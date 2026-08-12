@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<character>
+  <name>Kira Vance</name>
+  <hpMax>52</hpMax>
+  <xp>47800</xp>
+  <abilities>10, 18, 14, 11, 16, 12</abilities>
+  <race>
+    <name>Wood Elf</name>
+    <mod>dexterity +2</mod>
+    <mod>wisdom +1</mod>
+    <proficiency>Perception</proficiency>
+  </race>
+  <class>
+    <name>Ranger</name>
+    <level>8</level>
+    <proficiency>Strength, Dexterity</proficiency>
+    <proficiency>Stealth, Survival, Nature</proficiency>
+  </class>
+  <background>
+    <name>Outlander</name>
+    <proficiency>Athletics, Thieves' Tools</proficiency>
+  </background>
+</character>

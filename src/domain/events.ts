@@ -1,0 +1,129 @@
+/**
+ * The event log.
+ *
+ * Every mutation to campaign state is one of these, appended and never
+ * rewritten. Current state is a projection of the log, which is what buys
+ * undo, reconnect replay, the action feed, and session recap from a single
+ * mechanism rather than four.
+ *
+ * Events are deliberately COARSE and gameplay-shaped — "damage was applied",
+ * not "field currentHp was set to 23". A field-level log would still work and
+ * would be useless to read, undo, or sync.
+ */
+
+import type { CharacterId, Character } from "./build.js";
+import type { ConditionId } from "./edition.js";
+import type { RollMode } from "./roll.js";
+
+export type EventId = string;
+
+interface Meta {
+  readonly id: EventId;
+  /** Epoch milliseconds. A session is a view over the log between two of these. */
+  readonly at: number;
+  /** Who caused it. Phase 1 is always the one local player. */
+  readonly by: string;
+}
+
+export type DomainEvent = Meta &
+  (
+    | { readonly type: "characterAdded"; readonly character: Character }
+    | { readonly type: "damageApplied"; readonly who: CharacterId; readonly amount: number }
+    | { readonly type: "healingApplied"; readonly who: CharacterId; readonly amount: number }
+    | { readonly type: "tempHpGranted"; readonly who: CharacterId; readonly amount: number }
+    | {
+        readonly type: "resourceSpent";
+        readonly who: CharacterId;
+        readonly resource: string;
+        readonly amount: number;
+      }
+    | {
+        readonly type: "resourceRestored";
+        readonly who: CharacterId;
+        readonly resource: string;
+        readonly amount: number;
+      }
+    | {
+        readonly type: "hitDiceSpent";
+        readonly who: CharacterId;
+        /** The player rolled a real die; this is what they typed. */
+        readonly rolled: number;
+        readonly conMod: number;
+      }
+    | { readonly type: "conditionAdded"; readonly who: CharacterId; readonly condition: ConditionId }
+    | { readonly type: "conditionRemoved"; readonly who: CharacterId; readonly condition: ConditionId }
+    | { readonly type: "concentrationStarted"; readonly who: CharacterId; readonly on: string }
+    | { readonly type: "concentrationEnded"; readonly who: CharacterId }
+    /**
+     * Resolving one owed save. Carries the dice the player physically rolled;
+     * the projector compares the total against the DC it already stored, so
+     * pass or fail is derived rather than asserted by whoever tapped.
+     */
+    | {
+        readonly type: "concentrationChecked";
+        readonly who: CharacterId;
+        readonly mode: RollMode;
+        readonly dice: readonly number[];
+        readonly modifier: number;
+      }
+    | { readonly type: "exhaustionChanged"; readonly who: CharacterId; readonly delta: number }
+    | { readonly type: "inspirationChanged"; readonly who: CharacterId; readonly value: boolean }
+    | {
+        readonly type: "deathSaveRecorded";
+        readonly who: CharacterId;
+        readonly result: "success" | "failure" | "critical" | "fumble";
+      }
+    /**
+     * A roll changes no state — it is recorded because the log is the session's
+     * record, not only its state machine. The projector ignores it; the feed
+     * and the recap do not.
+     */
+    | {
+        readonly type: "diceRolled";
+        readonly who: CharacterId;
+        readonly label: string;
+        readonly mode: RollMode;
+        readonly dice: readonly number[];
+        readonly modifier: number;
+      }
+    | { readonly type: "shortRestTaken"; readonly who: readonly CharacterId[] }
+    | { readonly type: "longRestTaken"; readonly who: readonly CharacterId[] }
+    /**
+     * Undo. The log stays append-only: reverting appends a marker naming the
+     * event to skip, rather than removing anything. Other people may have
+     * acted since, and a removed event would silently rewrite their history.
+     */
+    | { readonly type: "reverted"; readonly target: EventId }
+  );
+
+export type DomainEventType = DomainEvent["type"];
+
+let counter = 0;
+
+/** Monotonic within a process; phase 2 replaces this with a room-scoped id. */
+export function newEventId(): EventId {
+  counter += 1;
+  return `e${Date.now().toString(36)}-${counter.toString(36)}`;
+}
+
+/**
+ * Omit distributes over a union only if you make it — a plain Omit collapses
+ * DomainEvent to the keys every variant shares, which is just Meta.
+ */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+export type EventBody = DistributiveOmit<DomainEvent, keyof Meta>;
+
+/** Generic so the returned event keeps its exact variant, with no cast. */
+export function makeEvent<B extends EventBody>(
+  body: B,
+  by = "local",
+  at = Date.now(),
+): B & Meta {
+  return { id: newEventId(), at, by, ...body };
+}
+
+/** Events that only describe the world, and can never be undone. */
+export function isRevertible(e: DomainEvent): boolean {
+  return e.type !== "characterAdded" && e.type !== "reverted";
+}
