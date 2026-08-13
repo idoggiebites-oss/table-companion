@@ -149,7 +149,7 @@ export function Homebrew({
             </div>
           </div>
 
-          <p className={dice ? "faint" : "err"} style={{ fontSize: ".82rem", margin: "8px 0 0" }}>
+          <p className={`hb-note ${dice ? "faint" : "err"}`}>
             {dice
               ? `Average ${hp} hit points. Rolled instances vary between ${
                   dice.count + dice.bonus} and ${dice.count * dice.die + dice.bonus}.`

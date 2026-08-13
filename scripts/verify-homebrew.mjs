@@ -41,7 +41,9 @@ await dm.page.locator('input[aria-label="Homebrew hit dice"]').fill("9d8+18");
 await dm.page.locator('input[aria-label="Homebrew str"]').fill("16");
 
 // hit points are derived from the expression, and the range is stated
-const note = (await dm.page.locator(".card-body p").first().innerText()).replace(/\s+/g, " ");
+// Scoped to the homebrew note itself — a positional ".card-body p" broke
+// the moment another panel rendered a paragraph earlier in the page.
+const note = (await dm.page.locator(".hb-note").innerText()).replace(/\s+/g, " ");
 ok("average hit points derived", note.includes("Average 58 hit points"), true);
 ok("and the rolled range stated", note.includes("between 27 and 90"), true);
 

@@ -608,8 +608,72 @@ html, body { overscroll-behavior-y: none; }
   letter-spacing: 0.1em; color: var(--steel);
   border: 1px solid rgba(110, 143, 168, 0.45); padding: 2px 5px;
 }
+.hb-note { margin: 8px 0 0; font-size: 0.82rem; }
 .linky {
   background: none; border: 0; padding: 0; color: var(--steel);
   text-transform: none; letter-spacing: 0; font-size: inherit;
   text-decoration: underline; text-underline-offset: 2px;
 }
+
+/* ---- progression ---- */
+.prow {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  gap: 14px; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid var(--rule);
+}
+.prow:last-of-type { border-bottom: 1px solid var(--rule); }
+.prow.owed { background: var(--raised); box-shadow: inset 2px 0 0 var(--steel); }
+.prow .who { min-width: 0; }
+.prow .nm { display: block; color: var(--ink); font-size: 0.98rem; }
+.prow .cls {
+  display: block; font-size: 0.57rem; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--faint); margin-top: 3px;
+}
+.prow .xp { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.prow .xp .num { font-size: 0.78rem; color: var(--muted); }
+.xpb {
+  position: relative; height: 6px; background: var(--raised);
+  border-radius: 2px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--rule);
+}
+/* Progress toward a level is a magnitude, so steel — the health ramp stays
+   reserved for creatures. */
+.xpb i {
+  position: absolute; inset: 0; transform-origin: left;
+  background: var(--steel); border-radius: 2px 0 0 2px;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.owe {
+  font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.11em;
+  font-weight: 500; color: var(--faint); white-space: nowrap; text-align: right;
+}
+.owe.on { color: var(--steel); }
+.prog-acts { border-top: 0; }
+
+/* ---- level up ---- */
+.lv { border-color: var(--steel); }
+.lv-head { padding: 18px 16px 14px; border-bottom: 1px solid var(--rule); }
+.lv-k {
+  display: block; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.16em; font-size: 0.62rem; color: var(--steel);
+}
+.lv-n {
+  display: block; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.13em; font-size: 1.4rem; color: #fff; margin-top: 9px;
+}
+.lv-s {
+  display: block; font-size: 0.6rem; text-transform: uppercase;
+  letter-spacing: 0.11em; color: var(--faint); margin-top: 7px;
+}
+.lv-ask { margin: 0 0 4px; font-size: 1rem; color: var(--ink); }
+.lv-pad { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.lv-pad button {
+  font-family: var(--mono); font-size: 0.95rem; letter-spacing: 0;
+  text-transform: none; padding: 11px 0; min-width: 0;
+}
+.lv-or { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
+.lv-or i { flex: 1 1 auto; height: 1px; background: var(--rule); }
+.lv-or span {
+  font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.11em;
+  color: var(--faint);
+}
+.lv-avg { width: 100%; }

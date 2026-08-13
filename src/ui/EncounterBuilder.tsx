@@ -39,10 +39,11 @@ const mod = (score: number) => Math.floor((score - 10) / 2);
 
 /** Where the working is shown rather than only the verdict. */
 function Working({
-  state, encounter,
+  state, encounter, append,
 }: {
   state: CampaignState;
   encounter: Encounter;
+  append: (body: EventBody) => void;
 }) {
   const levels = Object.values(state.builds).map((b) => b.totalLevel);
   const budget = budgetForParty(levels);
@@ -93,10 +94,26 @@ function Working({
         </p>
       )}
 
-      <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
-        Award <b className="num">{t.rawXp.toLocaleString()}</b> — the raw total,
-        never the adjusted one. {t.perCharacter.toLocaleString()} each.
-      </p>
+      <div className="row" style={{ marginTop: 12 }}>
+        {state.progression === "xp" && (
+          <button
+            disabled={t.rawXp <= 0 || levels.length === 0}
+            onClick={() =>
+              append({
+                type: "xpAwarded",
+                who: Object.keys(state.builds),
+                amount: t.rawXp,
+              })
+            }
+          >
+            Award {t.rawXp.toLocaleString()} XP
+          </button>
+        )}
+        <span className="faint" style={{ fontSize: ".8rem" }}>
+          The raw total, never the adjusted one.
+          {levels.length > 0 && ` ${t.perCharacter.toLocaleString()} each.`}
+        </span>
+      </div>
     </div>
   );
 }
@@ -284,7 +301,7 @@ export function EncounterBuilder({
                     ))}
                   </div>
 
-                  <Working state={state} encounter={encounter} />
+                  <Working state={state} encounter={encounter} append={append} />
 
                   <div className="row" style={{ marginTop: 14 }}>
                     <input

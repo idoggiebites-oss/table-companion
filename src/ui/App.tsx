@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Character } from "../domain/build.js";
 import { actorKey } from "../domain/permissions.js";
+import { levelsOwed } from "../domain/project.js";
 import { useCampaign } from "../store/useCampaign.js";
 import { useSeat } from "../store/useSeat.js";
 import { Combat } from "./Combat.js";
@@ -9,6 +10,8 @@ import { NewCharacter } from "./NewCharacter.js";
 import { Party } from "./Party.js";
 import { EncounterBuilder } from "./EncounterBuilder.js";
 import { Homebrew } from "./Homebrew.js";
+import { LevelUp } from "./LevelUp.js";
+import { Progression } from "./Progression.js";
 import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
@@ -109,12 +112,20 @@ export function App() {
           {seat.kind === "dm" ? (
             <>
               <Party state={state} seat={seat} append={append} />
+              <Progression state={state} append={append} />
               <EncounterBuilder state={state} append={append} />
               <Homebrew state={state} append={append} />
               <Reference homebrew={state.homebrew} />
             </>
           ) : mine && mineState ? (
-            <Sheet build={mine} state={mineState} campaign={state} append={append} />
+            <>
+              <LevelUp
+                build={mine}
+                owed={levelsOwed(state, mine.id)}
+                append={append}
+              />
+              <Sheet build={mine} state={mineState} campaign={state} append={append} />
+            </>
           ) : (
             <section className="card">
               <div className="card-body">
