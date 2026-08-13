@@ -11,6 +11,7 @@
 
 import { abilityModifier } from "./abilities.js";
 import { effectiveBuild, type Character, type CharacterId, type EffectiveBuild } from "./build.js";
+import { advance, startCombat, type Combat } from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import { rulesFor, type ConditionId } from "./edition.js";
 import { resolveRoll } from "./roll.js";
@@ -40,6 +41,8 @@ export interface CharacterState {
 export interface CampaignState {
   readonly builds: Readonly<Record<CharacterId, EffectiveBuild>>;
   readonly characters: Readonly<Record<CharacterId, CharacterState>>;
+  /** Null outside a fight. */
+  readonly combat: Combat | null;
 }
 
 function initialState(build: EffectiveBuild): CharacterState {
@@ -129,9 +132,80 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     return {
       builds: { ...state.builds, [build.id]: build },
       characters: { ...state.characters, [build.id]: initialState(build) },
+      combat: state.combat,
     };
   }
   if (e.type === "reverted") return state;
+
+  switch (e.type) {
+    case "combatStarted":
+      return { ...state, combat: startCombat(e.order) };
+    case "combatEnded":
+      return { ...state, combat: null };
+    case "turnAdvanced":
+      return state.combat === null
+        ? state
+        : { ...state, combat: advance(state.combat, e.from) };
+    case "creatureDamaged": {
+      if (state.combat === null) return state;
+      const current = state.combat.creatureHp[e.combatantId];
+      if (current === undefined) return state;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          creatureHp: {
+            ...state.combat.creatureHp,
+            [e.combatantId]: Math.max(0, current - e.amount),
+          },
+        },
+      };
+    }
+    case "areaDamageApplied": {
+      const characters = { ...state.characters };
+      let combat = state.combat;
+      for (const t of e.targets) {
+        // Half rounds DOWN, and a character's concentration save is owed
+        // against what they actually took — not the blast's full number.
+        const amount = t.saved
+          ? e.halfOnSave
+            ? Math.floor(e.amount / 2)
+            : 0
+          : e.amount;
+        if (amount <= 0 && t.saved && !e.halfOnSave) continue;
+        if (t.ref.kind === "character") {
+          const before = characters[t.ref.characterId];
+          if (before) characters[t.ref.characterId] = applyDamage(before, amount);
+        } else if (combat) {
+          const current = combat.creatureHp[t.ref.combatantId];
+          if (current !== undefined) {
+            combat = {
+              ...combat,
+              creatureHp: {
+                ...combat.creatureHp,
+                [t.ref.combatantId]: Math.max(0, current - amount),
+              },
+            };
+          }
+        }
+      }
+      return { ...state, characters, combat };
+    }
+    case "disclosureSet": {
+      if (state.combat === null) return state;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          order: state.combat.order.map((c) =>
+            c.id === e.combatantId ? { ...c, disclosure: e.level } : c,
+          ),
+        },
+      };
+    }
+    default:
+      break;
+  }
 
   const targets =
     e.type === "shortRestTaken" || e.type === "longRestTaken" ? e.who : [e.who];
@@ -249,10 +323,10 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     characters[id] = s;
   }
 
-  return { builds: state.builds, characters };
+  return { builds: state.builds, characters, combat: state.combat };
 }
 
-export const EMPTY_STATE: CampaignState = { builds: {}, characters: {} };
+export const EMPTY_STATE: CampaignState = { builds: {}, characters: {}, combat: null };
 
 /**
  * Replays a log. Reverted events are skipped rather than removed, so the log

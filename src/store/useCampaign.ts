@@ -2,19 +2,32 @@
  * React's view of the log.
  *
  * The only way to change anything is to append an event, and the only way to
- * read anything is to project the log — the same discipline the domain
- * enforces, carried up into the UI so no component can quietly hold state the
- * log doesn't know about.
+ * read anything is to project the log. That discipline is what lets the same
+ * hook serve solo play and a synced room with no branching in the UI: joining
+ * a room adds a transport, not a second source of truth.
  *
- * Writes are optimistic: state updates immediately and the IndexedDB write
- * follows. Phase 2 replaces that trailing write with the same append going to
- * a durable object, and nothing in the UI has to change.
+ * The log the projector sees is always `confirmed ++ pending` — server order
+ * first, then whatever this device has done that the server has not ordered
+ * yet. A local write shows instantly and settles into its real position when
+ * the server answers.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { makeEvent, type DomainEvent, type EventBody } from "../domain/events.js";
 import { EMPTY_STATE, project, type CampaignState } from "../domain/project.js";
-import { appendEvents, clearLog, loadLog } from "./log.js";
+import { RoomConnection, type ConnectionStatus } from "../sync/client.js";
+import type { RoomCredentials, StoredEvent } from "../sync/protocol.js";
+import {
+  appendLocal,
+  clearLog,
+  loadLog,
+  readMeta,
+  recordStored,
+  writeMeta,
+} from "./log.js";
+
+const ROOM_KEY = "room";
+const HEAD_KEY = "head";
 
 export interface Campaign {
   readonly ready: boolean;
@@ -23,36 +36,105 @@ export interface Campaign {
   readonly append: (body: EventBody) => DomainEvent;
   readonly revert: (target: string) => void;
   readonly reset: () => void;
-  /** Reverted ids, so the feed can show a mistake as struck through. */
   readonly reverted: ReadonlySet<string>;
+  /** Null when playing solo. */
+  readonly room: RoomCredentials | null;
+  readonly status: ConnectionStatus;
+  readonly members: number;
+  readonly joinRoom: (creds: RoomCredentials) => Promise<void>;
+  readonly leaveRoom: () => Promise<void>;
 }
 
-export function useCampaign(): Campaign {
-  const [log, setLog] = useState<readonly DomainEvent[]>([]);
+export function useCampaign(actor = "local"): Campaign {
+  const [confirmed, setConfirmed] = useState<StoredEvent[]>([]);
+  const [pending, setPending] = useState<DomainEvent[]>([]);
   const [ready, setReady] = useState(false);
+  const [room, setRoom] = useState<RoomCredentials | null>(null);
+  const [status, setStatus] = useState<ConnectionStatus>("offline");
+  const [members, setMembers] = useState(0);
+
+  const conn = useRef<RoomConnection | null>(null);
+  // Held in a ref so changing seats doesn't rebuild every callback.
+  const actorRef = useRef(actor);
+  actorRef.current = actor;
+  const head = useRef(0);
+
+  /** Server-ordered events win their position; ours settle out of pending. */
+  const absorb = useCallback((stored: readonly StoredEvent[]) => {
+    if (stored.length === 0) return;
+    setConfirmed((prev) => {
+      const seen = new Set(prev.map((s) => s.event.id));
+      const merged = [...prev];
+      for (const s of stored) if (!seen.has(s.event.id)) merged.push(s);
+      return merged.sort((a, b) => a.seq - b.seq);
+    });
+    const landed = new Set(stored.map((s) => s.event.id));
+    setPending((prev) => prev.filter((e) => !landed.has(e.id)));
+    void recordStored(stored);
+  }, []);
+
+  const openConnection = useCallback(
+    (creds: RoomCredentials, resend: readonly DomainEvent[]) => {
+      conn.current?.close();
+      const c = new RoomConnection(
+        creds.code,
+        creds.token,
+        {
+          onEvents: absorb,
+          onHead: (h) => {
+            head.current = h;
+            void writeMeta(HEAD_KEY, h);
+          },
+          onStatus: (s, n) => {
+            setStatus(s);
+            setMembers(n);
+          },
+        },
+        head.current,
+        resend,
+      );
+      conn.current = c;
+      c.connect();
+    },
+    [absorb],
+  );
 
   useEffect(() => {
     let live = true;
-    loadLog()
-      .then((events) => {
-        if (live) setLog(events);
-      })
-      .catch(() => {
-        // A blocked or unavailable IndexedDB shouldn't stop play — the session
-        // still works, it just won't survive a reload.
-      })
-      .finally(() => {
+    void (async () => {
+      try {
+        const [loaded, savedRoom, savedHead] = await Promise.all([
+          loadLog(),
+          readMeta<RoomCredentials>(ROOM_KEY),
+          readMeta<number>(HEAD_KEY),
+        ]);
+        if (!live) return;
+        setConfirmed(loaded.confirmed);
+        setPending(loaded.pending);
+        head.current = savedHead ?? 0;
+        if (savedRoom) {
+          setRoom(savedRoom);
+          openConnection(savedRoom, loaded.pending);
+        }
+      } catch {
+        // A blocked IndexedDB shouldn't stop play; the session just won't
+        // survive a reload.
+      } finally {
         if (live) setReady(true);
-      });
+      }
+    })();
     return () => {
       live = false;
+      conn.current?.close();
+      conn.current = null;
     };
-  }, []);
+  }, [openConnection]);
 
   const append = useCallback((body: EventBody) => {
-    const event = makeEvent(body);
-    setLog((prev) => [...prev, event]);
-    void appendEvents([event]);
+    const event = makeEvent(body, actorRef.current);
+    setPending((prev) => [...prev, event]);
+    void appendLocal(event);
+    conn.current?.push(event);
     return event;
   }, []);
 
@@ -63,10 +145,42 @@ export function useCampaign(): Campaign {
     [append],
   );
 
+  const joinRoom = useCallback(
+    async (creds: RoomCredentials) => {
+      await writeMeta(ROOM_KEY, creds);
+      setRoom(creds);
+      // Everything written solo is pending, so it flows into the room on
+      // connect — a character made before joining is not lost.
+      const loaded = await loadLog();
+      openConnection(creds, loaded.pending);
+    },
+    [openConnection],
+  );
+
+  const leaveRoom = useCallback(async () => {
+    conn.current?.close();
+    conn.current = null;
+    await writeMeta(ROOM_KEY, undefined);
+    setRoom(null);
+    setStatus("offline");
+    setMembers(0);
+  }, []);
+
   const reset = useCallback(() => {
-    setLog([]);
+    conn.current?.close();
+    conn.current = null;
+    setConfirmed([]);
+    setPending([]);
+    setRoom(null);
+    setStatus("offline");
+    head.current = 0;
     void clearLog();
   }, []);
+
+  const log = useMemo(
+    () => [...confirmed.map((s) => s.event), ...pending],
+    [confirmed, pending],
+  );
 
   const state = useMemo(() => (log.length ? project(log) : EMPTY_STATE), [log]);
 
@@ -76,5 +190,8 @@ export function useCampaign(): Campaign {
     return s;
   }, [log]);
 
-  return { ready, log, state, append, revert, reset, reverted };
+  return {
+    ready, log, state, append, revert, reset, reverted,
+    room, status, members, joinRoom, leaveRoom,
+  };
 }

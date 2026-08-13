@@ -389,3 +389,89 @@ html, body { overscroll-behavior-y: none; }
  * and flex items default to min-width:auto, so pin them.
  */
 .six > *, .row > select, .grid2 > * { min-width: 0; }
+
+/* ---- room ---- */
+.roombar {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  padding: 10px 12px; margin-bottom: 14px;
+  border: 1px solid var(--rule); background: var(--panel);
+}
+.rb-code { font-size: 1.1rem; letter-spacing: 0.14em; color: var(--ink); }
+.rb-status {
+  font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.11em; font-weight: 500;
+}
+.rb-status.s-offline { color: var(--faint); }
+.rb-status.s-connecting { color: var(--bloodied); }
+.rb-status.s-online { color: var(--unharmed); }
+.rb-input { width: 108px; text-transform: uppercase; letter-spacing: 0.14em; }
+.roombar button { padding: 8px 12px; font-size: 0.62rem; }
+.rb-error { color: var(--near); font-size: 0.82rem; flex-basis: 100%; }
+
+/* ---- seat ---- */
+.seatbar { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.seatbar select { width: auto; flex: 0 1 200px; }
+
+/* ---- initiative ---- */
+.init-row {
+  display: grid; grid-template-columns: 1fr 64px 84px; gap: 8px;
+  align-items: center; padding: 6px 0;
+}
+.init-row .n { color: var(--ink-dim); font-size: 0.94rem; }
+
+.track { border-top: 1px solid var(--rule); }
+.cbt {
+  display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto;
+  gap: 12px; align-items: center;
+  padding: 11px 16px; border-bottom: 1px solid var(--rule);
+  border-left: 2px solid transparent;
+}
+.cbt:last-child { border-bottom: 0; }
+.cbt .i { color: var(--faint); font-size: 1rem; text-align: right; }
+.cbt .who { min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.cbt .nm { color: var(--muted); font-size: 0.96rem; }
+.cbt .hp { font-size: 0.84rem; color: var(--muted); text-align: right; white-space: nowrap; }
+/* Active is luminance, never a hue — red already means damage in this list. */
+.cbt.on { background: var(--raised); border-left-color: var(--ink); }
+.cbt.on .nm { color: #fff; font-weight: 500; }
+.cbt.on .i, .cbt.on .hp { color: var(--ink); }
+.disc, .hitbtn { padding: 4px 8px; font-size: 0.55rem; }
+.disc { background: transparent; color: var(--steel); border-color: var(--rule); }
+/* Turn distance: brightness carries "it's you", never a hue. */
+.turns-away { color: var(--faint); }
+.turns-away.now { color: #fff; }
+/* Attribution: quiet, but always there. */
+.fr .by {
+  margin-left: 8px; font-size: 0.6rem; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--faint);
+}
+
+/* ---- party ---- */
+.pm { padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.pm:last-child { border-bottom: 0; }
+.pm-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.pm-name { font-size: 1.05rem; color: var(--ink); }
+.pm-hp { font-size: 1.1rem; color: var(--ink); }
+.pm-temp { color: var(--steel); }
+.pm-meta { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.pm-acts { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+.pm-acts button { padding: 8px 12px; font-size: 0.62rem; }
+
+/* ---- area damage ---- */
+.area { border: 1px solid var(--steel); background: var(--raised); padding: 14px; margin-top: 14px; }
+.area-list { margin-top: 12px; border-top: 1px solid var(--rule); }
+.arow {
+  display: grid; grid-template-columns: 18px minmax(0, 1fr) auto 44px;
+  gap: 10px; align-items: center;
+  padding: 9px 0; border-bottom: 1px solid var(--rule);
+}
+.arow:last-child { border-bottom: 0; }
+.arow .nm { color: var(--muted); font-size: 0.92rem; min-width: 0; }
+.arow.in .nm { color: var(--ink); }
+.arow .amt { text-align: right; font-size: 0.86rem; color: var(--muted); }
+.arow.in .amt { color: var(--ink); }
+.tick {
+  width: 16px; height: 16px; padding: 0; min-width: 0;
+  background: var(--panel); border: 1px solid var(--faint);
+}
+.tick.on { background: var(--steel); border-color: var(--steel); }
+.area .chip { cursor: pointer; }

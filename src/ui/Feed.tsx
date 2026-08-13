@@ -10,6 +10,7 @@
 import type { EffectiveBuild } from "../domain/build.js";
 import type { DomainEvent } from "../domain/events.js";
 import { isRevertible } from "../domain/events.js";
+import { DM_ACTOR } from "../domain/permissions.js";
 import { describeRoll, resolveRoll } from "../domain/roll.js";
 
 const time = (at: number) =>
@@ -56,6 +57,23 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       )}`;
     case "deathSaveRecorded":
       return `${nameOf(e.who)} death save · ${e.result}`;
+    case "areaDamageApplied": {
+      const hit = e.targets.length;
+      const saved = e.targets.filter((t) => t.saved).length;
+      return `${e.label} · ${e.amount} ${e.damageType} · ${hit} target${
+        hit === 1 ? "" : "s"
+      }${saved > 0 ? ` · ${saved} saved` : ""}`;
+    }
+    case "combatStarted":
+      return `Combat began · ${e.order.length} in initiative`;
+    case "combatEnded":
+      return "Combat ended";
+    case "turnAdvanced":
+      return null; // the feed would be nothing but this
+    case "creatureDamaged":
+      return `Creature took ${e.amount}`;
+    case "disclosureSet":
+      return `Disclosure set to ${e.level}`;
     case "shortRestTaken":
       return `Short rest · ${e.who.map(nameOf).join(", ")}`;
     case "longRestTaken":
@@ -74,6 +92,16 @@ export function Feed({
   onRevert: (id: string) => void;
 }) {
   const nameOf = (id: string) => builds[id]?.name ?? "Someone";
+  /**
+   * A signature only earns its place when somebody else did it. "Kira healed 4
+   * — Kira" is noise; "Kira took 12 — DM" is the whole reason the DM is allowed
+   * to edit another player's sheet.
+   */
+  const signedBy = (e: DomainEvent): string | null => {
+    const subject = "who" in e && typeof e.who === "string" ? e.who : null;
+    if (subject !== null && subject === e.by) return null;
+    return e.by === DM_ACTOR ? "DM" : (builds[e.by]?.name ?? null);
+  };
   const rows = [...log].reverse().filter((e) => e.type !== "reverted");
 
   if (rows.length === 0) {
@@ -89,7 +117,10 @@ export function Feed({
         return (
           <div className={`fr${undone ? " undone" : ""}`} key={e.id}>
             <span className="t">{time(e.at)}</span>
-            <span className="d">{text}</span>
+            <span className="d">
+              {text}
+              {signedBy(e) && <> <span className="by">{signedBy(e)}</span></>}
+            </span>
             {isRevertible(e) && (
               <button onClick={() => onRevert(e.id)} disabled={undone}>
                 {undone ? "Undone" : "Undo"}

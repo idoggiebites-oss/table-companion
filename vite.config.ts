@@ -3,6 +3,14 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // In dev the app is served by Vite and the API by wrangler; proxying keeps
+  // them one origin so cookies, websockets and relative URLs all behave as
+  // they will in production, where the Worker serves both.
+  server: {
+    proxy: {
+      "/api": { target: "http://127.0.0.1:8787", changeOrigin: true, ws: true },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

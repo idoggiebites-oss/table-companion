@@ -12,6 +12,7 @@
  */
 
 import type { CharacterId, Character } from "./build.js";
+import type { Combatant, Disclosure, TargetRef } from "./combat.js";
 import type { ConditionId } from "./edition.js";
 import type { RollMode } from "./roll.js";
 
@@ -85,6 +86,40 @@ export type DomainEvent = Meta &
         readonly mode: RollMode;
         readonly dice: readonly number[];
         readonly modifier: number;
+      }
+    | { readonly type: "combatStarted"; readonly order: readonly Combatant[] }
+    | { readonly type: "combatEnded" }
+    /**
+     * Names the turn it was issued against, so two devices pressing at the
+     * same instant produce one move rather than a skipped creature.
+     */
+    | { readonly type: "turnAdvanced"; readonly from: number }
+    | {
+        readonly type: "creatureDamaged";
+        readonly combatantId: string;
+        readonly amount: number;
+      }
+    | {
+        readonly type: "disclosureSet";
+        readonly combatantId: string;
+        readonly level: Disclosure;
+      }
+    /**
+     * One blast, one event, one undo. A fireball on four goblins is four
+     * saving throws and two different damage totals, and doing that as four
+     * separate events would mean four undos to take it back.
+     */
+    | {
+        readonly type: "areaDamageApplied";
+        readonly label: string;
+        readonly amount: number;
+        readonly damageType: string;
+        /** When false a successful save takes nothing at all. */
+        readonly halfOnSave: boolean;
+        readonly targets: readonly {
+          readonly ref: TargetRef;
+          readonly saved: boolean;
+        }[];
       }
     | { readonly type: "shortRestTaken"; readonly who: readonly CharacterId[] }
     | { readonly type: "longRestTaken"; readonly who: readonly CharacterId[] }
