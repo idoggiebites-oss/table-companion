@@ -8,8 +8,22 @@ This work includes material taken from the System Reference Document 5.1
 licensed under the Creative Commons Attribution 4.0 International License
 available at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
-Nothing outside the SRD 5.1 is included. Homebrew entry exists so that content
-which cannot be shipped can still be used.
+## Content that is NOT under that licence
+
+`src/domain/dmg-tables.ts` holds the encounter-building tables (XP thresholds
+by character level, and the encounter multiplier). Those are Dungeon Master's
+Guide content, **not** SRD 5.1 — verified against the SRD PDF, where the
+relevant headings appear on no page while control terms like "Goblin" and
+"Fireball" appear on many.
+
+They are present because this is a private tool for one table whose DM owns
+the book. **This app is therefore not redistributable as it stands.** Deleting
+that one file and the `budget` argument at its call sites returns the app to
+fully-licensed behaviour: raw XP totals with no difficulty band. Nothing else
+imports it.
+
+Homebrew entry exists so that other content which cannot be shipped can still
+be used.
 
 **Trademarks are not covered by that licence.** CC BY 4.0 grants use of the SRD
 *text* with attribution and says nothing about the Dungeons & Dragons name or

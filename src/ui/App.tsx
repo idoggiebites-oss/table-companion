@@ -7,6 +7,7 @@ import { Combat } from "./Combat.js";
 import { Feed } from "./Feed.js";
 import { NewCharacter } from "./NewCharacter.js";
 import { Party } from "./Party.js";
+import { EncounterBuilder } from "./EncounterBuilder.js";
 import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
@@ -107,6 +108,7 @@ export function App() {
           {seat.kind === "dm" ? (
             <>
               <Party state={state} seat={seat} append={append} />
+              <EncounterBuilder state={state} append={append} />
               <Reference />
             </>
           ) : mine && mineState ? (

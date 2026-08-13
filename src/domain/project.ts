@@ -16,6 +16,7 @@ import {
   type Combat, type Economy,
 } from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
+import type { Encounter } from "./encounter.js";
 import { rulesFor, type ConditionId } from "./edition.js";
 import { resolveRoll } from "./roll.js";
 import type { DomainEvent, EventId } from "./events.js";
@@ -48,6 +49,8 @@ export interface CampaignState {
   readonly characters: Readonly<Record<CharacterId, CharacterState>>;
   /** Null outside a fight. */
   readonly combat: Combat | null;
+  /** Saved prep, by encounter id. */
+  readonly encounters: Readonly<Record<string, Encounter>>;
 }
 
 function initialState(build: EffectiveBuild): CharacterState {
@@ -154,6 +157,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       builds: { ...state.builds, [build.id]: build },
       characters: { ...state.characters, [build.id]: initialState(build) },
       combat: state.combat,
+      encounters: state.encounters,
     };
   }
   if (e.type === "reverted") return state;
@@ -162,6 +166,16 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     case "combatStarted": {
       const combat = startCombat(e.order);
       return { ...state, combat, characters: refillActive(state.characters, combat) };
+    }
+    case "encounterSaved":
+      return {
+        ...state,
+        encounters: { ...state.encounters, [e.encounter.id]: e.encounter },
+      };
+    case "encounterDeleted": {
+      const rest = { ...state.encounters };
+      delete rest[e.encounterId];
+      return { ...state, encounters: rest };
     }
     case "combatEnded":
       // Outside a fight there is no economy to have spent.
@@ -358,10 +372,12 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     characters[id] = s;
   }
 
-  return { builds: state.builds, characters, combat: state.combat };
+  return { builds: state.builds, characters, combat: state.combat, encounters: state.encounters };
 }
 
-export const EMPTY_STATE: CampaignState = { builds: {}, characters: {}, combat: null };
+export const EMPTY_STATE: CampaignState = {
+  builds: {}, characters: {}, combat: null, encounters: {},
+};
 
 /**
  * Replays a log. Reverted events are skipped rather than removed, so the log

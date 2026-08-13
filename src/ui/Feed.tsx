@@ -68,6 +68,10 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `Combat began · ${e.order.length} in initiative`;
     case "combatEnded":
       return "Combat ended";
+    case "encounterSaved":
+      return `Saved encounter · ${e.encounter.name}`;
+    case "encounterDeleted":
+      return "Deleted an encounter";
     case "economySpent":
       return `${nameOf(e.who)} used their ${e.kind}`;
     case "turnAdvanced":
