@@ -5,6 +5,7 @@ import { levelsOwed } from "../domain/project.js";
 import { useCampaign } from "../store/useCampaign.js";
 import { useSeat } from "../store/useSeat.js";
 import { Combat } from "./Combat.js";
+import { CreateCharacter } from "./CreateCharacter.js";
 import { Feed } from "./Feed.js";
 import { NewCharacter } from "./NewCharacter.js";
 import { Party } from "./Party.js";
@@ -21,6 +22,7 @@ export function App() {
   const [seat, setSeat] = useSeat();
   const [showFeed, setShowFeed] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [building, setBuilding] = useState(false);
 
   // Events are signed by the seat, which is what makes one person editing
   // another's sheet acceptable rather than merely convenient.
@@ -41,6 +43,7 @@ export function App() {
   function create(c: Character) {
     append({ type: "characterAdded", character: c });
     setAdding(false);
+    setBuilding(false);
     // A device that just made a character is presumably going to play it.
     if (seat.kind === "player" || builds.length === 0) {
       setSeat({ kind: "player", characterId: c.base.id });
@@ -104,7 +107,25 @@ export function App() {
       )}
 
       {needsCharacter ? (
-        <NewCharacter onCreate={create} />
+        building ? (
+          <CreateCharacter onCreate={create} onCancel={() => setBuilding(false)} />
+        ) : (
+          <>
+            <section className="card">
+              <div className="card-hd">
+                <span className="label">Session zero</span>
+                <button onClick={() => setBuilding(true)}>Build a character</button>
+              </div>
+              <div className="card-body">
+                <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
+                  Make one here, or bring one in below. Either way it ends up
+                  the same character.
+                </p>
+              </div>
+            </section>
+            <NewCharacter onCreate={create} />
+          </>
+        )
       ) : (
         <>
           <Combat state={state} seat={seat} append={append} />

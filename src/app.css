@@ -677,3 +677,56 @@ html, body { overscroll-behavior-y: none; }
   color: var(--faint);
 }
 .lv-avg { width: 100%; }
+
+/* ---- character creation ---- */
+.cr-step {
+  display: block; margin: 18px 0 8px; color: var(--steel);
+}
+.cr-step:first-child { margin-top: 0; }
+.cr-sub { display: block; margin: 14px 0 8px; }
+.cr-note { margin: 10px 0 0; font-size: 0.86rem; color: var(--muted); }
+
+.cr-scores { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; background: var(--rule); }
+@media (min-width: 760px) {
+  .cr-scores { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+}
+.cr-assign, .cr-conseq { background: var(--panel); padding: 16px; }
+
+.cr-pool { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.cr-roll { margin-bottom: 14px; }
+.cr-pad { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-top: 10px; }
+.cr-pad button {
+  font-family: var(--mono); font-size: 0.85rem; letter-spacing: 0;
+  text-transform: none; padding: 9px 0; min-width: 0;
+}
+
+.cr-ab {
+  display: grid; grid-template-columns: 58px 1fr 46px 82px;
+  gap: 10px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--rule);
+}
+.cr-ab:last-of-type { border-bottom: 0; }
+.cr-name {
+  text-align: left; padding: 6px 8px; font-size: 0.66rem;
+  background: transparent; border-color: transparent; color: var(--ink-dim);
+}
+.cr-name:hover:not(:disabled) { border-color: var(--rule); color: var(--ink); }
+.cr-val { font-size: 1.05rem; color: var(--ink); }
+.cr-ab.empty .cr-val { color: var(--faint); }
+.cr-bonus { font-size: 0.78rem; color: var(--steel); text-align: right; }
+.cr-total { text-align: right; font-size: 1.1rem; color: var(--ink); }
+.cr-mod { font-size: 0.76rem; color: var(--muted); margin-left: 8px; }
+
+.cr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--rule); }
+.cr-grid > div { background: var(--panel); padding: 12px; }
+.cr-grid .l {
+  display: block; font-size: 0.54rem; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--faint);
+}
+.cr-grid .v { display: block; font-size: 1.3rem; color: var(--ink); margin-top: 5px; }
+.cr-srow {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 0.88rem;
+  color: var(--ink-dim);
+}
+.cr-srow:last-child { border-bottom: 0; }

@@ -10,14 +10,49 @@
 
 import type { Statblock } from "../domain/statblock.js";
 
-export interface ConditionEntry {
+export interface ConditionDescription {
   readonly id: string;
   readonly name: string;
   readonly desc: readonly string[];
 }
 
+export interface RaceEntry {
+  readonly id: string;
+  readonly name: string;
+  readonly size: string;
+  readonly speed: number;
+  readonly abilityBonuses: Readonly<Record<string, number>>;
+  readonly languages?: readonly string[];
+  readonly traits?: readonly { readonly name: string; readonly desc: string }[];
+  readonly subraces: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly abilityBonuses: Readonly<Record<string, number>>;
+  }[];
+}
+
+export interface ClassEntry {
+  readonly id: string;
+  readonly name: string;
+  readonly hitDie: number;
+  readonly saves: readonly string[];
+  readonly skillChoices?: { readonly choose: number; readonly from: readonly string[] };
+  readonly proficiencies: readonly string[];
+  readonly equipment: readonly string[];
+  readonly equipmentChoices: readonly string[];
+  readonly spellcasting?: {
+    readonly ability?: string;
+    readonly cantrips: number;
+    readonly known: number;
+    readonly slots: readonly number[];
+  };
+  readonly features: readonly string[];
+}
+
 let monsters: Promise<Statblock[]> | null = null;
-let conditions: Promise<ConditionEntry[]> | null = null;
+let races: Promise<RaceEntry[]> | null = null;
+let classes: Promise<ClassEntry[]> | null = null;
+let conditions: Promise<ConditionDescription[]> | null = null;
 
 async function load<T>(path: string): Promise<T[]> {
   const res = await fetch(path);
@@ -30,7 +65,17 @@ export function loadMonsters(): Promise<Statblock[]> {
   return monsters;
 }
 
-export function loadConditions(): Promise<ConditionEntry[]> {
-  conditions ??= load<ConditionEntry>("/srd/conditions.json");
+export function loadRaces(): Promise<RaceEntry[]> {
+  races ??= load<RaceEntry>("/srd/races.json");
+  return races;
+}
+
+export function loadClasses(): Promise<ClassEntry[]> {
+  classes ??= load<ClassEntry>("/srd/classes.json");
+  return classes;
+}
+
+export function loadConditions(): Promise<ConditionDescription[]> {
+  conditions ??= load<ConditionDescription>("/srd/conditions.json");
   return conditions;
 }
