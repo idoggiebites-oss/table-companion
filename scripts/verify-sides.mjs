@@ -44,7 +44,7 @@ ok("dm sees the character in the party", await dm.page.locator(".pm-name").inner
 await dm.page.screenshot({ path: `${OUT}/22-party.png` });
 
 // the DM narrates and types, without the player touching anything
-await dm.page.locator('input[aria-label="Party amount"]').fill("12");
+await dm.page.locator('input[aria-label="Kira Vance amount"]').fill("12");
 await dm.page.locator(".pm").getByRole("button", { name: "Damage" }).click();
 await player.page.waitForTimeout(900);
 ok("dm's damage reached the player's sheet",
@@ -79,7 +79,7 @@ await dm.page.waitForTimeout(900);
 ok("dm sees concentration", (await dm.page.locator(".pm-meta .chip.conc").first().innerText()).toLowerCase(), "hunter's mark");
 
 // damage from the DM owes the player a save, on the player's device
-await dm.page.locator('input[aria-label="Party amount"]').fill("22");
+await dm.page.locator('input[aria-label="Kira Vance amount"]').fill("22");
 await dm.page.locator(".pm").getByRole("button", { name: "Damage" }).click();
 await player.page.waitForTimeout(900);
 ok("the save is owed on the player's screen", await player.page.locator(".alarm").count(), 1);

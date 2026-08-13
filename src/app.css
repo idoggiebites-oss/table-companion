@@ -422,6 +422,25 @@ html, body { overscroll-behavior-y: none; }
 .rb-second .rb-input { width: 128px; }
 .rb-hint { color: var(--faint); font-size: 0.76rem; }
 
+/* ---- npcs, boons, loot ---- */
+.npc-row { flex-wrap: wrap; }
+.npc-row .nm { flex: 1 1 auto; min-width: 0; }
+.npc-note { flex-basis: 100%; font-size: 0.76rem; }
+.npc-notes {
+  width: 100%; margin-top: 10px; resize: vertical;
+  font: inherit; color: var(--ink);
+  background: var(--sunk); border: 1px solid var(--rule); padding: 8px 10px;
+}
+.npc-stock { margin-top: 12px; }
+.pm-boons { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.pm-boons input { width: 100%; }
+.chip.boon { color: var(--unharmed); border-color: color-mix(in srgb, var(--unharmed) 40%, transparent); }
+.stash { border-top: 1px solid var(--rule); }
+.rp-boon {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 6px 0 0; font-size: 0.84rem; color: var(--unharmed);
+}
+
 /* ---- inventory ---- */
 .inv { padding: 4px 12px 10px; }
 .inv-purse { color: var(--ink); font-size: 0.92rem; letter-spacing: 0.04em; }

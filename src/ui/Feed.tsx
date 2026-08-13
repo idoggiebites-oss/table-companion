@@ -11,6 +11,7 @@ import type { EffectiveBuild } from "../domain/build.js";
 import type { DomainEvent } from "../domain/events.js";
 import { isRevertible } from "../domain/events.js";
 import { DM_ACTOR } from "../domain/permissions.js";
+import { describeBoon } from "../domain/boons.js";
 import { formatCoins } from "../domain/money.js";
 import { describeRoll, resolveRoll } from "../domain/roll.js";
 
@@ -93,6 +94,33 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `${nameOf(e.who)} put away ${e.name}`;
     case "coinsChanged":
       return `${nameOf(e.who)} ${e.delta >= 0 ? "gained" : "spent"} ${formatCoins(Math.abs(e.delta))}`;
+    case "boonGranted":
+      return `${nameOf(e.who)} gained ${describeBoon(e.boon)}`;
+    case "boonRemoved":
+      return `${nameOf(e.who)} lost a boon`;
+    case "npcSaved":
+      return `Saved ${e.npc.name}${e.npc.role ? ` · ${e.npc.role}` : ""}`;
+    case "npcDeleted":
+      return "Deleted an NPC";
+    case "traderOpened":
+      return "Opened a shop";
+    case "traderClosed":
+      return "Closed the shop";
+    case "itemBought":
+      return `${nameOf(e.who)} bought ${e.stack.name} for ${formatCoins(e.price)}`;
+    case "lootGranted": {
+      const what = [
+        ...e.items.map((i) => (i.qty > 1 ? `${i.qty} × ${i.name}` : i.name)),
+        ...(e.coins > 0 ? [formatCoins(e.coins)] : []),
+      ].join(", ");
+      return e.to.kind === "party"
+        ? `The party found ${what || "nothing"}`
+        : `${nameOf(e.to.who)} was given ${what || "nothing"}`;
+    }
+    case "stashAssigned":
+      return `${e.name} went to ${nameOf(e.to)}`;
+    case "stashCoinsSplit":
+      return `Coins split ${e.among.length} way${e.among.length === 1 ? "" : "s"}`;
     case "homebrewSaved":
       return `Saved a creature · ${e.statblock.name}`;
     case "homebrewDeleted":

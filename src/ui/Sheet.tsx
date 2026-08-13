@@ -19,6 +19,7 @@ import { RollPad, type RollTarget } from "./RollPad.js";
 import type { CampaignState } from "../domain/project.js";
 import { HpBar, healthStep, VAGUE_LABEL } from "./HpBar.js";
 import { Inventory, useCatalogue } from "./Inventory.js";
+import { acBoons, boonsFor, describeBoon } from "../domain/boons.js";
 import { armourClass, attacksFromEquipment } from "../domain/equipment.js";
 import { equippedItems, indexItems } from "../domain/items.js";
 import { resolveAttack } from "../domain/attack.js";
@@ -172,7 +173,10 @@ export function Sheet({
           </div>
         </div>
         <div className="strip">
-          <div title={ac.from}><b className="num">{ac.value}</b><span>Armour</span></div>
+          <div title={ac.from}>
+            <b className="num">{ac.value}</b>
+            <span>{acBoons(state.boons).length > 0 ? `Armour ${acBoons(state.boons)[0]!.modifier ?? ""}` : "Armour"}</span>
+          </div>
           <div><b className="num">{formatModifier(build.abilityMods.dex)}</b><span>Initiative</span></div>
           <div><b className="num">{build.speed - ac.speedPenalty}</b><span>Speed</span></div>
           <div><b className="num">{formatModifier(build.proficiencyBonus)}</b><span>Proficiency</span></div>
@@ -309,6 +313,22 @@ export function Sheet({
         </section>
       )}
 
+      {state.boons.length > 0 && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label">Boons</span>
+            <span className="label faint">Yours until they end</span>
+          </div>
+          <div className="card-body chips">
+            {state.boons.map((b) => (
+              <span className="chip boon" key={b.id} title={b.note ?? ""}>
+                {describeBoon(b)}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Inventory
         who={who}
         inventory={state.inventory}
@@ -336,6 +356,7 @@ export function Sheet({
                   label: a.name,
                   modifier: a.toHit,
                   note: `Damage ${describeAttack(a)}`,
+                  boons: boonsFor(state.boons, "attack"),
                 })
               }
             >
@@ -360,7 +381,7 @@ export function Sheet({
                   type="button"
                   className={`stat rollable${pad?.target.label === label ? " sel" : ""}`}
                   key={a}
-                  onClick={() => openCheck({ label, modifier: build.saveMods[a] })}
+                  onClick={() => openCheck({ label, modifier: build.saveMods[a], boons: boonsFor(state.boons, "save") })}
                 >
                   <span className="n prof">{a}</span>
                   <span className="m">{formatModifier(build.saveMods[a])}</span>
@@ -382,7 +403,7 @@ export function Sheet({
                   type="button"
                   className={`stat rollable${pad?.target.label === label ? " sel" : ""}`}
                   key={s}
-                  onClick={() => openCheck({ label, modifier: build.skillMods[s] })}
+                  onClick={() => openCheck({ label, modifier: build.skillMods[s], boons: boonsFor(state.boons, "check") })}
                 >
                   <span className="n">
                     {label} <span className="a">{SKILLS[s]}</span>

@@ -20,7 +20,9 @@ import {
 } from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import type { Encounter } from "./encounter.js";
+import type { Boon } from "./boons.js";
 import { addItem, removeItem, type Stack } from "./items.js";
+import { sellOne, type Npc } from "./npc.js";
 import { levelForXp, type Progression } from "./progression.js";
 import type { Statblock } from "./statblock.js";
 import { rulesFor, type ConditionId } from "./edition.js";
@@ -51,6 +53,7 @@ export interface CharacterState {
   readonly xp: number;
   /** The level the DM has granted in a milestone campaign. */
   readonly milestoneLevel: number;
+  readonly boons: readonly Boon[];
   readonly inventory: readonly Stack[];
   /** Item ids being worn or wielded. See items.ts for why it is a set. */
   readonly equipped: readonly string[];
@@ -69,6 +72,11 @@ export interface CampaignState {
   readonly encounters: Readonly<Record<string, Encounter>>;
   /** The DM's own creatures, by statblock id. */
   readonly homebrew: Readonly<Record<string, Statblock>>;
+  readonly npcs: Readonly<Record<string, Npc>>;
+  /** The shop the party is standing in, if any. Players see only this one. */
+  readonly openTrader: string | null;
+  /** Loot given to the party as a whole, waiting to be divided. */
+  readonly stash: { readonly items: readonly Stack[]; readonly coins: number };
   readonly progression: Progression;
 }
 
@@ -88,6 +96,7 @@ function initialState(build: EffectiveBuild): CharacterState {
     economy: FRESH_ECONOMY,
     xp: 0,
     milestoneLevel: build.totalLevel,
+    boons: [],
     inventory: [],
     equipped: [],
     coins: 0,
@@ -218,6 +227,99 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     }
     case "progressionSet":
       return { ...state, progression: e.mode };
+    case "npcSaved":
+      return { ...state, npcs: { ...state.npcs, [e.npc.id]: e.npc } };
+    case "npcDeleted": {
+      const rest = { ...state.npcs };
+      delete rest[e.npcId];
+      // A deleted shopkeeper cannot still be serving the party.
+      return {
+        ...state,
+        npcs: rest,
+        openTrader: state.openTrader === e.npcId ? null : state.openTrader,
+      };
+    }
+    case "traderOpened":
+      return { ...state, openTrader: e.npcId };
+    case "traderClosed":
+      return { ...state, openTrader: null };
+    case "itemBought": {
+      const npc = state.npcs[e.npcId];
+      const buyer = state.characters[e.who];
+      if (!buyer) return state;
+      return {
+        ...state,
+        ...(npc
+          ? { npcs: { ...state.npcs, [e.npcId]: { ...npc, stock: sellOne(npc.stock, e.stack.itemId) } } }
+          : {}),
+        characters: {
+          ...state.characters,
+          [e.who]: {
+            ...buyer,
+            coins: Math.max(0, buyer.coins - e.price),
+            inventory: addItem(buyer.inventory, e.stack),
+          },
+        },
+      };
+    }
+    case "lootGranted": {
+      if (e.to.kind === "party") {
+        return {
+          ...state,
+          stash: {
+            items: e.items.reduce((inv, s) => addItem(inv, s), [...state.stash.items]),
+            coins: state.stash.coins + e.coins,
+          },
+        };
+      }
+      const owner = state.characters[e.to.who];
+      if (!owner) return state;
+      return {
+        ...state,
+        characters: {
+          ...state.characters,
+          [e.to.who]: {
+            ...owner,
+            coins: Math.max(0, owner.coins + e.coins),
+            inventory: e.items.reduce((inv, s) => addItem(inv, s), [...owner.inventory]),
+          },
+        },
+      };
+    }
+    case "stashAssigned": {
+      const owner = state.characters[e.to];
+      if (!owner) return state;
+      return {
+        ...state,
+        stash: {
+          ...state.stash,
+          items: removeItem(state.stash.items, e.itemId, e.qty, e.note),
+        },
+        characters: {
+          ...state.characters,
+          [e.to]: {
+            ...owner,
+            inventory: addItem(owner.inventory, {
+              itemId: e.itemId, name: e.name, qty: e.qty,
+              ...(e.note === undefined ? {} : { note: e.note }),
+            }),
+          },
+        },
+      };
+    }
+    case "stashCoinsSplit": {
+      const n = e.among.length;
+      // An even split only; the remainder stays in the stash rather than
+      // being quietly given to whoever happens to sort first.
+      const each = n === 0 ? 0 : Math.floor(state.stash.coins / n);
+      if (each <= 0) return state;
+      const characters = { ...state.characters };
+      for (const id of e.among) {
+        const c = characters[id];
+        if (c) characters[id] = { ...c, coins: c.coins + each };
+      }
+      return { ...state, characters, stash: { ...state.stash, coins: state.stash.coins - each * n } };
+    }
     case "levelGained": {
       const source = state.sources[e.who];
       if (!source) return state;
@@ -348,6 +450,17 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       case "tempHpGranted":
         // Temporary hit points never stack; you take the better pool.
         s = { ...s, tempHp: Math.max(s.tempHp, e.amount) };
+        break;
+      case "boonGranted":
+        s = {
+          ...s,
+          boons: s.boons.some((b) => b.id === e.boon.id)
+            ? s.boons
+            : [...s.boons, e.boon],
+        };
+        break;
+      case "boonRemoved":
+        s = { ...s, boons: s.boons.filter((b) => b.id !== e.boonId) };
         break;
       case "itemAdded":
         s = { ...s, inventory: addItem(s.inventory, e.stack) };
@@ -482,6 +595,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
 export const EMPTY_STATE: CampaignState = {
   sources: {}, builds: {}, characters: {}, combat: null,
   encounters: {}, homebrew: {}, progression: "xp",
+  npcs: {}, openTrader: null, stash: { items: [], coins: 0 },
 };
 
 /**

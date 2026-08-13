@@ -12,10 +12,12 @@ import { Party } from "./Party.js";
 import { EncounterBuilder } from "./EncounterBuilder.js";
 import { Homebrew } from "./Homebrew.js";
 import { LevelUp } from "./LevelUp.js";
+import { Npcs } from "./Npcs.js";
 import { Progression } from "./Progression.js";
 import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
+import { Shop } from "./Shop.js";
 import { UpdateBar } from "./UpdateBar.js";
 
 export function App() {
@@ -47,7 +49,17 @@ export function App() {
     seat.kind === "player" ? state.builds[seat.characterId] : undefined;
   const mineState = mine ? state.characters[mine.id] : undefined;
 
-  const needsCharacter = builds.length === 0 || adding;
+  /**
+   * The DM's screen is a planning surface, not a character sheet. Making a
+   * character was a REQUIREMENT before this: an empty campaign put session
+   * zero in front of whoever opened it, so the person who starts the room —
+   * always the DM — was asked to roll ability scores before they could build
+   * an encounter. It stays available, because a DM running a companion NPC or
+   * taking a missing player's character is a real thing, and the seat selector
+   * already lets them sit anywhere.
+   */
+  const dmView = seat.kind === "dm" && mayBeDm;
+  const needsCharacter = (builds.length === 0 && !dmView) || adding || building;
 
   // A fresh device defaults to the DM's seat, which is right when it is alone
   // and wrong the instant it joins someone else's room. Move it off rather
@@ -88,7 +100,7 @@ export function App() {
       <div className="topbar">
         <h1>Table Companion</h1>
         <div className="row">
-          {builds.length > 0 && !adding && (
+          {(builds.length > 0 || dmView) && !adding && (
             <button onClick={() => setAdding(true)}>Add character</button>
           )}
           {builds.length > 0 && (
@@ -152,9 +164,30 @@ export function App() {
         <>
           <Combat state={state} seat={seat} append={append} />
 
-          {seat.kind === "dm" ? (
+          {dmView ? (
             <>
+              {/* An empty table is ambiguous: a DM about to prep, or someone
+                  who just opened the app and wants a character. Offering both
+                  costs one card and settles it without guessing. */}
+              {builds.length === 0 && (
+                <>
+                  <section className="card">
+                    <div className="card-hd">
+                      <span className="label">Session zero</span>
+                      <button onClick={() => setBuilding(true)}>Build a character</button>
+                    </div>
+                    <div className="card-body">
+                      <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
+                        Nobody yet. Make one here or bring one in — or leave it
+                        and prep the session below.
+                      </p>
+                    </div>
+                  </section>
+                  <NewCharacter onCreate={create} />
+                </>
+              )}
               <Party state={state} seat={seat} append={append} />
+              <Npcs state={state} append={append} />
               <Progression state={state} append={append} />
               <EncounterBuilder state={state} append={append} />
               <Homebrew state={state} append={append} />
@@ -165,6 +198,12 @@ export function App() {
               <LevelUp
                 build={mine}
                 owed={levelsOwed(state, mine.id)}
+                append={append}
+              />
+              <Shop
+                state={state}
+                who={mine.id}
+                coins={mineState.coins}
                 append={append}
               />
               <Sheet build={mine} state={mineState} campaign={state} append={append} />

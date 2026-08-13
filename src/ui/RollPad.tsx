@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
+import type { Boon } from "../domain/boons.js";
 import { formatModifier } from "../domain/abilities.js";
 import {
   describeRoll,
@@ -28,6 +29,11 @@ export interface RollTarget {
   readonly dc?: number;
   /** Extra line under the title — what is at stake, for a save. */
   readonly note?: string;
+  /**
+   * Boons that touch this roll. Shown, never added: the pad holds the
+   * modifier while a person rolls, and a boon is no different.
+   */
+  readonly boons?: readonly Boon[];
 }
 
 const MODE_LABEL: Record<RollMode, string> = {
@@ -106,6 +112,14 @@ export function RollPad({
         </button>
       </div>
       {target.note && <p className="rp-note">{target.note}</p>}
+      {/* Not folded into the modifier above: a printed total that disagrees
+          with the table's own arithmetic is worse than a line to read. */}
+      {(target.boons ?? []).map((b) => (
+        <p className="rp-boon" key={b.id}>
+          <span>{b.name}</span>
+          <b>{b.modifier ?? "—"}</b>
+        </p>
+      ))}
 
       <div className="rp-modes">
         {ROLL_MODES.map((m) => (

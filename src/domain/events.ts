@@ -16,7 +16,9 @@ import type { ClassId } from "./resources.js";
 import type { Combatant, Disclosure, EconomyKind, TargetRef } from "./combat.js";
 import type { Encounter } from "./encounter.js";
 import type { Progression } from "./progression.js";
+import type { Boon } from "./boons.js";
 import type { Stack } from "./items.js";
+import type { Npc } from "./npc.js";
 import type { Statblock } from "./statblock.js";
 import type { ConditionId } from "./edition.js";
 import type { RollMode } from "./roll.js";
@@ -142,6 +144,44 @@ export type DomainEvent = Meta &
       }
     /** Signed, in copper. Undo is replay-without-it, so no inverse is stored. */
     | { readonly type: "coinsChanged"; readonly who: CharacterId; readonly delta: number }
+    /** Blessings and buffs. Shown, never applied — see boons.ts. */
+    | { readonly type: "boonGranted"; readonly who: CharacterId; readonly boon: Boon }
+    | { readonly type: "boonRemoved"; readonly who: CharacterId; readonly boonId: string }
+
+    | { readonly type: "npcSaved"; readonly npc: Npc }
+    | { readonly type: "npcDeleted"; readonly npcId: string }
+    /** Opening a shop is what makes it visible to players. One at a time. */
+    | { readonly type: "traderOpened"; readonly npcId: string }
+    | { readonly type: "traderClosed" }
+    | {
+        readonly type: "itemBought";
+        readonly who: CharacterId;
+        readonly npcId: string;
+        readonly stack: Stack;
+        /** Copper. One event, so undoing a purchase returns both halves. */
+        readonly price: number;
+      }
+
+    /**
+     * Loot. To the party it lands in a shared stash to be divided later, which
+     * is what a table actually does with "you find 500 gp and a sword".
+     */
+    | {
+        readonly type: "lootGranted";
+        readonly to: { readonly kind: "party" } | { readonly kind: "character"; readonly who: CharacterId };
+        readonly items: readonly Stack[];
+        readonly coins: number;
+      }
+    | {
+        readonly type: "stashAssigned";
+        readonly to: CharacterId;
+        readonly itemId: string;
+        readonly name: string;
+        readonly qty: number;
+        readonly note?: string;
+      }
+    /** Even shares out of the stash; the remainder stays in it. */
+    | { readonly type: "stashCoinsSplit"; readonly among: readonly CharacterId[] }
     | { readonly type: "homebrewSaved"; readonly statblock: Statblock }
     | { readonly type: "homebrewDeleted"; readonly statblockId: string }
     | {
