@@ -1,4 +1,13 @@
 /*
+ * CONVENTION. Sections below are marked with `/* ---- name ---- *\/`, and a
+ * class declared bare (`.foo {`) belongs to exactly one of them.
+ * `npm run lint` fails if two sections claim the same name, or if a bare rule
+ * would reach inside another section's scoped rules. Both have shipped here:
+ * .track and .ar each ended up meaning two different things.
+ *
+ * Shared primitives live in the base, "shared utilities", "chips" and "pips"
+ * sections; components are expected to scope those (`.rp-out .num`).
+ *
  * Tokens from the interface design language.
  *
  * Dark only, by constraint — tables are dimly lit. Active state is carried by
@@ -219,6 +228,7 @@ section.card { border: 1px solid var(--rule); background: var(--panel); margin-t
 .fr button { padding: 5px 9px; font-size: 0.6rem; background: transparent; border-color: transparent; color: var(--steel); }
 .fr button:hover:not(:disabled) { border-color: var(--rule); }
 
+/* ---- shared utilities ---- */
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
