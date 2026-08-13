@@ -1,11 +1,18 @@
 /**
  * ⚠ NOT SRD CONTENT. NOT REDISTRIBUTABLE.
  *
- * The encounter-building tables below are from the Dungeon Master's Guide.
- * They are not in SRD 5.1 — verified against the SRD PDF, where "XP
- * Threshold", "Encounter Difficulty", "Encounter Multipliers" and
- * "Adventuring Day" appear on no page, while controls like "Goblin" and
- * "Fireball" appear on many.
+ * Everything outside SRD 5.1 lives here and nowhere else, so the app has one
+ * file standing between it and being shareable. Each table was checked
+ * against the SRD PDF rather than assumed, using terms known to be in the
+ * SRD ("Goblin", "Fireball") as controls so that a failed text extraction
+ * could not be mistaken for an absent table.
+ *
+ *   Encounter building (DMG): "XP Threshold", "Encounter Difficulty",
+ *   "Encounter Multipliers", "Adventuring Day" — absent from every page.
+ *
+ *   Ability score generation (PHB): "15, 14, 13, 12, 10, 8", "standard set"
+ *   and "Variant: Customizing Ability Scores" — absent from every page.
+ *   The SRD covers what ability scores DO, not how you first pick them.
  *
  * They are here because this app is for one private table whose DM owns the
  * book. That is a deliberate decision, and it is the ONE thing in this
@@ -25,6 +32,7 @@
  * against the book before trusting the bands.
  */
 
+import type { Ability } from "./abilities.js";
 import type { DifficultyBudget } from "./encounter.js";
 
 /** Per character, by level: easy, medium, hard, deadly. */
@@ -90,4 +98,38 @@ export function encounterMultiplier(creatures: number): number {
   if (creatures <= 10) return 2.5;
   if (creatures <= 14) return 3;
   return 4;
+}
+
+/* ---- ability score generation (PHB) ------------------------------------- */
+
+/** The fixed spread most tables use, highest first. */
+export const STANDARD_ARRAY: readonly number[] = [15, 14, 13, 12, 10, 8];
+
+/** Points to buy each score, and the budget to spend. */
+const POINT_COST: Readonly<Record<number, number>> = {
+  8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9,
+};
+export const POINT_BUY_BUDGET = 27;
+export const POINT_BUY_MIN = 8;
+export const POINT_BUY_MAX = 15;
+
+export function pointCost(score: number): number | null {
+  return POINT_COST[score] ?? null;
+}
+
+export function pointsSpent(scores: Readonly<Record<Ability, number>>): number {
+  return Object.values(scores).reduce((n, s) => n + (POINT_COST[s] ?? 0), 0);
+}
+
+/** Whether a score can move without leaving the range or overspending. */
+export function canAfford(
+  scores: Readonly<Record<Ability, number>>,
+  ability: Ability,
+  next: number,
+): boolean {
+  if (next < POINT_BUY_MIN || next > POINT_BUY_MAX) return false;
+  const cost = POINT_COST[next];
+  const current = POINT_COST[scores[ability]];
+  if (cost === undefined || current === undefined) return false;
+  return pointsSpent(scores) - current + cost <= POINT_BUY_BUDGET;
 }

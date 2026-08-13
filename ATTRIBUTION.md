@@ -10,9 +10,10 @@ available at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
 ## Content that is NOT under that licence
 
-`src/domain/dmg-tables.ts` holds the encounter-building tables (XP thresholds
-by character level, and the encounter multiplier). Those are Dungeon Master's
-Guide content, **not** SRD 5.1 — verified against the SRD PDF, where the
+`src/domain/non-srd.ts` holds the encounter-building tables (XP thresholds by
+character level, and the encounter multiplier) from the Dungeon Master's
+Guide, and the ability-score generation tables (standard array, point buy)
+from the Player's Handbook. None of it is SRD 5.1 — verified against the SRD PDF, where the
 relevant headings appear on no page while control terms like "Goblin" and
 "Fireball" appear on many.
 

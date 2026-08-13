@@ -3,7 +3,7 @@
  *
  * Difficulty is OPTIONAL here, and deliberately so. The thresholds and the
  * multiplier are Dungeon Master's Guide content rather than SRD — see
- * dmg-tables.ts, which is the only file that holds them and the only one that
+ * non-srd.ts, which is the only file that holds them and the only one that
  * would have to go before this app could be shared publicly. Everything in
  * THIS file works without a budget: pass one and you get a band, pass nothing
  * and you get totals.

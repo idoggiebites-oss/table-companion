@@ -4,7 +4,7 @@
  * even though the values themselves can only be checked against the book.
  */
 import { describe, expect, it } from "vitest";
-import { budgetForParty, encounterMultiplier, thresholdsForLevel } from "../dmg-tables.js";
+import { budgetForParty, encounterMultiplier, thresholdsForLevel } from "../non-srd.js";
 import { totals, type Encounter } from "../encounter.js";
 
 describe("thresholds", () => {

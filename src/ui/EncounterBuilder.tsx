@@ -12,13 +12,13 @@
  * encounter calculator that exists.
  *
  * Difficulty is optional throughout: without a budget you still get totals.
- * See dmg-tables.ts for why that matters.
+ * See non-srd.ts for why that matters.
  */
 
 import { useEffect, useMemo, useState } from "react";
 import type { Combatant, Disclosure } from "../domain/combat.js";
 import { DISCLOSURE } from "../domain/combat.js";
-import { budgetForParty, encounterMultiplier } from "../domain/dmg-tables.js";
+import { budgetForParty, encounterMultiplier } from "../domain/non-srd.js";
 import {
   addEntry, EMPTY_ENCOUNTER, patchEntry, setCount, totals,
   type Encounter, type HpMode,

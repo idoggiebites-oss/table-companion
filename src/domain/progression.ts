@@ -4,7 +4,7 @@
  * The XP thresholds below ARE SRD content — the Character Advancement table,
  * SRD 5.1 page 56, which also gives the proficiency bonus progression that
  * abilities.ts already implements. Unlike the encounter-building tables in
- * dmg-tables.ts, these ship under CC BY like the rest of the reference.
+ * non-srd.ts, these ship under CC BY like the rest of the reference.
  *
  * A campaign advances by experience or by the DM's judgement, and that is a
  * setting rather than a preference: in a milestone campaign there are no
