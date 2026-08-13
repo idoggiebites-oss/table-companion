@@ -506,3 +506,32 @@ html, body { overscroll-behavior-y: none; }
 .ec.up { color: var(--ink-dim); border-color: var(--faint); }
 .ec.up::before { background: var(--steel); }
 .ec.spent { color: var(--faint); text-decoration: line-through; }
+
+/* ---- reference ---- */
+.mlist { margin-top: 12px; border-top: 1px solid var(--rule); }
+.mrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px; align-items: baseline; width: 100%; text-align: left;
+  padding: 11px 0; border: 0; border-bottom: 1px solid var(--rule);
+  background: transparent; text-transform: none; letter-spacing: 0;
+  font-size: 0.94rem; font-weight: 400; color: var(--ink-dim);
+}
+.mrow:hover:not(:disabled) { color: var(--ink); }
+.mrow.open { color: #fff; }
+.mrow .ty { font-size: 0.78rem; }
+.mrow .cr { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
+
+.sb { padding: 14px; margin-bottom: 12px; background: var(--raised); border-left: 2px solid var(--steel); }
+.sb-line { font-size: 0.84rem; color: var(--muted); font-style: italic; }
+.sb-top { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 0.88rem; color: var(--ink-dim); }
+.sb-top b { font-weight: 400; color: var(--ink); font-size: 1.05rem; }
+.sb-abils { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: var(--rule); margin: 12px 0; }
+.sb-abils > div { background: var(--raised); padding: 8px 4px; text-align: center; }
+.sb-abils .k { display: block; font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); }
+.sb-abils .v { display: block; font-size: 0.95rem; color: var(--ink); margin-top: 3px; }
+.sb-abils .m { display: block; font-size: 0.72rem; color: var(--muted); }
+.sb-meta { font-size: 0.84rem; color: var(--ink-dim); display: flex; flex-direction: column; gap: 5px; }
+.sb-meta .label { color: var(--muted); margin-right: 6px; }
+.sb-block { margin-top: 14px; }
+.sb-entry { margin: 6px 0 0; font-size: 0.86rem; color: var(--ink-dim); line-height: 1.5; }
+.sb-entry b { font-weight: 500; color: var(--ink); }

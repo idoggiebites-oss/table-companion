@@ -7,6 +7,7 @@ import { Combat } from "./Combat.js";
 import { Feed } from "./Feed.js";
 import { NewCharacter } from "./NewCharacter.js";
 import { Party } from "./Party.js";
+import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
 import { UpdateBar } from "./UpdateBar.js";
@@ -104,7 +105,10 @@ export function App() {
           <Combat state={state} seat={seat} append={append} />
 
           {seat.kind === "dm" ? (
-            <Party state={state} seat={seat} append={append} />
+            <>
+              <Party state={state} seat={seat} append={append} />
+              <Reference />
+            </>
           ) : mine && mineState ? (
             <Sheet build={mine} state={mineState} campaign={state} append={append} />
           ) : (

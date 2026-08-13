@@ -29,7 +29,7 @@ export default defineConfig({
          * icons and nothing else — anything dropped into public/ is silently
          * left out of the precache and simply fails offline.
          */
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2,json}"],
         cleanupOutdatedCaches: true,
         /*
          * Claim the page that installed us, so the app is offline-capable
