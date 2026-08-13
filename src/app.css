@@ -475,3 +475,34 @@ html, body { overscroll-behavior-y: none; }
 }
 .tick.on { background: var(--steel); border-color: var(--steel); }
 .area .chip { cursor: pointer; }
+
+/* ---- the player's glance block ---- */
+.pt { padding: 18px 16px; border-top: 1px solid var(--rule); }
+.pt.acting { background: var(--raised); box-shadow: inset 3px 0 0 var(--ink); }
+
+/* Waiting is one enormous number and nothing to tap. */
+.pt-dist .num { font-size: 3.2rem; line-height: 1; color: var(--ink-dim); }
+.pt-dist small {
+  display: block; font-size: 0.6rem; text-transform: uppercase;
+  letter-spacing: 0.13em; color: var(--faint); margin-top: 8px;
+}
+/* Acting is signalled by brightness, never a hue — red means damage here. */
+.pt-turn {
+  font-weight: 500; text-transform: uppercase; letter-spacing: 0.2em;
+  font-size: 1.25rem; color: #fff; line-height: 1.1;
+}
+.pt-turn small {
+  display: block; font-size: 0.58rem; letter-spacing: 0.13em;
+  color: var(--ink-dim); margin-top: 8px;
+}
+.pt-end { margin-top: 16px; padding: 14px 22px; letter-spacing: 0.13em; }
+
+.econ { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.ec {
+  font-size: 0.58rem; padding: 7px 11px;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.ec::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+.ec.up { color: var(--ink-dim); border-color: var(--faint); }
+.ec.up::before { background: var(--steel); }
+.ec.spent { color: var(--faint); text-decoration: line-through; }

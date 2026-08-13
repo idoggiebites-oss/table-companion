@@ -12,7 +12,7 @@
  */
 
 import type { CharacterId, Character } from "./build.js";
-import type { Combatant, Disclosure, TargetRef } from "./combat.js";
+import type { Combatant, Disclosure, EconomyKind, TargetRef } from "./combat.js";
 import type { ConditionId } from "./edition.js";
 import type { RollMode } from "./roll.js";
 
@@ -89,6 +89,11 @@ export type DomainEvent = Meta &
       }
     | { readonly type: "combatStarted"; readonly order: readonly Combatant[] }
     | { readonly type: "combatEnded" }
+    | {
+        readonly type: "economySpent";
+        readonly who: CharacterId;
+        readonly kind: EconomyKind;
+      }
     /**
      * Names the turn it was issued against, so two devices pressing at the
      * same instant produce one move rather than a skipped creature.

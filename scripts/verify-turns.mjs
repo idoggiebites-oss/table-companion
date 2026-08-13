@@ -74,16 +74,17 @@ ok("dm sees exact health",
   await dm.page.locator(".cbt", { hasText: "Goblin Boss" }).locator(".hp").innerText(), "21/21");
 await player.page.screenshot({ path: `${OUT}/21-player-initiative.png` });
 
-// a player cannot end somebody else's turn
-ok("player cannot end the goblin's turn",
-  await player.page.getByRole("button", { name: "End turn" }).isDisabled(), true);
+// A player waiting is offered nothing to press at all — not a greyed button,
+// which would still invite a tap.
+ok("player is offered no end-turn control while waiting",
+  await player.page.getByRole("button", { name: "End turn" }).count(), 0);
 
 // advance to Kira, so BOTH devices have an enabled button naming the same turn
 await dm.page.getByRole("button", { name: "Advance turn" }).click();
 await player.page.waitForTimeout(900);
 ok("dm advanced to the player", await activeName(dm), "Kira Vance");
-ok("player may now end their own turn",
-  await player.page.getByRole("button", { name: "End turn" }).isDisabled(), false);
+ok("player is offered one once it is their turn",
+  await player.page.getByRole("button", { name: "End turn" }).count(), 1);
 
 // THE clause from the build plan: two devices press at the same instant,
 // both naming turn 1, and the fight moves exactly one step.

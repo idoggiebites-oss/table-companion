@@ -68,6 +68,8 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `Combat began · ${e.order.length} in initiative`;
     case "combatEnded":
       return "Combat ended";
+    case "economySpent":
+      return `${nameOf(e.who)} used their ${e.kind}`;
     case "turnAdvanced":
       return null; // the feed would be nothing but this
     case "creatureDamaged":

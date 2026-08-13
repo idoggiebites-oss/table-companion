@@ -21,6 +21,7 @@ import type { EventBody } from "../domain/events.js";
 import type { CampaignState } from "../domain/project.js";
 import { AreaDamage } from "./AreaDamage.js";
 import { healthStep, VAGUE_LABEL } from "./HpBar.js";
+import { PlayerTurn } from "./PlayerTurn.js";
 
 const nextDisclosure = (d: Disclosure): Disclosure =>
   DISCLOSURE[(DISCLOSURE.indexOf(d) + 1) % DISCLOSURE.length]!;
@@ -160,6 +161,15 @@ export function Combat({
         )}
       </div>
 
+      {seat.kind === "player" && state.characters[seat.characterId] && (
+        <PlayerTurn
+          combat={combat}
+          seat={seat}
+          character={state.characters[seat.characterId]!}
+          append={append}
+        />
+      )}
+
       <div className="track">
         {visible.map((c) => {
           const isActive = active?.id === c.id;
@@ -213,12 +223,14 @@ export function Combat({
 
       <div className="card-body">
         <div className="controls" style={{ marginTop: 0 }}>
-          <button
-            disabled={!canEnd}
-            onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
-          >
-            {seat.kind === "dm" ? "Advance turn" : "End turn"}
-          </button>
+          {seat.kind === "dm" && (
+            <button
+              disabled={!canEnd}
+              onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
+            >
+              Advance turn
+            </button>
+          )}
           {seat.kind === "dm" && (
             <>
               <input
@@ -234,7 +246,7 @@ export function Combat({
         {area && seat.kind === "dm" && (
           <AreaDamage combat={combat} onApply={append} onClose={() => setArea(false)} />
         )}
-        {!canEnd && (
+        {seat.kind === "dm" && !canEnd && (
           <p className="faint" style={{ fontSize: ".84rem", margin: "10px 0 0" }}>
             {active ? `${active.name} is up.` : "Nobody is up."}
           </p>

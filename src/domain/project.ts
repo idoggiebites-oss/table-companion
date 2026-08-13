@@ -11,7 +11,10 @@
 
 import { abilityModifier } from "./abilities.js";
 import { effectiveBuild, type Character, type CharacterId, type EffectiveBuild } from "./build.js";
-import { advance, startCombat, type Combat } from "./combat.js";
+import {
+  activeCombatant, advance, FRESH_ECONOMY, startCombat,
+  type Combat, type Economy,
+} from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import { rulesFor, type ConditionId } from "./edition.js";
 import { resolveRoll } from "./roll.js";
@@ -36,6 +39,8 @@ export interface CharacterState {
   readonly deathSaves: { readonly successes: number; readonly failures: number };
   readonly stable: boolean;
   readonly dead: boolean;
+  /** What has been spent this round. All of it returns on your turn. */
+  readonly economy: Economy;
 }
 
 export interface CampaignState {
@@ -58,10 +63,26 @@ function initialState(build: EffectiveBuild): CharacterState {
     deathSaves: { successes: 0, failures: 0 },
     stable: false,
     dead: false,
+    economy: FRESH_ECONOMY,
   };
 }
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+
+/** You regain everything at the start of your turn, the reaction included. */
+function refillActive(
+  characters: Readonly<Record<CharacterId, CharacterState>>,
+  combat: Combat,
+): Record<CharacterId, CharacterState> {
+  const next = { ...characters };
+  const active = activeCombatant(combat);
+  if (active?.source.kind === "character") {
+    const who = active.source.characterId;
+    const before = next[who];
+    if (before) next[who] = { ...before, economy: FRESH_ECONOMY };
+  }
+  return next;
+}
 
 function spend(spent: Record<string, number>, id: string, n: number, max: number) {
   const now = clamp((spent[id] ?? 0) + n, 0, max);
@@ -138,14 +159,25 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
   if (e.type === "reverted") return state;
 
   switch (e.type) {
-    case "combatStarted":
-      return { ...state, combat: startCombat(e.order) };
+    case "combatStarted": {
+      const combat = startCombat(e.order);
+      return { ...state, combat, characters: refillActive(state.characters, combat) };
+    }
     case "combatEnded":
-      return { ...state, combat: null };
-    case "turnAdvanced":
-      return state.combat === null
-        ? state
-        : { ...state, combat: advance(state.combat, e.from) };
+      // Outside a fight there is no economy to have spent.
+      return {
+        ...state,
+        combat: null,
+        characters: Object.fromEntries(
+          Object.entries(state.characters).map(([id, c]) => [id, { ...c, economy: FRESH_ECONOMY }]),
+        ),
+      };
+    case "turnAdvanced": {
+      if (state.combat === null) return state;
+      const combat = advance(state.combat, e.from);
+      if (combat === state.combat) return state; // guard refused it
+      return { ...state, combat, characters: refillActive(state.characters, combat) };
+    }
     case "creatureDamaged": {
       if (state.combat === null) return state;
       const current = state.combat.creatureHp[e.combatantId];
@@ -309,6 +341,9 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         };
         break;
       }
+      case "economySpent":
+        s = { ...s, economy: { ...s.economy, [e.kind]: true } };
+        break;
       case "diceRolled":
         // Recorded, never applied — a roll is history, not state.
         break;

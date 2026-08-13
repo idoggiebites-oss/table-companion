@@ -102,6 +102,21 @@ export function turnsUntil(combat: Combat, characterId: CharacterId): number | n
 }
 
 /**
+ * What you have left this round.
+ *
+ * Tracked because forgetting a bonus action is the most common self-inflicted
+ * loss in play. All three come back at the start of your turn — the reaction
+ * included — but the reaction is the only one you ever spend on somebody
+ * ELSE's turn, which is why it stays on screen while you are doing nothing.
+ */
+export const ECONOMY = ["action", "bonus", "reaction"] as const;
+export type EconomyKind = (typeof ECONOMY)[number];
+
+export type Economy = Readonly<Record<EconomyKind, boolean>>;
+
+export const FRESH_ECONOMY: Economy = { action: false, bonus: false, reaction: false };
+
+/**
  * Something damage can be pointed at. The first thing in the model that spans
  * both sides of the table — a fireball does not care which kind of thing is
  * standing in it.
