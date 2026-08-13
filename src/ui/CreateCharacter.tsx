@@ -19,19 +19,22 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  ABILITIES, abilityModifier, formatModifier, SKILLS, SKILL_IDS,
+  ABILITIES, abilityModifier, formatModifier, proficiencyBonus, SKILLS, SKILL_IDS,
   type Ability, type SkillId,
 } from "../domain/abilities.js";
 import type { Character } from "../domain/build.js";
 import {
-  assemble, finalScores, missing, startingHp,
+  asiPoints, assemble, finalScores, hpAtLevel, missing,
   type BackgroundChoice, type ClassChoice, type RaceChoice, type ScoreMethod,
 } from "../domain/creation.js";
 import {
   canAfford, POINT_BUY_BUDGET, POINT_BUY_MIN, pointsSpent, STANDARD_ARRAY,
 } from "../domain/non-srd.js";
 import type { ClassId, DieSize } from "../domain/resources.js";
-import { loadClasses, loadRaces, type ClassEntry, type RaceEntry } from "../store/srd.js";
+import {
+  loadClasses, loadClassLevels, loadRaces,
+  type ClassEntry, type ClassLevels, type RaceEntry,
+} from "../store/srd.js";
 
 const FLAT: Record<Ability, number> = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
 const skillIdOf = (label: string): SkillId | undefined =>
@@ -62,6 +65,8 @@ export function CreateCharacter({
 }) {
   const [races, setRaces] = useState<RaceEntry[] | null>(null);
   const [classes, setClasses] = useState<ClassEntry[] | null>(null);
+  const [levels, setLevels] = useState<ClassLevels | null>(null);
+  const [level, setLevel] = useState(1);
 
   const [name, setName] = useState("");
   const [classId, setClassId] = useState<string>("");
@@ -80,6 +85,7 @@ export function CreateCharacter({
   useEffect(() => {
     loadRaces().then(setRaces, () => setRaces([]));
     loadClasses().then(setClasses, () => setClasses([]));
+    loadClassLevels().then(setLevels, () => setLevels({}));
   }, []);
 
   const klass = classes?.find((c) => c.id === classId);
@@ -111,6 +117,14 @@ export function CreateCharacter({
     ABILITIES.map((a) => [a, abilityModifier(scores[a])]),
   ) as Record<Ability, number>;
 
+  const table = klass && levels ? levels[klass.id] : undefined;
+  const atLevel = table?.[level - 1];
+  const asiLevels = (table ?? []).filter((l) => l.asi).map((l) => l.level);
+  const asi = asiPoints(asiLevels, level);
+  // Proficiency has to come from the chosen level, not the level-1 default —
+  // the preview's whole job is to be the number you will actually see.
+  const prof = atLevel?.profBonus ?? proficiencyBonus(level);
+
   const allAssigned = method === "pointBuy" || ABILITIES.every((a) => assigned[a] !== undefined);
   const skillsNeeded = klass?.skillChoices?.choose ?? 0;
 
@@ -131,6 +145,8 @@ export function CreateCharacter({
           } satisfies BackgroundChoice,
           baseScores,
           classSkills,
+          level,
+          ...(atLevel?.slots.length ? { spellSlots: atLevel.slots } : {}),
         }
       : undefined;
 
@@ -197,6 +213,20 @@ export function CreateCharacter({
 
             {klass && (
               <>
+                <div className="row" style={{ marginTop: 10 }}>
+                  <span className="label">Starting at level</span>
+                  <input
+                    type="number" min={1} max={20} value={level}
+                    aria-label="Starting level"
+                    style={{ width: 78 }}
+                    onChange={(e) => setLevel(Math.max(1, Math.min(20, +e.target.value || 1)))}
+                  />
+                  {level > 1 && (
+                    <span className="faint" style={{ fontSize: ".8rem" }}>
+                      joining a campaign in progress
+                    </span>
+                  )}
+                </div>
                 <p className="cr-note">
                   d{klass.hitDie} hit die · saves in{" "}
                   {klass.saves.map((s) => s.toUpperCase()).join(" and ")}
@@ -388,15 +418,23 @@ export function CreateCharacter({
             <div className="cr-conseq">
               <div className="cr-grid">
                 <div><span className="l">Armour class</span><span className="v num">{10 + mods.dex}</span></div>
-                <div><span className="l">Hit points</span><span className="v num">{startingHp(klass.hitDie as DieSize, mods.con)}</span></div>
+                <div><span className="l">Hit points</span><span className="v num">{hpAtLevel(klass.hitDie as DieSize, mods.con, level)}</span></div>
                 <div><span className="l">Initiative</span><span className="v num">{formatModifier(mods.dex)}</span></div>
                 <div><span className="l">Speed</span><span className="v num">{race.speed}</span></div>
               </div>
+              {level > 1 && (
+                <p className="cr-note" style={{ marginTop: 0 }}>
+                  Level {level}: average hit points per level, proficiency{" "}
+                  {formatModifier(prof)}
+                  {atLevel?.slots.length ? `, slots ${atLevel.slots.join("/")}` : ""}
+                  {asi > 0 ? ` · ${asi} ability points to spend in your builder` : ""}.
+                </p>
+              )}
               <span className="label cr-sub">Skills you are proficient in</span>
               {[...new Set([...classSkills, ...bgSkills])].map((s) => (
                 <div className="cr-srow" key={s}>
                   <span>{spaced(s)}<span className="faint"> {SKILLS[s]}</span></span>
-                  <span className="num">{formatModifier(mods[SKILLS[s]] + 2)}</span>
+                  <span className="num">{formatModifier(mods[SKILLS[s]] + prof)}</span>
                 </div>
               ))}
               {classSkills.length + bgSkills.length === 0 && (

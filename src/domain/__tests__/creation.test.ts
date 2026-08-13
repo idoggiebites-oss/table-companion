@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { effectiveBuild } from "../build.js";
 import {
-  assemble, finalScores, missing, startingHp,
+  asiPoints, assemble, finalScores, hpAtLevel, missing, startingHp,
   type ClassChoice, type CreationChoices, type RaceChoice,
 } from "../creation.js";
 import {
@@ -119,5 +119,65 @@ describe("point buy", () => {
 describe("the standard array", () => {
   it("is six values, highest first", () => {
     expect(STANDARD_ARRAY).toEqual([15, 14, 13, 12, 10, 8]);
+  });
+});
+
+describe("joining a campaign already in progress", () => {
+  it("is a base at that level, exactly like importing one", () => {
+    const base = assemble({ ...choices, level: 8 }, "kira");
+    expect(base.classes).toEqual([{ classId: "ranger", level: 8 }]);
+    // Not level 1 plus seven deltas — so re-import reconciliation is unchanged.
+    expect(effectiveBuild({ base, deltas: [] }).proficiencyBonus).toBe(3);
+  });
+
+  it("takes the full die at level one and the average after", () => {
+    // d10 ranger, con 14 → +2. 12 at first, then 6+2 each level.
+    expect(hpAtLevel(10, 2, 1)).toBe(12);
+    expect(hpAtLevel(10, 2, 2)).toBe(20);
+    expect(hpAtLevel(10, 2, 8)).toBe(68);
+  });
+
+  it("applies constitution to every level, not just the first", () => {
+    const withCon = hpAtLevel(10, 2, 5);
+    const without = hpAtLevel(10, 0, 5);
+    expect(withCon - without).toBe(10); // +2 across five levels
+  });
+
+  it("uses rolls where they are given and the average elsewhere", () => {
+    // Two rolls supplied for levels 2 and 3; levels 4-5 fall back to 6.
+    expect(hpAtLevel(10, 0, 5, [10, 10])).toBe(10 + 10 + 10 + 6 + 6);
+  });
+
+  it("never returns fewer hit points than levels", () => {
+    expect(hpAtLevel(6, -5, 4)).toBeGreaterThanOrEqual(4);
+  });
+
+  it("clamps a level outside the table", () => {
+    expect(assemble({ ...choices, level: 99 }).classes[0]!.level).toBe(20);
+    expect(assemble({ ...choices, level: 0 }).classes[0]!.level).toBe(1);
+  });
+
+  it("takes spell slots from the class table when supplied", () => {
+    const base = assemble({ ...choices, level: 8, spellSlots: [4, 3] });
+    const b = effectiveBuild({ base, deltas: [] });
+    expect(b.resources.find((r) => r.id === "slot2")?.max).toBe(3);
+  });
+});
+
+describe("ability score improvements", () => {
+  const fighter = [4, 6, 8, 12, 14, 16, 19];
+
+  it("counts what a level has earned", () => {
+    expect(asiPoints(fighter, 3)).toBe(0);
+    expect(asiPoints(fighter, 4)).toBe(2);
+    expect(asiPoints(fighter, 8)).toBe(6);   // 4, 6, 8
+    expect(asiPoints(fighter, 20)).toBe(14);
+  });
+
+  it("is per class — a rogue's levels differ from a fighter's", () => {
+    expect(asiPoints([4, 8, 10, 12, 16, 19], 10)).toBe(6);
+    expect(asiPoints(fighter, 10)).toBe(6);
+    expect(asiPoints([4, 8, 10, 12, 16, 19], 14)).toBe(8);
+    expect(asiPoints(fighter, 14)).toBe(10);
   });
 });

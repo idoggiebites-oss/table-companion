@@ -45,6 +45,12 @@ export interface BackgroundChoice {
 
 export interface CreationChoices {
   readonly name: string;
+  /** Defaults to 1. Above that, the character is joining mid-campaign. */
+  readonly level?: number;
+  /** Rolled hit points for levels 2..N; missing entries take the average. */
+  readonly hpRolls?: readonly number[];
+  /** Spell slots at this level, from the class table. */
+  readonly spellSlots?: readonly number[];
   readonly race: RaceChoice;
   readonly klass: ClassChoice;
   readonly background: BackgroundChoice;
@@ -72,6 +78,42 @@ export function startingHp(hitDie: DieSize, conMod: number): number {
   return Math.max(1, hitDie + conMod);
 }
 
+/** Levels after the first take half the die rounded up, or a roll. */
+export function averagePerLevel(hitDie: DieSize): number {
+  return Math.floor(hitDie / 2) + 1;
+}
+
+/**
+ * Hit points for a character created ABOVE level one — someone joining a
+ * campaign already in progress.
+ *
+ * Level one is always the full die; every level after it is the average
+ * unless a roll is supplied for it. Constitution applies to every level, not
+ * just the first, which is the arithmetic people most often shortcut.
+ */
+export function hpAtLevel(
+  hitDie: DieSize,
+  conMod: number,
+  level: number,
+  rolls: readonly number[] = [],
+): number {
+  const levels = Math.max(1, Math.min(20, Math.round(level)));
+  let total = hitDie + conMod;
+  for (let i = 1; i < levels; i++) {
+    total += (rolls[i - 1] ?? averagePerLevel(hitDie)) + conMod;
+  }
+  return Math.max(levels, total);
+}
+
+/**
+ * Ability score points a character has to spend by a given level. Each
+ * improvement is +2 to distribute, and which levels grant one is per class —
+ * fighters get extra ones at 6 and 14, rogues at 10.
+ */
+export function asiPoints(asiLevels: readonly number[], level: number): number {
+  return asiLevels.filter((l) => l <= level).length * 2;
+}
+
 export function assemble(choices: CreationChoices, id = `c${Date.now().toString(36)}`): BuildBase {
   const abilities = finalScores(choices.baseScores, choices.race);
   const conMod = abilityModifier(abilities.con);
@@ -81,24 +123,25 @@ export function assemble(choices: CreationChoices, id = `c${Date.now().toString(
   // wasted choice rather than a doubled bonus, and the model should not
   // pretend otherwise.
   const skills = [...new Set([...choices.classSkills, ...choices.background.skills])];
+  const level = Math.max(1, Math.min(20, Math.round(choices.level ?? 1)));
 
   return {
     id,
     name: choices.name.trim() || "Unnamed",
     edition: "2014",
     source: "builder",
-    classes: [{ classId: choices.klass.id, level: 1 }],
+    classes: [{ classId: choices.klass.id, level }],
     race: choices.race.subraceName
       ? `${choices.race.subraceName} ${choices.race.name}`
       : choices.race.name,
     abilities,
-    maxHp: startingHp(choices.klass.hitDie, conMod),
+    maxHp: hpAtLevel(choices.klass.hitDie, conMod, level, choices.hpRolls ?? []),
     hitDie: choices.klass.hitDie,
     armourClass: choices.armourClass ?? 10 + dexMod,
     speed: choices.race.speed,
     saveProficiencies: choices.klass.saves,
     skillProficiencies: skills,
-    spellSlots: choices.klass.spellSlots,
+    spellSlots: choices.spellSlots ?? choices.klass.spellSlots,
     attacks: [],
   };
 }

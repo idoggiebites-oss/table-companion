@@ -218,6 +218,36 @@ const classes = rawClasses
 writeFileSync(`${OUT}/classes.json`, JSON.stringify(classes));
 console.log(`classes: ${classes.length} (${classes.filter((c) => c.spellcasting).length} casting at level 1) → ${OUT}/classes.json`);
 
+/*
+ * Per-class, per-level spell slots and feature names, for characters created
+ * above level 1 — a player joining a campaign in progress. Small enough to
+ * ship whole: 12 classes x 20 levels.
+ */
+const classLevels = {};
+for (const l of rawLevels) {
+  const id = l.class?.index;
+  if (!id || l.subclass) continue;
+  const sc = l.spellcasting ?? {};
+  const slots = [];
+  for (let lvl = 1; lvl <= 9; lvl++) slots.push(sc[`spell_slots_level_${lvl}`] ?? 0);
+  while (slots.length && slots.at(-1) === 0) slots.pop();
+  (classLevels[id] ??= [])[l.level - 1] = {
+    level: l.level,
+    profBonus: l.prof_bonus,
+    slots,
+    cantrips: sc.cantrips_known ?? 0,
+    known: sc.spells_known ?? 0,
+    features: (l.features ?? []).map(nameOf),
+    /** Ability score improvements are a feature by name at 4, 8, 12, 16, 19. */
+    asi: (l.feature_choices ?? []).length > 0 || (l.features ?? [])
+      .some((f) => /Ability Score Improvement/i.test(nameOf(f))),
+  };
+}
+writeFileSync(`${OUT}/class-levels.json`, JSON.stringify(classLevels));
+console.log(
+  `class levels: ${Object.keys(classLevels).length} classes x 20 → ${OUT}/class-levels.json`,
+);
+
 const conditions = (await get("5e-SRD-Conditions.json")).map((c) => ({
   id: c.index,
   name: c.name,

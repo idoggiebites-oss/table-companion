@@ -31,6 +31,17 @@ export interface RaceEntry {
   }[];
 }
 
+export interface ClassLevel {
+  readonly level: number;
+  readonly profBonus: number;
+  readonly slots: readonly number[];
+  readonly cantrips: number;
+  readonly known: number;
+  readonly features: readonly string[];
+  readonly asi: boolean;
+}
+export type ClassLevels = Readonly<Record<string, readonly ClassLevel[]>>;
+
 export interface ClassEntry {
   readonly id: string;
   readonly name: string;
@@ -52,6 +63,7 @@ export interface ClassEntry {
 let monsters: Promise<Statblock[]> | null = null;
 let races: Promise<RaceEntry[]> | null = null;
 let classes: Promise<ClassEntry[]> | null = null;
+let classLevels: Promise<ClassLevels> | null = null;
 let conditions: Promise<ConditionDescription[]> | null = null;
 
 async function load<T>(path: string): Promise<T[]> {
@@ -73,6 +85,14 @@ export function loadRaces(): Promise<RaceEntry[]> {
 export function loadClasses(): Promise<ClassEntry[]> {
   classes ??= load<ClassEntry>("/srd/classes.json");
   return classes;
+}
+
+export function loadClassLevels(): Promise<ClassLevels> {
+  classLevels ??= fetch("/srd/class-levels.json").then((r) => {
+    if (!r.ok) throw new Error(`class-levels: HTTP ${r.status}`);
+    return r.json() as Promise<ClassLevels>;
+  });
+  return classLevels;
 }
 
 export function loadConditions(): Promise<ConditionDescription[]> {
