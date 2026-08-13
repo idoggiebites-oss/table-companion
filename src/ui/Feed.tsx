@@ -72,6 +72,10 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `Saved encounter · ${e.encounter.name}`;
     case "encounterDeleted":
       return "Deleted an encounter";
+    case "homebrewSaved":
+      return `Saved a creature · ${e.statblock.name}`;
+    case "homebrewDeleted":
+      return "Deleted a homebrew creature";
     case "economySpent":
       return `${nameOf(e.who)} used their ${e.kind}`;
     case "turnAdvanced":

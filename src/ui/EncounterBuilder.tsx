@@ -26,7 +26,8 @@ import {
 import type { EventBody } from "../domain/events.js";
 import type { CampaignState } from "../domain/project.js";
 import {
-  formatCr, instanceLabel, rollHp, searchStatblocks, type Statblock,
+  formatCr, instanceLabel, mergeStatblocks, rollHp, searchStatblocks,
+  type Statblock,
 } from "../domain/statblock.js";
 import { loadMonsters } from "../store/srd.js";
 
@@ -119,9 +120,13 @@ export function EncounterBuilder({
     if (open && !all) loadMonsters().then(setAll, () => setAll([]));
   }, [open, all]);
 
+  const catalogue = useMemo(
+    () => (all ? mergeStatblocks(all, state.homebrew) : null),
+    [all, state.homebrew],
+  );
   const results = useMemo(
-    () => (all && text.trim() ? searchStatblocks(all, { text }).slice(0, 8) : []),
-    [all, text],
+    () => (catalogue && text.trim() ? searchStatblocks(catalogue, { text }).slice(0, 8) : []),
+    [catalogue, text],
   );
   const saved = Object.values(state.encounters);
 
@@ -133,9 +138,11 @@ export function EncounterBuilder({
    * case, and without this every creature silently arrived with 1 hit point.
    */
   async function dropIntoInitiative(e: Encounter) {
-    const monsters = all ?? (await loadMonsters().catch(() => []));
-    if (!all && monsters.length > 0) setAll(monsters);
-    const lookup = new Map(monsters.map((m) => [m.id, m]));
+    const srd = all ?? (await loadMonsters().catch(() => []));
+    if (!all && srd.length > 0) setAll(srd);
+    // Homebrew must resolve here too, or a creature the DM wrote arrives with
+    // one hit point exactly like an unknown statblock would.
+    const lookup = new Map(mergeStatblocks(srd, state.homebrew).map((m) => [m.id, m]));
 
     const order: Combatant[] = [];
     for (const entry of e.entries) {
@@ -198,9 +205,9 @@ export function EncounterBuilder({
 
       {open && (
         <div className="card-body">
-          {!all && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
+          {!catalogue && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
 
-          {all && (
+          {catalogue && (
             <>
               <input
                 value={text}

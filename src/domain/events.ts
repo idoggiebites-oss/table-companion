@@ -14,6 +14,7 @@
 import type { CharacterId, Character } from "./build.js";
 import type { Combatant, Disclosure, EconomyKind, TargetRef } from "./combat.js";
 import type { Encounter } from "./encounter.js";
+import type { Statblock } from "./statblock.js";
 import type { ConditionId } from "./edition.js";
 import type { RollMode } from "./roll.js";
 
@@ -93,6 +94,9 @@ export type DomainEvent = Meta &
     /** Prep that survives contact: built on a laptop, opened at the table. */
     | { readonly type: "encounterSaved"; readonly encounter: Encounter }
     | { readonly type: "encounterDeleted"; readonly encounterId: string }
+    /** The legal escape hatch: anything the SRD cannot carry. */
+    | { readonly type: "homebrewSaved"; readonly statblock: Statblock }
+    | { readonly type: "homebrewDeleted"; readonly statblockId: string }
     | {
         readonly type: "economySpent";
         readonly who: CharacterId;

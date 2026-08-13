@@ -8,6 +8,7 @@ import { Feed } from "./Feed.js";
 import { NewCharacter } from "./NewCharacter.js";
 import { Party } from "./Party.js";
 import { EncounterBuilder } from "./EncounterBuilder.js";
+import { Homebrew } from "./Homebrew.js";
 import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
@@ -109,7 +110,8 @@ export function App() {
             <>
               <Party state={state} seat={seat} append={append} />
               <EncounterBuilder state={state} append={append} />
-              <Reference />
+              <Homebrew state={state} append={append} />
+              <Reference homebrew={state.homebrew} />
             </>
           ) : mine && mineState ? (
             <Sheet build={mine} state={mineState} campaign={state} append={append} />

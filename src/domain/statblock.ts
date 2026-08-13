@@ -94,6 +94,37 @@ export function instanceLabel(name: string, index: number, total: number): strin
   return total > 1 ? `${name} ${index + 1}` : name;
 }
 
+/** Average hit points for a dice expression — what a statblock prints. */
+export function averageHp(expr: string): number {
+  const d = parseDice(expr);
+  if (!d) return 1;
+  return Math.max(1, Math.floor(d.count * ((d.die + 1) / 2)) + d.bonus);
+}
+
+/**
+ * Suggests an XP value for a homebrew creature by looking at what SRD
+ * creatures of the same challenge rating are worth.
+ *
+ * Deliberately derived from data already in hand rather than transcribed from
+ * a CR-to-XP table, which is not SRD content. It is a suggestion the DM can
+ * overwrite, not an authority.
+ */
+export function suggestXp(all: readonly Statblock[], cr: number): number | null {
+  const at = all.filter((m) => m.cr === cr && !m.homebrew).map((m) => m.xp);
+  if (at.length === 0) return null;
+  const counts = new Map<number, number>();
+  for (const xp of at) counts.set(xp, (counts.get(xp) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+}
+
+/** SRD and homebrew in one list, homebrew first so your own work is findable. */
+export function mergeStatblocks(
+  srd: readonly Statblock[],
+  homebrew: Readonly<Record<string, Statblock>>,
+): Statblock[] {
+  return [...Object.values(homebrew), ...srd];
+}
+
 export interface SearchQuery {
   readonly text?: string;
   readonly minCr?: number;

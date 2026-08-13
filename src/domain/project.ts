@@ -17,6 +17,7 @@ import {
 } from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import type { Encounter } from "./encounter.js";
+import type { Statblock } from "./statblock.js";
 import { rulesFor, type ConditionId } from "./edition.js";
 import { resolveRoll } from "./roll.js";
 import type { DomainEvent, EventId } from "./events.js";
@@ -51,6 +52,8 @@ export interface CampaignState {
   readonly combat: Combat | null;
   /** Saved prep, by encounter id. */
   readonly encounters: Readonly<Record<string, Encounter>>;
+  /** The DM's own creatures, by statblock id. */
+  readonly homebrew: Readonly<Record<string, Statblock>>;
 }
 
 function initialState(build: EffectiveBuild): CharacterState {
@@ -158,6 +161,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       characters: { ...state.characters, [build.id]: initialState(build) },
       combat: state.combat,
       encounters: state.encounters,
+      homebrew: state.homebrew,
     };
   }
   if (e.type === "reverted") return state;
@@ -176,6 +180,16 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       const rest = { ...state.encounters };
       delete rest[e.encounterId];
       return { ...state, encounters: rest };
+    }
+    case "homebrewSaved":
+      return {
+        ...state,
+        homebrew: { ...state.homebrew, [e.statblock.id]: e.statblock },
+      };
+    case "homebrewDeleted": {
+      const rest = { ...state.homebrew };
+      delete rest[e.statblockId];
+      return { ...state, homebrew: rest };
     }
     case "combatEnded":
       // Outside a fight there is no economy to have spent.
@@ -372,11 +386,14 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     characters[id] = s;
   }
 
-  return { builds: state.builds, characters, combat: state.combat, encounters: state.encounters };
+  return {
+    builds: state.builds, characters, combat: state.combat,
+    encounters: state.encounters, homebrew: state.homebrew,
+  };
 }
 
 export const EMPTY_STATE: CampaignState = {
-  builds: {}, characters: {}, combat: null, encounters: {},
+  builds: {}, characters: {}, combat: null, encounters: {}, homebrew: {},
 };
 
 /**

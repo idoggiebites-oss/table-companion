@@ -12,7 +12,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  formatCr, searchStatblocks, type Statblock, type StatblockAction,
+  formatCr, mergeStatblocks, searchStatblocks,
+  type Statblock, type StatblockAction,
 } from "../domain/statblock.js";
 import { loadMonsters } from "../store/srd.js";
 
@@ -74,7 +75,7 @@ function StatblockView({ m }: { m: Statblock }) {
   );
 }
 
-export function Reference() {
+export function Reference({ homebrew }: { homebrew: Readonly<Record<string, Statblock>> }) {
   const [all, setAll] = useState<Statblock[] | null>(null);
   const [error, setError] = useState(false);
   const [text, setText] = useState("");
@@ -87,13 +88,18 @@ export function Reference() {
     loadMonsters().then(setAll, () => setError(true));
   }, [shown, all, error]);
 
+  const catalogue = useMemo(
+    () => (all ? mergeStatblocks(all, homebrew) : null),
+    [all, homebrew],
+  );
+
   const results = useMemo(() => {
-    if (!all) return [];
-    return searchStatblocks(all, {
+    if (!catalogue) return [];
+    return searchStatblocks(catalogue, {
       ...(text ? { text } : {}),
       ...(maxCr === "" ? {} : { maxCr }),
     }).slice(0, 60);
-  }, [all, text, maxCr]);
+  }, [catalogue, text, maxCr]);
 
   return (
     <section className="card">
@@ -107,9 +113,9 @@ export function Reference() {
       {shown && (
         <div className="card-body">
           {error && <p className="err">Could not load the monster data.</p>}
-          {!all && !error && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
+          {!catalogue && !error && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
 
-          {all && (
+          {catalogue && (
             <>
               <div className="row">
                 <input
@@ -129,7 +135,7 @@ export function Reference() {
                 />
               </div>
               <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
-                {results.length} of {all.length}
+                {results.length} of {catalogue?.length ?? 0}
               </p>
 
               <div className="mlist">
@@ -139,7 +145,10 @@ export function Reference() {
                       className={`mrow${open === m.id ? " open" : ""}`}
                       onClick={() => setOpen(open === m.id ? null : m.id)}
                     >
-                      <span className="nm">{m.name}</span>
+                      <span className="nm">
+                        {m.name}
+                        {m.homebrew && <> <span className="hb">yours</span></>}
+                      </span>
                       <span className="ty faint">{m.type}</span>
                       <span className="cr num">CR {formatCr(m.cr)}</span>
                     </button>

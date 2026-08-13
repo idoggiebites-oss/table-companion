@@ -593,3 +593,13 @@ html, body { overscroll-behavior-y: none; }
 .sv-row:last-child { border-bottom: 0; }
 .sv-row .nm { flex: 1 1 120px; color: var(--ink); font-size: 0.94rem; min-width: 0; }
 .sv-row button { padding: 7px 11px; font-size: 0.6rem; }
+.hb {
+  margin-left: 8px; font-size: 0.52rem; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--steel);
+  border: 1px solid rgba(110, 143, 168, 0.45); padding: 2px 5px;
+}
+.linky {
+  background: none; border: 0; padding: 0; color: var(--steel);
+  text-transform: none; letter-spacing: 0; font-size: inherit;
+  text-decoration: underline; text-underline-offset: 2px;
+}
