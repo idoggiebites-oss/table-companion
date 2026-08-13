@@ -10,13 +10,17 @@
  */
 
 import { abilityModifier } from "./abilities.js";
-import { effectiveBuild, type Character, type CharacterId, type EffectiveBuild } from "./build.js";
+import {
+  appendLevel, effectiveBuild, reconcileImport,
+  type Character, type CharacterId, type EffectiveBuild,
+} from "./build.js";
 import {
   activeCombatant, advance, FRESH_ECONOMY, startCombat,
   type Combat, type Economy,
 } from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import type { Encounter } from "./encounter.js";
+import { levelForXp, type Progression } from "./progression.js";
 import type { Statblock } from "./statblock.js";
 import { rulesFor, type ConditionId } from "./edition.js";
 import { resolveRoll } from "./roll.js";
@@ -43,9 +47,14 @@ export interface CharacterState {
   readonly dead: boolean;
   /** What has been spent this round. All of it returns on your turn. */
   readonly economy: Economy;
+  readonly xp: number;
+  /** The level the DM has granted in a milestone campaign. */
+  readonly milestoneLevel: number;
 }
 
 export interface CampaignState {
+  /** Imported base plus appended level-ups — the source builds derive from. */
+  readonly sources: Readonly<Record<CharacterId, Character>>;
   readonly builds: Readonly<Record<CharacterId, EffectiveBuild>>;
   readonly characters: Readonly<Record<CharacterId, CharacterState>>;
   /** Null outside a fight. */
@@ -54,6 +63,7 @@ export interface CampaignState {
   readonly encounters: Readonly<Record<string, Encounter>>;
   /** The DM's own creatures, by statblock id. */
   readonly homebrew: Readonly<Record<string, Statblock>>;
+  readonly progression: Progression;
 }
 
 function initialState(build: EffectiveBuild): CharacterState {
@@ -70,6 +80,8 @@ function initialState(build: EffectiveBuild): CharacterState {
     stable: false,
     dead: false,
     economy: FRESH_ECONOMY,
+    xp: 0,
+    milestoneLevel: build.totalLevel,
   };
 }
 
@@ -155,13 +167,27 @@ function applyRest(
 
 function reduce(state: CampaignState, e: DomainEvent): CampaignState {
   if (e.type === "characterAdded") {
-    const build = effectiveBuild(e.character);
+    const id = e.character.base.id;
+    const existing = state.sources[id];
+    // A second characterAdded for the same id is a RE-IMPORT: keep the
+    // level-ups the incoming file does not already contain.
+    const source = existing
+      ? reconcileImport(e.character.base, existing.deltas)
+      : e.character;
+    const build = effectiveBuild(source);
+    const before = state.characters[id];
     return {
-      builds: { ...state.builds, [build.id]: build },
-      characters: { ...state.characters, [build.id]: initialState(build) },
-      combat: state.combat,
-      encounters: state.encounters,
-      homebrew: state.homebrew,
+      ...state,
+      sources: { ...state.sources, [id]: source },
+      builds: { ...state.builds, [id]: build },
+      characters: {
+        ...state.characters,
+        // Re-import replaces the BUILD, never the campaign state — you do not
+        // lose your spent slots because you fixed a typo in your builder.
+        [id]: before
+          ? { ...before, currentHp: Math.min(before.currentHp, build.maxHp) }
+          : initialState(build),
+      },
     };
   }
   if (e.type === "reverted") return state;
@@ -180,6 +206,24 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       const rest = { ...state.encounters };
       delete rest[e.encounterId];
       return { ...state, encounters: rest };
+    }
+    case "progressionSet":
+      return { ...state, progression: e.mode };
+    case "levelGained": {
+      const source = state.sources[e.who];
+      if (!source) return state;
+      const next = appendLevel(source, e.classId, e.hpGain, new Date(e.at).toISOString());
+      const build = effectiveBuild(next);
+      const before = state.characters[e.who];
+      return {
+        ...state,
+        sources: { ...state.sources, [e.who]: next },
+        builds: { ...state.builds, [e.who]: build },
+        // Levelling raises the maximum; it does not heal you.
+        characters: before
+          ? { ...state.characters, [e.who]: { ...before, milestoneLevel: build.totalLevel } }
+          : state.characters,
+      };
     }
     case "homebrewSaved":
       return {
@@ -268,7 +312,10 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
   }
 
   const targets =
-    e.type === "shortRestTaken" || e.type === "longRestTaken" ? e.who : [e.who];
+    e.type === "shortRestTaken" || e.type === "longRestTaken" ||
+    e.type === "xpAwarded" || e.type === "levelAwarded"
+      ? e.who
+      : [e.who];
 
   const characters = { ...state.characters };
 
@@ -372,6 +419,12 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       case "economySpent":
         s = { ...s, economy: { ...s.economy, [e.kind]: true } };
         break;
+      case "xpAwarded":
+        s = { ...s, xp: Math.max(0, s.xp + e.amount) };
+        break;
+      case "levelAwarded":
+        s = { ...s, milestoneLevel: s.milestoneLevel + 1 };
+        break;
       case "diceRolled":
         // Recorded, never applied — a roll is history, not state.
         break;
@@ -386,14 +439,12 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     characters[id] = s;
   }
 
-  return {
-    builds: state.builds, characters, combat: state.combat,
-    encounters: state.encounters, homebrew: state.homebrew,
-  };
+  return { ...state, characters };
 }
 
 export const EMPTY_STATE: CampaignState = {
-  builds: {}, characters: {}, combat: null, encounters: {}, homebrew: {},
+  sources: {}, builds: {}, characters: {}, combat: null,
+  encounters: {}, homebrew: {}, progression: "xp",
 };
 
 /**
@@ -410,6 +461,18 @@ export function project(log: readonly DomainEvent[]): CampaignState {
     state = reduce(state, e);
   }
   return state;
+}
+
+/**
+ * Levels owed but not yet resolved. Derived, so it survives a reload and the
+ * DM can see it without anything extra being stored.
+ */
+export function levelsOwed(state: CampaignState, id: CharacterId): number {
+  const build = state.builds[id];
+  const c = state.characters[id];
+  if (!build || !c) return 0;
+  const target = state.progression === "xp" ? levelForXp(c.xp) : c.milestoneLevel;
+  return Math.max(0, target - build.totalLevel);
 }
 
 /** Convenience for tests and adapters that have a character rather than a log. */

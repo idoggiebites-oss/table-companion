@@ -219,3 +219,43 @@ export function effectiveBuild(character: Character): EffectiveBuild {
     attacks: b.attacks.map((a) => resolveAttack(a, abilityMods, pb)),
   };
 }
+
+/**
+ * Reconciles a re-import against level-ups already appended in the app.
+ *
+ * This is the case the build plan called phase 4's riskiest: somebody levels
+ * in their builder AND in the app, then re-imports. The new base already
+ * contains that level, so replaying the delta on top would apply it twice —
+ * a character silently two levels and sixteen hit points ahead.
+ *
+ * A delta records the total level it produced, so anything the incoming base
+ * already reaches has been superseded and is dropped. Deltas beyond it are
+ * levels the builder does not know about yet and are kept.
+ */
+export function reconcileImport(
+  incoming: BuildBase,
+  deltas: readonly BuildDelta[],
+): Character {
+  const baseLevel = totalLevelOf(incoming.classes);
+  return {
+    base: incoming,
+    deltas: deltas.filter((d) => d.toTotalLevel > baseLevel),
+  };
+}
+
+/** Appends a level-up, numbering it from where the character actually is. */
+export function appendLevel(
+  character: Character,
+  classId: ClassId,
+  hpGain: number,
+  at: string,
+): Character {
+  const current = effectiveBuild(character).totalLevel;
+  return {
+    ...character,
+    deltas: [
+      ...character.deltas,
+      { kind: "levelGained", classId, toTotalLevel: current + 1, hpGain, at },
+    ],
+  };
+}

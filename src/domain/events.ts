@@ -12,8 +12,10 @@
  */
 
 import type { CharacterId, Character } from "./build.js";
+import type { ClassId } from "./resources.js";
 import type { Combatant, Disclosure, EconomyKind, TargetRef } from "./combat.js";
 import type { Encounter } from "./encounter.js";
+import type { Progression } from "./progression.js";
 import type { Statblock } from "./statblock.js";
 import type { ConditionId } from "./edition.js";
 import type { RollMode } from "./roll.js";
@@ -91,6 +93,22 @@ export type DomainEvent = Meta &
       }
     | { readonly type: "combatStarted"; readonly order: readonly Combatant[] }
     | { readonly type: "combatEnded" }
+    /** How this campaign advances. A setting, not a preference. */
+    | { readonly type: "progressionSet"; readonly mode: Progression }
+    | {
+        readonly type: "xpAwarded";
+        readonly who: readonly CharacterId[];
+        readonly amount: number;
+      }
+    /** Milestone campaigns: the DM says so, and a level becomes owed. */
+    | { readonly type: "levelAwarded"; readonly who: readonly CharacterId[] }
+    /** Resolving one owed level. Appends to the character's deltas. */
+    | {
+        readonly type: "levelGained";
+        readonly who: CharacterId;
+        readonly classId: ClassId;
+        readonly hpGain: number;
+      }
     /** Prep that survives contact: built on a laptop, opened at the table. */
     | { readonly type: "encounterSaved"; readonly encounter: Encounter }
     | { readonly type: "encounterDeleted"; readonly encounterId: string }

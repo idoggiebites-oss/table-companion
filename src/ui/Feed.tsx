@@ -68,6 +68,14 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `Combat began · ${e.order.length} in initiative`;
     case "combatEnded":
       return "Combat ended";
+    case "progressionSet":
+      return `Campaign advances by ${e.mode === "xp" ? "experience" : "milestone"}`;
+    case "xpAwarded":
+      return `${e.who.map(nameOf).join(", ")} gained ${e.amount.toLocaleString()} XP`;
+    case "levelAwarded":
+      return `${e.who.map(nameOf).join(", ")} may level up`;
+    case "levelGained":
+      return `${nameOf(e.who)} levelled up · +${e.hpGain} hit points`;
     case "encounterSaved":
       return `Saved encounter · ${e.encounter.name}`;
     case "encounterDeleted":
