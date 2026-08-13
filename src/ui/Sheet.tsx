@@ -7,7 +7,7 @@
  * ability check.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { formatModifier, SKILLS, SKILL_IDS, type Ability } from "../domain/abilities.js";
 import { describeAttack } from "../domain/attack.js";
 import type { EffectiveBuild } from "../domain/build.js";
@@ -18,6 +18,11 @@ import type { RollMode } from "../domain/roll.js";
 import { RollPad, type RollTarget } from "./RollPad.js";
 import type { CampaignState } from "../domain/project.js";
 import { HpBar, healthStep, VAGUE_LABEL } from "./HpBar.js";
+import { Inventory, useCatalogue } from "./Inventory.js";
+import { armourClass, attacksFromEquipment } from "../domain/equipment.js";
+import { equippedItems, indexItems } from "../domain/items.js";
+import { resolveAttack } from "../domain/attack.js";
+import { loadEquipment } from "../store/srd.js";
 import { StateCard } from "./StateCard.js";
 
 const spaced = (s: string) => s.replace(/([A-Z])/g, " $1").toLowerCase();
@@ -131,6 +136,28 @@ export function Sheet({
   const hitDice = build.resources.find((r) => r.id === "hitDice");
   const hitDiceLeft = (hitDice?.max ?? 0) - (state.spent.hitDice ?? 0);
 
+  // Equipment is campaign state, not part of the build, so the derivations
+  // live here where both are in hand. The build stays "imported base plus
+  // deltas" and never learns about a shield.
+  const items = useCatalogue(loadEquipment, true);
+  const catalogue = useMemo(() => indexItems(items ?? []), [items]);
+  const worn = useMemo(
+    () => equippedItems(state.inventory, state.equipped, catalogue),
+    [state.inventory, state.equipped, catalogue],
+  );
+  const ac = armourClass(worn, build.abilityMods.dex, build.armourClass, build.abilities.str);
+  const gear = useMemo(
+    () =>
+      attacksFromEquipment(worn).map((a) =>
+        resolveAttack(a, build.abilityMods, build.proficiencyBonus),
+      ),
+    [worn, build.abilityMods, build.proficiencyBonus],
+  );
+  // Equipment-derived attacks come first, then whatever was imported or typed
+  // by hand. Both are kept: an imported sheet's attacks are real, and a
+  // character who equips a longsword has not renounced them.
+  const attacks = [...gear, ...build.attacks.filter((a) => !gear.some((g) => g.name === a.name))];
+
   const previews = rest ? previewRest(campaign, rest, [who]) : [];
   const owed = state.concentrationChecks[0];
 
@@ -145,9 +172,9 @@ export function Sheet({
           </div>
         </div>
         <div className="strip">
-          <div><b className="num">{build.armourClass}</b><span>Armour</span></div>
+          <div title={ac.from}><b className="num">{ac.value}</b><span>Armour</span></div>
           <div><b className="num">{formatModifier(build.abilityMods.dex)}</b><span>Initiative</span></div>
-          <div><b className="num">{build.speed}</b><span>Speed</span></div>
+          <div><b className="num">{build.speed - ac.speedPenalty}</b><span>Speed</span></div>
           <div><b className="num">{formatModifier(build.proficiencyBonus)}</b><span>Proficiency</span></div>
           <div><b className="num">{build.passivePerception}</b><span>Passive per.</span></div>
         </div>
@@ -282,13 +309,24 @@ export function Sheet({
         </section>
       )}
 
-      {build.attacks.length > 0 && (
+      <Inventory
+        who={who}
+        inventory={state.inventory}
+        equipped={state.equipped}
+        coins={state.coins}
+        catalogue={catalogue}
+        items={items ?? []}
+        editable
+        append={append}
+      />
+
+      {attacks.length > 0 && (
         <section className="card">
           <div className="card-hd">
             <span className="label">Attacks</span>
             <span className="label faint">Tap to roll</span>
           </div>
-          {build.attacks.map((a) => (
+          {attacks.map((a) => (
             <button
               type="button"
               key={a.name}

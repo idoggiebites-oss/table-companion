@@ -31,6 +31,8 @@ export interface RaceEntry {
   }[];
 }
 
+import type { Item } from "../domain/items.js";
+
 export interface ClassLevel {
   readonly level: number;
   readonly profBonus: number;
@@ -64,6 +66,7 @@ let monsters: Promise<Statblock[]> | null = null;
 let races: Promise<RaceEntry[]> | null = null;
 let classes: Promise<ClassEntry[]> | null = null;
 let classLevels: Promise<ClassLevels> | null = null;
+let equipment: Promise<Item[]> | null = null;
 let conditions: Promise<ConditionDescription[]> | null = null;
 
 async function load<T>(path: string): Promise<T[]> {
@@ -93,6 +96,14 @@ export function loadClassLevels(): Promise<ClassLevels> {
     return r.json() as Promise<ClassLevels>;
   });
   return classLevels;
+}
+
+export function loadEquipment(): Promise<Item[]> {
+  equipment ??= fetch("/srd/equipment.json").then((r) => {
+    if (!r.ok) throw new Error(`equipment: HTTP ${r.status}`);
+    return r.json() as Promise<Item[]>;
+  });
+  return equipment;
 }
 
 export function loadConditions(): Promise<ConditionDescription[]> {

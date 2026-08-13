@@ -16,6 +16,7 @@ import type { ClassId } from "./resources.js";
 import type { Combatant, Disclosure, EconomyKind, TargetRef } from "./combat.js";
 import type { Encounter } from "./encounter.js";
 import type { Progression } from "./progression.js";
+import type { Stack } from "./items.js";
 import type { Statblock } from "./statblock.js";
 import type { ConditionId } from "./edition.js";
 import type { RollMode } from "./roll.js";
@@ -113,6 +114,34 @@ export type DomainEvent = Meta &
     | { readonly type: "encounterSaved"; readonly encounter: Encounter }
     | { readonly type: "encounterDeleted"; readonly encounterId: string }
     /** The legal escape hatch: anything the SRD cannot carry. */
+    /**
+     * Carrying things. Quantities and what is equipped move separately: taking
+     * off a helmet does not change how many you own, and selling one does not
+     * need to know whether it was worn.
+     */
+    | { readonly type: "itemAdded"; readonly who: CharacterId; readonly stack: Stack }
+    | {
+        readonly type: "itemRemoved";
+        readonly who: CharacterId;
+        readonly itemId: string;
+        readonly name: string;
+        readonly qty: number;
+        readonly note?: string;
+      }
+    | {
+        readonly type: "itemEquipped";
+        readonly who: CharacterId;
+        readonly itemId: string;
+        readonly name: string;
+      }
+    | {
+        readonly type: "itemUnequipped";
+        readonly who: CharacterId;
+        readonly itemId: string;
+        readonly name: string;
+      }
+    /** Signed, in copper. Undo is replay-without-it, so no inverse is stored. */
+    | { readonly type: "coinsChanged"; readonly who: CharacterId; readonly delta: number }
     | { readonly type: "homebrewSaved"; readonly statblock: Statblock }
     | { readonly type: "homebrewDeleted"; readonly statblockId: string }
     | {

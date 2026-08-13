@@ -255,3 +255,58 @@ const conditions = (await get("5e-SRD-Conditions.json")).map((c) => ({
 }));
 writeFileSync(`${OUT}/conditions.json`, JSON.stringify(conditions));
 console.log(`conditions: ${conditions.length} → ${OUT}/conditions.json`);
+
+/*
+ * Equipment. The reason this is worth shipping rather than typing: weapons
+ * carry the dice, the damage type and the properties that decide HOW you roll
+ * (finesse picks the better ability, versatile changes the die in two hands),
+ * and armour carries the AC formula including whether dexterity applies and
+ * how much of it. Both are derivable, so neither should be hand-entered.
+ *
+ * Costs are flattened to copper. Money is integer arithmetic or it drifts:
+ * a 5 sp item paid for in gold has to come back as exactly 5 sp.
+ */
+const COPPER = { cp: 1, sp: 10, ep: 50, gp: 100, pp: 1000 };
+
+const equipment = (await get("5e-SRD-Equipment.json"))
+  .map((e) => {
+    const cat = e.equipment_category?.index ?? "gear";
+    const out = {
+      id: e.index,
+      name: e.name,
+      category: cat,
+      cost: (e.cost?.quantity ?? 0) * (COPPER[e.cost?.unit] ?? 0),
+    };
+    if (e.weight) out.weight = e.weight;
+
+    if (cat === "weapon") {
+      out.weaponRange = e.weapon_range;          // Melee | Ranged
+      out.weaponCategory = e.weapon_category;    // Simple | Martial
+      if (e.damage) {
+        out.damage = e.damage.damage_dice;
+        out.damageType = nameOf(e.damage.damage_type)?.toLowerCase();
+      }
+      // Versatile: the die when swung in two hands.
+      if (e.two_handed_damage) out.twoHanded = e.two_handed_damage.damage_dice;
+      out.properties = (e.properties ?? []).map((p) => nameOf(p).toLowerCase());
+      if (e.range) out.range = e.range;
+    }
+
+    if (cat === "armor") {
+      out.armorCategory = e.armor_category;      // Light | Medium | Heavy | Shield
+      out.baseAc = e.armor_class?.base ?? 0;
+      out.dexBonus = e.armor_class?.dex_bonus ?? false;
+      // Medium armour caps dexterity at +2; the cap is absent when uncapped.
+      if (e.armor_class?.max_bonus !== undefined) out.maxDex = e.armor_class.max_bonus;
+      if (e.str_minimum) out.strMinimum = e.str_minimum;
+      if (e.stealth_disadvantage) out.stealthDisadvantage = true;
+    }
+    return out;
+  })
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+writeFileSync(`${OUT}/equipment.json`, JSON.stringify(equipment));
+const byCat = equipment.reduce((m, e) => ((m[e.category] = (m[e.category] ?? 0) + 1), m), {});
+console.log(
+  `equipment: ${equipment.length} (${Object.entries(byCat).map(([k, v]) => `${v} ${k}`).join(", ")}) → ${OUT}/equipment.json`,
+);

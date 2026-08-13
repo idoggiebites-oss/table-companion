@@ -422,6 +422,31 @@ html, body { overscroll-behavior-y: none; }
 .rb-second .rb-input { width: 128px; }
 .rb-hint { color: var(--faint); font-size: 0.76rem; }
 
+/* ---- inventory ---- */
+.inv { padding: 4px 12px 10px; }
+.inv-purse { color: var(--ink); font-size: 0.92rem; letter-spacing: 0.04em; }
+.inv-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-top: 1px solid var(--rule);
+}
+.inv-row { flex-wrap: wrap; }
+.inv-row .nm { flex: 1 1 auto; min-width: 0; }
+/* Its own line: name, two buttons and a description are four columns, and at
+   430px the description loses and wraps into unreadable slivers. */
+.inv-desc { flex-basis: 100%; font-size: 0.74rem; }
+.inv-row button { padding: 5px 9px; font-size: 0.58rem; }
+.inv-row button.on { color: var(--ink); border-color: var(--edge); }
+.inv-find { display: flex; flex-direction: column; margin-top: 10px; }
+.inv-add {
+  display: flex; align-items: baseline; gap: 8px; width: 100%;
+  padding: 8px 4px; text-align: left; border: 0;
+  border-top: 1px solid var(--rule); background: none;
+}
+.inv-add .nm { flex: 1 1 auto; min-width: 0; color: var(--ink); }
+.inv-add .faint { flex: 1 1 100%; order: 3; font-size: 0.74rem; min-width: 0; }
+.inv-add { flex-wrap: wrap; }
+.inv-add .num { flex: 0 0 auto; }
+
 /* ---- seat ---- */
 .seatbar { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
 .seatbar select { width: auto; flex: 0 1 200px; }

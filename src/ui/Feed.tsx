@@ -11,6 +11,7 @@ import type { EffectiveBuild } from "../domain/build.js";
 import type { DomainEvent } from "../domain/events.js";
 import { isRevertible } from "../domain/events.js";
 import { DM_ACTOR } from "../domain/permissions.js";
+import { formatCoins } from "../domain/money.js";
 import { describeRoll, resolveRoll } from "../domain/roll.js";
 
 const time = (at: number) =>
@@ -80,6 +81,18 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `Saved encounter · ${e.encounter.name}`;
     case "encounterDeleted":
       return "Deleted an encounter";
+    case "itemAdded":
+      return `${nameOf(e.who)} gained ${e.stack.qty > 1 ? `${e.stack.qty} × ` : ""}${e.stack.name}${
+        e.stack.note ? ` (${e.stack.note})` : ""
+      }`;
+    case "itemRemoved":
+      return `${nameOf(e.who)} lost ${e.qty > 1 ? `${e.qty} × ` : ""}${e.name}`;
+    case "itemEquipped":
+      return `${nameOf(e.who)} drew ${e.name}`;
+    case "itemUnequipped":
+      return `${nameOf(e.who)} put away ${e.name}`;
+    case "coinsChanged":
+      return `${nameOf(e.who)} ${e.delta >= 0 ? "gained" : "spent"} ${formatCoins(Math.abs(e.delta))}`;
     case "homebrewSaved":
       return `Saved a creature · ${e.statblock.name}`;
     case "homebrewDeleted":

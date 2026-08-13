@@ -20,6 +20,7 @@ import {
 } from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import type { Encounter } from "./encounter.js";
+import { addItem, removeItem, type Stack } from "./items.js";
 import { levelForXp, type Progression } from "./progression.js";
 import type { Statblock } from "./statblock.js";
 import { rulesFor, type ConditionId } from "./edition.js";
@@ -50,6 +51,11 @@ export interface CharacterState {
   readonly xp: number;
   /** The level the DM has granted in a milestone campaign. */
   readonly milestoneLevel: number;
+  readonly inventory: readonly Stack[];
+  /** Item ids being worn or wielded. See items.ts for why it is a set. */
+  readonly equipped: readonly string[];
+  /** Copper. Integer, always — money.ts explains why. */
+  readonly coins: number;
 }
 
 export interface CampaignState {
@@ -82,6 +88,9 @@ function initialState(build: EffectiveBuild): CharacterState {
     economy: FRESH_ECONOMY,
     xp: 0,
     milestoneLevel: build.totalLevel,
+    inventory: [],
+    equipped: [],
+    coins: 0,
   };
 }
 
@@ -339,6 +348,34 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       case "tempHpGranted":
         // Temporary hit points never stack; you take the better pool.
         s = { ...s, tempHp: Math.max(s.tempHp, e.amount) };
+        break;
+      case "itemAdded":
+        s = { ...s, inventory: addItem(s.inventory, e.stack) };
+        break;
+      case "itemRemoved": {
+        const inventory = removeItem(s.inventory, e.itemId, e.qty, e.note);
+        // Losing the last one takes it off your body too, or the sheet keeps
+        // deriving armour class from a breastplate that has been sold.
+        const gone = inventory.every((x) => x.itemId !== e.itemId);
+        s = {
+          ...s,
+          inventory,
+          equipped: gone ? s.equipped.filter((id) => id !== e.itemId) : s.equipped,
+        };
+        break;
+      }
+      case "itemEquipped":
+        s = s.equipped.includes(e.itemId)
+          ? s
+          : { ...s, equipped: [...s.equipped, e.itemId] };
+        break;
+      case "itemUnequipped":
+        s = { ...s, equipped: s.equipped.filter((id) => id !== e.itemId) };
+        break;
+      case "coinsChanged":
+        // A purse cannot go negative; the DM taking more than you have takes
+        // what there is.
+        s = { ...s, coins: Math.max(0, s.coins + e.delta) };
         break;
       case "resourceSpent": {
         const max = build.resources.find((r) => r.id === e.resource)?.max ?? 0;
