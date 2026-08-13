@@ -75,6 +75,15 @@ const tablet = await device("tablet");
 await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
 await tablet.page.waitForSelector('select[aria-label="Seat"]', { timeout: 20000 });
+await tablet.page.waitForTimeout(1000);
+// The DM's second device is still the DM, but it has to prove it — joining
+// with the room code makes you a player, whoever you are.
+await laptop.page.getByRole("button", { name: "DM key" }).click();
+const dmKey = await laptop.page.locator(".rb-second .rb-code").innerText();
+await tablet.page.getByRole("button", { name: /I.m the DM/ }).click();
+await tablet.page.locator('input[aria-label="DM key"]').fill(dmKey);
+await tablet.page.getByRole("button", { name: "Claim DM" }).click();
+await tablet.page.waitForTimeout(1200);
 await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
 await tablet.page.waitForSelector(".sv-row", { timeout: 20000 });
 ok("the prep arrived on the other device",

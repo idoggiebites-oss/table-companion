@@ -40,11 +40,30 @@ export type ServerMessage =
       readonly events: readonly StoredEvent[];
       readonly head: number;
     }
+  /**
+   * Who this ONE socket is. Deliberately not a field on `welcome`: welcome is
+   * broadcast to the whole room, and a per-socket fact riding on a broadcast
+   * is a leak waiting to happen — every device would read the last arrival's
+   * answer as its own.
+   */
+  | {
+      readonly t: "you";
+      readonly dm: boolean;
+      /** Only ever sent to a DM — a player's device never holds this. */
+      readonly dmKey?: string;
+    }
   | { readonly t: "error"; readonly code: string; readonly message: string };
 
 export interface RoomCredentials {
   readonly code: string;
   readonly token: string;
+  /**
+   * Seeded from which button was pressed — start a room, or join one. The
+   * server confirms it on connect and is the authority; this only closes the
+   * window before the socket is up, during which a joiner would otherwise be
+   * sitting in the DM's seat.
+   */
+  readonly dm?: boolean;
 }
 
 /**
@@ -53,6 +72,27 @@ export interface RoomCredentials {
  */
 export const CODE_ALPHABET = "ACDEFGHJKMNPQRTUVWXY2346789";
 export const CODE_LENGTH = 6;
+
+/**
+ * The DM key is longer than a join code and grouped, because it is typed once
+ * from a screen rather than shouted across a table. Same alphabet: it is still
+ * read by a human.
+ */
+export const DM_KEY_LENGTH = 8;
+
+export function formatDmKey(raw: string): string {
+  const up = raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return up.length > 4 ? `${up.slice(0, 4)}-${up.slice(4, 8)}` : up;
+}
+
+export function normaliseDmKey(s: string): string {
+  return s.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, DM_KEY_LENGTH);
+}
+
+export function isDmKeyShaped(s: string): boolean {
+  const up = normaliseDmKey(s);
+  return up.length === DM_KEY_LENGTH && [...up].every((c) => CODE_ALPHABET.includes(c));
+}
 
 export function isCodeShaped(s: string): boolean {
   const up = s.trim().toUpperCase();

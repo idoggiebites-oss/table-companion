@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Character } from "../domain/build.js";
 import { actorKey } from "../domain/permissions.js";
 import { levelsOwed } from "../domain/project.js";
@@ -29,8 +29,17 @@ export function App() {
   const campaign = useCampaign(actorKey(seat));
   const {
     ready, log, state, append, revert, reset, reverted,
-    room, status, members, joinRoom, leaveRoom,
+    room, status, members, dmRole, dmKey, claimDm, joinRoom, leaveRoom,
   } = campaign;
+
+  /**
+   * Only the device that started the room may sit in the DM's seat. `null`
+   * means the server has not answered yet and is treated as "yes", so a DM
+   * reloading is never briefly tipped out of their own seat; the joiner's
+   * side is seeded false at the moment they press Join, so there is no
+   * matching window on the other side.
+   */
+  const mayBeDm = dmRole !== false;
 
   const builds = Object.values(state.builds);
   /** A player sees their own sheet; the DM sees the party instead. */
@@ -39,6 +48,16 @@ export function App() {
   const mineState = mine ? state.characters[mine.id] : undefined;
 
   const needsCharacter = builds.length === 0 || adding;
+
+  // A fresh device defaults to the DM's seat, which is right when it is alone
+  // and wrong the instant it joins someone else's room. Move it off rather
+  // than merely hiding the option — otherwise a player who never touches the
+  // selector spends the session looking at the DM's screen.
+  useEffect(() => {
+    if (mayBeDm || seat.kind !== "dm") return;
+    const first = builds[0];
+    if (first) setSeat({ kind: "player", characterId: first.id });
+  }, [mayBeDm, seat.kind, builds, setSeat]);
 
   function create(c: Character) {
     append({ type: "characterAdded", character: c });
@@ -59,8 +78,11 @@ export function App() {
         room={room}
         status={status}
         members={members}
+        dmRole={dmRole}
+        dmKey={dmKey}
         onJoin={joinRoom}
         onLeave={leaveRoom}
+        onClaim={claimDm}
       />
 
       <div className="topbar">
@@ -97,7 +119,7 @@ export function App() {
               setSeat(v === "dm" ? { kind: "dm" } : { kind: "player", characterId: v.slice(3) });
             }}
           >
-            <option value="dm">the DM</option>
+            {mayBeDm && <option value="dm">the DM</option>}
             {builds.map((b) => (
               <option key={b.id} value={`pc:${b.id}`}>{b.name}</option>
             ))}

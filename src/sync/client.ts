@@ -22,6 +22,8 @@ export interface RoomHandlers {
   readonly onEvents: (events: readonly StoredEvent[]) => void;
   readonly onHead: (head: number) => void;
   readonly onStatus: (status: ConnectionStatus, members: number) => void;
+  /** Whether this device may sit in the DM's seat, and the key if it may. */
+  readonly onRole: (dm: boolean, dmKey?: string) => void;
 }
 
 const RETRY_MIN_MS = 500;
@@ -119,6 +121,9 @@ export class RoomConnection {
         this.handlers.onHead(this.head);
         break;
       }
+      case "you":
+        this.handlers.onRole(msg.dm, msg.dmKey);
+        break;
       case "error":
         // Nothing here is recoverable by retrying the same message, and the
         // socket stays usable, so surface it and carry on.

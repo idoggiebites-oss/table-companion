@@ -9,7 +9,10 @@
 
 import { useState } from "react";
 import type { ConnectionStatus } from "../sync/client.js";
-import { isCodeShaped, normaliseCode, type RoomCredentials } from "../sync/protocol.js";
+import {
+  formatDmKey, isCodeShaped, isDmKeyShaped, normaliseCode, normaliseDmKey,
+  type RoomCredentials,
+} from "../sync/protocol.js";
 
 const STATUS_LABEL: Record<ConnectionStatus, string> = {
   offline: "Solo",
@@ -23,17 +26,37 @@ async function post(url: string): Promise<Record<string, string>> {
 }
 
 export function RoomBar({
-  room, status, members, onJoin, onLeave,
+  room, status, members, dmRole, dmKey, onJoin, onLeave, onClaim,
 }: {
   room: RoomCredentials | null;
   status: ConnectionStatus;
   members: number;
+  dmRole: boolean | null;
+  dmKey: string | null;
   onJoin: (creds: RoomCredentials) => Promise<void>;
   onLeave: () => Promise<void>;
+  onClaim: (key: string) => Promise<boolean>;
 }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showKey, setShowKey] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [claimKey, setClaimKey] = useState("");
+  const [claimError, setClaimError] = useState<string | null>(null);
+
+  async function claim() {
+    setBusy(true);
+    setClaimError(null);
+    const won = await onClaim(normaliseDmKey(claimKey));
+    setBusy(false);
+    if (won) {
+      setClaiming(false);
+      setClaimKey("");
+    } else {
+      setClaimError("That key does not match.");
+    }
+  }
 
   async function create() {
     setBusy(true);
@@ -41,7 +64,7 @@ export function RoomBar({
     try {
       const res = await post("/api/rooms");
       if (!res.code || !res.token) throw new Error("no room");
-      await onJoin({ code: res.code, token: res.token });
+      await onJoin({ code: res.code, token: res.token, dm: true });
     } catch {
       setError("Could not start a room.");
     } finally {
@@ -63,7 +86,7 @@ export function RoomBar({
         setError(res.error === "joining-closed" ? "That room is closed." : "No room with that code.");
         return;
       }
-      await onJoin({ code: c, token: res.token });
+      await onJoin({ code: c, token: res.token, dm: false });
       setCode("");
     } catch {
       setError("Could not reach the room.");
@@ -74,14 +97,56 @@ export function RoomBar({
 
   if (room) {
     return (
-      <div className="roombar">
-        <span className="rb-code num" title="Read this out to join">{room.code}</span>
-        <span className={`rb-status s-${status}`}>
-          {STATUS_LABEL[status]}
-          {status === "online" && members > 0 ? ` · ${members} joined` : ""}
-        </span>
-        <button onClick={() => void onLeave()}>Leave</button>
-      </div>
+      <>
+        <div className="roombar">
+          <span className="rb-code num" title="Read this out to join">{room.code}</span>
+          <span className={`rb-status s-${status}`}>
+            {STATUS_LABEL[status]}
+            {status === "online" && members > 0 ? ` · ${members} joined` : ""}
+          </span>
+          {/* A secret does not belong on screen by default — the room bar is
+              the one thing everyone leans over to read. */}
+          {dmKey && !showKey && (
+            <button onClick={() => setShowKey(true)}>DM key</button>
+          )}
+          {dmRole === false && !claiming && (
+            <button onClick={() => setClaiming(true)}>I&rsquo;m the DM</button>
+          )}
+          <button onClick={() => void onLeave()}>Leave</button>
+        </div>
+
+        {dmKey && showKey && (
+          <div className="roombar rb-second">
+            <span className="label">DM key</span>
+            <span className="rb-code num">{formatDmKey(dmKey)}</span>
+            <span className="rb-hint">Your other devices only. Not the players.</span>
+            <button onClick={() => setShowKey(false)}>Hide</button>
+          </div>
+        )}
+
+        {dmRole === false && claiming && (
+          <div className="roombar rb-second">
+            <span className="label">DM key</span>
+            <input
+              className="rb-input num"
+              value={formatDmKey(claimKey)}
+              maxLength={9}
+              placeholder="XXXX-XXXX"
+              aria-label="DM key"
+              onChange={(e) => {
+                setClaimKey(normaliseDmKey(e.target.value));
+                setClaimError(null);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && isDmKeyShaped(claimKey) && void claim()}
+            />
+            <button disabled={busy || !isDmKeyShaped(claimKey)} onClick={() => void claim()}>
+              Claim DM
+            </button>
+            <button onClick={() => { setClaiming(false); setClaimError(null); }}>Cancel</button>
+            {claimError && <span className="rb-error">{claimError}</span>}
+          </div>
+        )}
+      </>
     );
   }
 

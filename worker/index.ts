@@ -15,8 +15,10 @@ import type { DomainEvent } from "../src/domain/events.js";
 import {
   CODE_ALPHABET,
   CODE_LENGTH,
+  DM_KEY_LENGTH,
   isCodeShaped,
   normaliseCode,
+  normaliseDmKey,
   type ClientMessage,
   type ServerMessage,
   type StoredEvent,
@@ -60,7 +62,8 @@ export class Room extends DurableObject<Env> {
         );
         CREATE TABLE IF NOT EXISTS members (
           token TEXT PRIMARY KEY,
-          joined INTEGER NOT NULL
+          joined INTEGER NOT NULL,
+          dm INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS events (
           seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,6 +71,14 @@ export class Room extends DurableObject<Env> {
           payload TEXT NOT NULL
         );
       `);
+      // Rooms created before the DM seat was restricted predate the column.
+      try {
+        this.ctx.storage.sql.exec(
+          "ALTER TABLE members ADD COLUMN dm INTEGER NOT NULL DEFAULT 0",
+        );
+      } catch {
+        // Already there, which is the normal case.
+      }
     });
   }
 
@@ -103,6 +114,21 @@ export class Room extends DurableObject<Env> {
     );
   }
 
+  /**
+   * DM-ness is a property of the member, not of a single device: the same
+   * person running a laptop for prep and a tablet at the table is one DM with
+   * two devices, and both must work. It is granted at creation, or by
+   * presenting the DM key.
+   */
+  private isDm(token: string): boolean {
+    if (token === "") return false;
+    return (
+      this.ctx.storage.sql
+        .exec<{ dm: number }>("SELECT dm FROM members WHERE token = ?", token)
+        .toArray()[0]?.dm === 1
+    );
+  }
+
   private isMember(token: string): boolean {
     return (
       this.ctx.storage.sql
@@ -111,14 +137,29 @@ export class Room extends DurableObject<Env> {
     );
   }
 
-  private addMember(): string {
+  private addMember(dm = false): string {
     const token = newToken();
     this.ctx.storage.sql.exec(
-      "INSERT INTO members (token, joined) VALUES (?, ?)",
+      "INSERT INTO members (token, joined, dm) VALUES (?, ?, ?)",
       token,
       Date.now(),
+      dm ? 1 : 0,
     );
     return token;
+  }
+
+  /** Re-answers "who am I" on every socket held by one member. */
+  private tellRole(token: string): void {
+    const dm = this.isDm(token);
+    for (const ws of this.ctx.getWebSockets()) {
+      const held = (ws.deserializeAttachment() ?? {}) as Partial<Attachment>;
+      if (held.token !== token) continue;
+      this.send(ws, {
+        t: "you",
+        dm,
+        ...(dm ? { dmKey: this.meta("dmKey") ?? "" } : {}),
+      });
+    }
   }
 
   // ---- RPC ----------------------------------------------------------------
@@ -131,7 +172,8 @@ export class Room extends DurableObject<Env> {
       return { token: "", created: false };
     }
     this.setMeta("createdAt", String(Date.now()));
-    return { token: this.addMember(), created: true };
+    this.setMeta("dmKey", randomFrom(CODE_ALPHABET, DM_KEY_LENGTH));
+    return { token: this.addMember(true), created: true };
   }
 
   async join(): Promise<{ token: string } | { error: string }> {
@@ -141,6 +183,23 @@ export class Room extends DurableObject<Env> {
       return { error: "joining-closed" };
     }
     return { token: this.addMember() };
+  }
+
+  /**
+   * Claim the DM seat with the key. Additive — the device that started the
+   * room stays a DM, so a laptop and a tablet can both be one.
+   *
+   * Joining closes after a window; claiming deliberately does not. Losing a
+   * device is exactly the case this exists for, and it can happen in week
+   * nine.
+   */
+  async claim(token: string, key: string): Promise<{ ok: true } | { error: string }> {
+    if (!this.isMember(token)) return { error: "not-a-member" };
+    const want = this.meta("dmKey");
+    if (!want || normaliseDmKey(key) !== want) return { error: "wrong-key" };
+    this.ctx.storage.sql.exec("UPDATE members SET dm = 1 WHERE token = ?", token);
+    this.tellRole(token);
+    return { ok: true };
   }
 
   // ---- the log ------------------------------------------------------------
@@ -226,6 +285,10 @@ export class Room extends DurableObject<Env> {
       // Everyone gets the new count, not just the arrival — otherwise the
       // first person in the room reads "1 joined" for the whole session.
       this.broadcast({ t: "welcome", head: this.head(), members: this.memberCount() });
+      // Sent on every sync, not just the first: a device that reloads has to
+      // learn again which side of the screen it is on.
+      const held = (ws.deserializeAttachment() ?? {}) as Partial<Attachment>;
+      this.tellRole(held.token ?? "");
       const missed = this.after(since);
       if (missed.length > 0) {
         this.send(ws, { t: "events", events: missed, head: this.head() });
@@ -283,7 +346,7 @@ export default {
       return json({ error: "could-not-allocate" }, 503);
     }
 
-    const roomMatch = /^\/api\/rooms\/([^/]+)\/(join|ws)$/.exec(path);
+    const roomMatch = /^\/api\/rooms\/([^/]+)\/(join|claim|ws)$/.exec(path);
     if (roomMatch) {
       const code = normaliseCode(decodeURIComponent(roomMatch[1]!));
       const action = roomMatch[2];
@@ -294,6 +357,12 @@ export default {
       if (action === "join" && request.method === "POST") {
         const result = await stub.join();
         return "error" in result ? json(result, 404) : json({ code, ...result });
+      }
+      if (action === "claim" && request.method === "POST") {
+        const token = url.searchParams.get("token") ?? "";
+        const key = url.searchParams.get("key") ?? "";
+        const result = await stub.claim(token, key);
+        return "error" in result ? json(result, 403) : json(result);
       }
       if (action === "ws") return stub.fetch(request);
     }

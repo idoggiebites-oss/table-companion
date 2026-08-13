@@ -41,6 +41,17 @@ export interface Campaign {
   readonly room: RoomCredentials | null;
   readonly status: ConnectionStatus;
   readonly members: number;
+  /**
+   * Whether this device may sit in the DM's seat. Solo (no room) it may — a
+   * device on its own is its own table. In a room only the creator may.
+   * `null` means the server has not answered yet, and is deliberately not
+   * treated as "no": a DM reloading must not be tipped out of their seat.
+   */
+  readonly dmRole: boolean | null;
+  /** The DM's key, held only by a DM. Never sent to a player's device. */
+  readonly dmKey: string | null;
+  /** Present the key to become a DM on this device too. */
+  readonly claimDm: (key: string) => Promise<boolean>;
   readonly joinRoom: (creds: RoomCredentials) => Promise<void>;
   readonly leaveRoom: () => Promise<void>;
 }
@@ -52,6 +63,8 @@ export function useCampaign(actor = "local"): Campaign {
   const [room, setRoom] = useState<RoomCredentials | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("offline");
   const [members, setMembers] = useState(0);
+  const [dmRole, setDmRole] = useState<boolean | null>(null);
+  const [dmKey, setDmKey] = useState<string | null>(null);
 
   const conn = useRef<RoomConnection | null>(null);
   // Held in a ref so changing seats doesn't rebuild every callback.
@@ -89,6 +102,10 @@ export function useCampaign(actor = "local"): Campaign {
             setStatus(s);
             setMembers(n);
           },
+          onRole: (dm, key) => {
+            setDmRole(dm);
+            setDmKey(key ?? null);
+          },
         },
         head.current,
         resend,
@@ -114,6 +131,7 @@ export function useCampaign(actor = "local"): Campaign {
         head.current = savedHead ?? 0;
         if (savedRoom) {
           setRoom(savedRoom);
+          setDmRole(savedRoom.dm ?? null);
           openConnection(savedRoom, loaded.pending);
         }
       } catch {
@@ -149,12 +167,34 @@ export function useCampaign(actor = "local"): Campaign {
     async (creds: RoomCredentials) => {
       await writeMeta(ROOM_KEY, creds);
       setRoom(creds);
+      setDmRole(creds.dm ?? null);
       // Everything written solo is pending, so it flows into the room on
       // connect — a character made before joining is not lost.
       const loaded = await loadLog();
       openConnection(creds, loaded.pending);
     },
     [openConnection],
+  );
+
+  /**
+   * The server answers by pushing a fresh role down the open socket, so there
+   * is nothing to reload and no second source of truth on this device.
+   */
+  const claimDm = useCallback(
+    async (key: string) => {
+      if (!room) return false;
+      try {
+        const res = await fetch(
+          `/api/rooms/${encodeURIComponent(room.code)}/claim` +
+            `?token=${encodeURIComponent(room.token)}&key=${encodeURIComponent(key)}`,
+          { method: "POST" },
+        );
+        return res.ok;
+      } catch {
+        return false;
+      }
+    },
+    [room],
   );
 
   const leaveRoom = useCallback(async () => {
@@ -164,6 +204,8 @@ export function useCampaign(actor = "local"): Campaign {
     setRoom(null);
     setStatus("offline");
     setMembers(0);
+    setDmRole(null);
+    setDmKey(null);
   }, []);
 
   const reset = useCallback(() => {
@@ -192,6 +234,6 @@ export function useCampaign(actor = "local"): Campaign {
 
   return {
     ready, log, state, append, revert, reset, reverted,
-    room, status, members, joinRoom, leaveRoom,
+    room, status, members, dmRole, dmKey, claimDm, joinRoom, leaveRoom,
   };
 }

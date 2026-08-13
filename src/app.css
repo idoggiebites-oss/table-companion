@@ -416,6 +416,11 @@ html, body { overscroll-behavior-y: none; }
 .rb-input { width: 108px; text-transform: uppercase; letter-spacing: 0.14em; }
 .roombar button { padding: 8px 12px; font-size: 0.62rem; }
 .rb-error { color: var(--near); font-size: 0.82rem; flex-basis: 100%; }
+/* The key sits UNDER the room bar rather than inside it: it is a second
+   thought, and at 430px a fifth control in that row wraps into nonsense. */
+.rb-second { margin-top: -14px; border-top: 0; }
+.rb-second .rb-input { width: 128px; }
+.rb-hint { color: var(--faint); font-size: 0.76rem; }
 
 /* ---- seat ---- */
 .seatbar { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
