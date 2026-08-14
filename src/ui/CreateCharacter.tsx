@@ -32,8 +32,8 @@ import {
 } from "../domain/non-srd.js";
 import type { ClassId, DieSize } from "../domain/resources.js";
 import {
-  loadClasses, loadClassLevels, loadEquipment, loadRaces,
-  type ClassEntry, type ClassLevels, type RaceEntry,
+  loadBackgrounds, loadClasses, loadClassLevels, loadEquipment, loadRaces,
+  type BackgroundEntry, type ClassEntry, type ClassLevels, type RaceEntry,
 } from "../store/srd.js";
 import { indexItems, type Item, type Stack } from "../domain/items.js";
 import { formatCoins } from "../domain/money.js";
@@ -84,6 +84,7 @@ export function CreateCharacter({
   const [classId, setClassId] = useState<string>("");
   const [classSkills, setClassSkills] = useState<SkillId[]>([]);
   const [raceId, setRaceId] = useState<string>("");
+  const [raceFilter, setRaceFilter] = useState("");
   const [subraceId, setSubraceId] = useState<string>("");
   const [method, setMethod] = useState<ScoreMethod>("array");
   const [assigned, setAssigned] = useState<Partial<Record<Ability, number>>>({});
@@ -93,13 +94,32 @@ export function CreateCharacter({
   const [rolled, setRolled] = useState<number[]>([]);
   const [bgName, setBgName] = useState("");
   const [bgSkills, setBgSkills] = useState<SkillId[]>([]);
+  const [bgId, setBgId] = useState("");
+  const [bgFilter, setBgFilter] = useState("");
+  const [backgrounds, setBackgrounds] = useState<BackgroundEntry[]>([]);
 
   useEffect(() => {
     loadRaces().then(setRaces, () => setRaces([]));
     loadClasses().then(setClasses, () => setClasses([]));
     loadClassLevels().then(setLevels, () => setLevels({}));
     loadEquipment().then(setGear, () => setGear([]));
+    loadBackgrounds().then(setBackgrounds, () => setBackgrounds([]));
   }, []);
+
+  /** Keeps the chosen race listed even when it falls out of the filter. */
+  const shownRaces = useMemo(() => {
+    const list = races ?? [];
+    const q = raceFilter.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((r) => r.name.toLowerCase().includes(q) || r.id === raceId);
+  }, [races, raceFilter, raceId]);
+
+  const shownBackgrounds = useMemo(() => {
+    const q = bgFilter.trim().toLowerCase();
+    return q
+      ? backgrounds.filter((b) => b.name.toLowerCase().includes(q) || b.id === bgId)
+      : backgrounds;
+  }, [backgrounds, bgFilter, bgId]);
 
   const klass = classes?.find((c) => c.id === classId);
   const race = races?.find((r) => r.id === raceId);
@@ -319,6 +339,18 @@ export function CreateCharacter({
             )}
 
             <span className="label cr-step">2 · Race</span>
+            {/* A shipped SRD list is nine long; an imported one is six hundred.
+                The filter appears only when the list is long enough to need
+                it, so the common case stays a single control. */}
+            {races.length > 20 && (
+              <input
+                value={raceFilter}
+                aria-label="Filter races"
+                placeholder={`filter ${races.length} races…`}
+                style={{ marginBottom: 8 }}
+                onChange={(e) => setRaceFilter(e.target.value)}
+              />
+            )}
             <select
               aria-label="Race"
               value={raceId}
@@ -329,10 +361,13 @@ export function CreateCharacter({
               }}
             >
               <option value="">choose a race…</option>
-              {races.map((r) => (
+              {shownRaces.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
+            {races.length > 20 && shownRaces.length === 0 && (
+              <p className="cr-note">Nothing matches that.</p>
+            )}
             {race && race.subraces.length > 0 && (
               <select
                 aria-label="Subrace"
@@ -510,10 +545,48 @@ export function CreateCharacter({
             <span className="faint" style={{ fontSize: ".78rem" }}>{bgSkills.length} of 2 skills</span>
           </div>
           <div className="card-body">
-            <p className="cr-note" style={{ marginTop: 0 }}>
-              The SRD ships one background, so this builder offers a custom one
-              instead — two skills and a name. That is all a background
-              mechanically is.
+            {/* Imported backgrounds fill in the name and the skills; the
+                custom route stays underneath, because a table invents one
+                more often than it looks one up. */}
+            {backgrounds.length > 0 && (
+              <>
+                <input
+                  value={bgFilter}
+                  aria-label="Filter backgrounds"
+                  placeholder={`filter ${backgrounds.length} backgrounds…`}
+                  onChange={(e) => setBgFilter(e.target.value)}
+                />
+                <select
+                  aria-label="Background"
+                  value={bgId}
+                  style={{ marginTop: 8 }}
+                  onChange={(e) => {
+                    const b = backgrounds.find((x) => x.id === e.target.value);
+                    setBgId(e.target.value);
+                    if (!b) return;
+                    setBgName(b.name);
+                    // Only the skills this app knows how to score. A
+                    // background naming a tool proficiency keeps its name and
+                    // loses nothing the sheet was going to show.
+                    setBgSkills(
+                      b.skills
+                        .map((n) => skillIdOf(n))
+                        .filter((x): x is SkillId => x !== undefined)
+                        .slice(0, 2),
+                    );
+                  }}
+                >
+                  <option value="">choose one, or make your own below…</option>
+                  {shownBackgrounds.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </>
+            )}
+            <p className="cr-note" style={{ marginTop: backgrounds.length > 0 ? 12 : 0 }}>
+              {backgrounds.length > 0
+                ? "Or make one up — two skills and a name is all a background mechanically is."
+                : "The SRD ships one background, so this builder offers a custom one instead — two skills and a name. That is all a background mechanically is."}
             </p>
             <div className="chips">
               {SKILL_IDS.map((s) => {

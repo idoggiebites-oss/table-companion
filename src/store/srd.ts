@@ -68,6 +68,7 @@ let races: Promise<RaceEntry[]> | null = null;
 let classes: Promise<ClassEntry[]> | null = null;
 let classLevels: Promise<ClassLevels> | null = null;
 let equipment: Promise<Item[]> | null = null;
+let backgrounds: Promise<BackgroundEntry[]> | null = null;
 let conditions: Promise<ConditionDescription[]> | null = null;
 
 async function load<T>(path: string): Promise<T[]> {
@@ -85,8 +86,54 @@ export function loadMonsters(): Promise<Statblock[]> {
 }
 
 export function loadRaces(): Promise<RaceEntry[]> {
-  races ??= load<RaceEntry>("/srd/races.json");
+  races ??= Promise.all([
+    load<RaceEntry>("/srd/races.json"),
+    readContent("race").catch(() => []),
+  ]).then(([srd, imported]) =>
+    // A compendium race has traits and no subraces — it lists "Elf, Wood" as
+    // its own entry rather than nesting. Mapped into the shipped shape so the
+    // builder does not need to know which list a race came from.
+    mergeById(
+      srd,
+      imported.map(
+        (r): RaceEntry => ({
+          id: r.id,
+          name: r.name,
+          size: r.size,
+          speed: r.speed,
+          abilityBonuses: r.abilityBonuses,
+          traits: r.traits.map((t) => ({ name: t.name, desc: t.text })),
+          subraces: [],
+        }),
+      ),
+    ),
+  );
   return races;
+}
+
+export interface BackgroundEntry {
+  readonly id: string;
+  readonly name: string;
+  readonly skills: readonly string[];
+  readonly traits: readonly { readonly name: string; readonly desc: string }[];
+}
+
+/**
+ * There is exactly one SRD background, so this list is empty until something
+ * is imported — which is why the builder offers a custom one either way.
+ */
+export function loadBackgrounds(): Promise<BackgroundEntry[]> {
+  backgrounds ??= readContent("background")
+    .then((rows) =>
+      rows.map((b) => ({
+        id: b.id,
+        name: b.name,
+        skills: b.skills,
+        traits: b.traits.map((t) => ({ name: t.name, desc: t.text })),
+      })),
+    )
+    .catch(() => []);
+  return backgrounds;
 }
 
 export function loadClasses(): Promise<ClassEntry[]> {
@@ -117,6 +164,8 @@ export function loadEquipment(): Promise<Item[]> {
 export function forgetLoaded(): void {
   equipment = null;
   monsters = null;
+  races = null;
+  backgrounds = null;
 }
 
 export function loadConditions(): Promise<ConditionDescription[]> {
