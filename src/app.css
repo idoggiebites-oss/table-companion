@@ -422,6 +422,18 @@ html, body { overscroll-behavior-y: none; }
 .rb-second .rb-input { width: 128px; }
 .rb-hint { color: var(--faint); font-size: 0.76rem; }
 
+/* ---- sources ---- */
+.src { padding: 4px 16px 12px; }
+.src-row {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 8px 0; border-top: 1px solid var(--rule);
+}
+.src-row:first-child { border-top: 0; }
+.src-row .nm { flex: 0 0 auto; color: var(--ink); }
+.src-row .faint { flex: 1 1 auto; font-size: 0.78rem; min-width: 0; }
+.src-row button { padding: 5px 9px; font-size: 0.58rem; }
+.src-note { padding: 0 16px 12px; margin: 0; font-size: 0.78rem; }
+
 /* ---- starting equipment ---- */
 .gear-step { margin: 14px 0 4px; }
 .gear-step .seg { margin-top: 6px; }

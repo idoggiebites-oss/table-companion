@@ -19,6 +19,7 @@ import { Progression } from "./Progression.js";
 import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
+import { Sources } from "./Sources.js";
 import { Tabs, type TabDef } from "./Tabs.js";
 import { Gear } from "./Gear.js";
 
@@ -275,7 +276,12 @@ export function App() {
                 </>
               )}
 
-              {current === "book" && <Reference homebrew={state.homebrew} />}
+              {current === "book" && (
+                <>
+                  <Reference homebrew={state.homebrew} />
+                  <Sources />
+                </>
+              )}
             </>
           ) : mine && mineState ? (
             <>
@@ -299,6 +305,9 @@ export function App() {
                     append={append}
                   />
                   <Gear build={mine} state={mineState} append={append} />
+                  {/* Content is device-local, so every device needs its own
+                      way in — not just the DM's. */}
+                  <Sources />
                 </>
               )}
             </>

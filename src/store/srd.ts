@@ -32,6 +32,7 @@ export interface RaceEntry {
 }
 
 import type { Item } from "../domain/items.js";
+import { mergeById, readContent } from "./content.js";
 
 export interface ClassLevel {
   readonly level: number;
@@ -76,7 +77,10 @@ async function load<T>(path: string): Promise<T[]> {
 }
 
 export function loadMonsters(): Promise<Statblock[]> {
-  monsters ??= load<Statblock>("/srd/monsters.json");
+  monsters ??= Promise.all([
+    load<Statblock>("/srd/monsters.json"),
+    readContent("monster").catch(() => [] as Statblock[]),
+  ]).then(([srd, imported]) => mergeById(srd, imported));
   return monsters;
 }
 
@@ -99,11 +103,20 @@ export function loadClassLevels(): Promise<ClassLevels> {
 }
 
 export function loadEquipment(): Promise<Item[]> {
-  equipment ??= fetch("/srd/equipment.json").then((r) => {
-    if (!r.ok) throw new Error(`equipment: HTTP ${r.status}`);
-    return r.json() as Promise<Item[]>;
-  });
+  equipment ??= Promise.all([
+    fetch("/srd/equipment.json").then((r) => {
+      if (!r.ok) throw new Error(`equipment: HTTP ${r.status}`);
+      return r.json() as Promise<Item[]>;
+    }),
+    readContent("item").catch(() => [] as Item[]),
+  ]).then(([srd, imported]) => mergeById(srd, imported));
   return equipment;
+}
+
+/** Called after an import, so the next read picks the new content up. */
+export function forgetLoaded(): void {
+  equipment = null;
+  monsters = null;
 }
 
 export function loadConditions(): Promise<ConditionDescription[]> {
