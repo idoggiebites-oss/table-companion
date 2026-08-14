@@ -67,6 +67,13 @@ export interface Combat {
   readonly creatureHp: Readonly<Record<string, number>>;
   /** Feet moved this turn, by combatant id. Cleared when their turn opens. */
   readonly moved: Readonly<Record<string, number>>;
+  /**
+   * Reactions spent, by combatant id — for CREATURES only. A character's
+   * reaction is part of their economy in campaign state, where the rest of
+   * their action economy lives; a creature has no state outside the fight, so
+   * its reaction lives here. Same split as hit points.
+   */
+  readonly reactions: Readonly<Record<string, boolean>>;
 }
 
 /**
@@ -107,6 +114,7 @@ export function stageCombat(order: readonly Combatant[]): Combat {
     order: [...order],
     creatureHp: seedHp(order),
     moved: {},
+    reactions: {},
   };
 }
 
@@ -119,6 +127,7 @@ export function startCombat(order: readonly Combatant[]): Combat {
     order: sorted,
     creatureHp: seedHp(sorted),
     moved: {},
+    reactions: {},
   };
 }
 
@@ -148,12 +157,18 @@ export function beginCombat(combat: Combat): Combat {
     turn: 0,
     order: sortOrder(rolled),
     moved: {},
+    reactions: {},
   };
 }
 
 /** Surprise costs you the first round only. */
 export function isSurprised(combat: Combat, c: Combatant): boolean {
   return c.surprised === true && combat.round === 1;
+}
+
+/** Creatures only — a character's reaction lives in their economy. */
+export function hasReaction(combat: Combat, id: string): boolean {
+  return combat.reactions[id] !== true;
 }
 
 export function movementLeft(combat: Combat, c: Combatant): number | null {
@@ -175,12 +190,17 @@ export function advance(combat: Combat, from: number): Combat {
   if (from !== combat.turn) return combat;
   const next = combat.turn + 1;
   const moved = { ...combat.moved };
-  // Movement comes back when your turn opens, exactly like the economy.
+  const reactions = { ...combat.reactions };
+  // Movement and the reaction both come back when your turn opens, exactly
+  // like a character's economy does.
   const opening = combat.order[next >= combat.order.length ? 0 : next];
-  if (opening) delete moved[opening.id];
+  if (opening) {
+    delete moved[opening.id];
+    delete reactions[opening.id];
+  }
   return next >= combat.order.length
-    ? { ...combat, turn: 0, round: combat.round + 1, moved }
-    : { ...combat, turn: next, moved };
+    ? { ...combat, turn: 0, round: combat.round + 1, moved, reactions }
+    : { ...combat, turn: next, moved, reactions };
 }
 
 export function activeCombatant(combat: Combat): Combatant | null {

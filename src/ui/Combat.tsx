@@ -18,8 +18,8 @@ import {
 } from "../domain/statblock.js";
 import { loadMonsters } from "../store/srd.js";
 import {
-  activeCombatant, awaitingRolls, controls, DISCLOSURE, mayEndTurn, turnsUntil,
-  visibleTo,
+  activeCombatant, awaitingRolls, controls, DISCLOSURE, hasReaction, mayEndTurn,
+  turnsUntil, visibleTo,
   type Combat, type Combatant, type Disclosure, type Seat,
 } from "../domain/combat.js";
 
@@ -339,7 +339,14 @@ export function Combat({
   /** Who a player has chosen to swing at, and what they rolled for damage. */
   const [target, setTarget] = useState<Combatant | null>(null);
   const [dealt, setDealt] = useState(0);
-  const [dmPicking, setDmPicking] = useState(false);
+  /**
+   * The DM's swing, in two flavours. On a creature's own turn the attacker is
+   * whoever is up. Off-turn it is an opportunity attack, and WHICH creature
+   * is reacting has to be asked — attributing it to whoever happens to be
+   * active would credit the player whose turn provoked it.
+   */
+  const [dmPicking, setDmPicking] = useState<null | "target" | "reactor">(null);
+  const [reactor, setReactor] = useState<Combatant | null>(null);
   const combat = state.combat;
 
   if (!combat) {
@@ -488,12 +495,23 @@ export function Combat({
                 * for the party screen, which is the one thing you cannot do
                 * mid-turn.
                 */}
-              <button onClick={() => setDmPicking((v) => !v)}>
+              <button
+                onClick={() => {
+                  if (dmPicking) {
+                    setDmPicking(null);
+                    setReactor(null);
+                    return;
+                  }
+                  const own = active !== null && active.controller.kind === "dm";
+                  setReactor(own ? active : null);
+                  setDmPicking(own ? "target" : "reactor");
+                }}
+              >
                 {dmPicking
                   ? "Cancel"
                   : active && active.controller.kind === "dm"
                     ? `Attack with ${active.name}`
-                    : "Attack"}
+                    : "Opportunity attack"}
               </button>
               <button
                 disabled={!canEnd}
@@ -515,23 +533,66 @@ export function Combat({
             </>
           )}
         </div>
-        {dmPicking && seat.kind === "dm" && (
+        {dmPicking === "reactor" && seat.kind === "dm" && (() => {
+          const able = combat.order.filter(
+            (c) =>
+              c.controller.kind === "dm" &&
+              c.id !== active?.id &&
+              hasReaction(combat, c.id) &&
+              (c.source.kind !== "creature" || (combat.creatureHp[c.id] ?? 1) > 0),
+          );
+          return (
+            <div className="tgt">
+              <span className="label">Which one reacts</span>
+              {able.map((c) => (
+                <button
+                  className="tgt-row"
+                  key={c.id}
+                  onClick={() => {
+                    setReactor(c);
+                    setDmPicking("target");
+                  }}
+                >
+                  {c.name}
+                </button>
+              ))}
+              {able.length === 0 && (
+                <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+                  Nothing of yours has a reaction left. They come back on their
+                  own turns.
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
+        {dmPicking === "target" && seat.kind === "dm" && (
           <div className="tgt">
             <span className="label">
-              {active ? `${active.name} attacks` : "Attacks"}
+              {reactor ? `${reactor.name} attacks` : "Attacks"}
             </span>
             {/* Everyone but the attacker: monsters turn on each other often
                 enough — charmed, confused, or just badly aimed. */}
             {combat.order
-              .filter((c) => c.id !== active?.id)
+              .filter((c) => c.id !== reactor?.id)
               .map((c) => (
                 <button
                   className="tgt-row"
                   key={c.id}
                   onClick={() => {
+                    // Off-turn, this IS an opportunity attack: one event
+                    // spends the reaction and records who it was against, so
+                    // undoing the attack gives the reaction back.
+                    if (reactor && reactor.id !== active?.id) {
+                      append({
+                        type: "opportunityTaken",
+                        attacker: reactor.id,
+                        against: c.id,
+                      });
+                    }
                     setTarget(c);
                     setDealt(0);
-                    setDmPicking(false);
+                    setDmPicking(null);
                   }}
                 >
                   {c.name}

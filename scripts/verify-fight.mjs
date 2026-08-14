@@ -172,6 +172,40 @@ ok("and it lands on the player's own sheet",
 await go(p1.page, "fight");
 
 
+// --- the DM's opportunity attack ------------------------------------------
+// Off-turn the attacker is NOT whoever is active — attributing it to them
+// would credit the player whose turn provoked it.
+await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.waitForTimeout(700);
+ok("off a creature's turn the DM is offered a reaction, not an action",
+  await dm.page.getByRole("button", { name: "Opportunity attack" }).count(), 1);
+await dm.page.getByRole("button", { name: "Opportunity attack" }).click();
+await dm.page.waitForSelector(".tgt");
+ok("and is asked which of theirs reacts",
+  (await dm.page.locator(".tgt-row").allInnerTexts()).map((t) => t.toLowerCase()), ["goblin"]);
+await dm.page.locator(".tgt-row").first().click();
+await dm.page.waitForTimeout(300);
+ok("then who it swings at",
+  (await dm.page.locator(".tgt-row").allInnerTexts()).map((t) => t.toLowerCase()).includes("kira vance"), true);
+await dm.page.locator(".tgt-row", { hasText: /Kira/i }).click();
+await dm.page.locator('input[aria-label="Damage dealt"]').fill("2");
+await dm.page.getByRole("button", { name: "It hits" }).click();
+await p1.page.waitForTimeout(1200);
+await go(p1.page, "sheet");
+ok("it lands", (await p1.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "4 / 12");
+await go(p1.page, "fight");
+
+// One reaction, like everyone else's.
+await dm.page.getByRole("button", { name: "Opportunity attack" }).click();
+await dm.page.waitForSelector(".tgt");
+ok("and a creature only gets one until its turn comes round",
+  (await dm.page.locator(".tgt").innerText()).toLowerCase().includes("nothing of yours"), true);
+await dm.page.getByRole("button", { name: "Cancel" }).click();
+
+// Back to the creature's turn, so the PLAYER is the one waiting.
+await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.waitForTimeout(700);
+
 // --- the opportunity attack the reaction pip was always for ---------------
 await p1.page.waitForTimeout(600);
 ok("a waiting player is offered one",

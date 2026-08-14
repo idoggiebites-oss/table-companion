@@ -252,7 +252,18 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     case "opportunityTaken": {
       // The reaction is spent by the same event, so undoing the attack gives
       // it back — two events could be undone apart and leave a lie.
-      if (!e.attackerWho) return state;
+      if (!e.attackerWho) {
+        // A creature: its reaction lives in the fight, not in a character.
+        return state.combat
+          ? {
+              ...state,
+              combat: {
+                ...state.combat,
+                reactions: { ...state.combat.reactions, [e.attacker]: true },
+              },
+            }
+          : state;
+      }
       const c = state.characters[e.attackerWho];
       if (!c) return state;
       return {

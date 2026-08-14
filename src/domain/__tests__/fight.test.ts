@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  advance, awaitingRolls, beginCombat, isSurprised, movementLeft,
+  advance, awaitingRolls, beginCombat, hasReaction, isSurprised, movementLeft,
   setInitiative, sortOrder, stageCombat, type Combatant,
 } from "../combat.js";
 
@@ -116,5 +116,40 @@ describe("movement", () => {
     const next = advance(c, 1);
     expect(next.round).toBe(2);
     expect(next.moved.a).toBeUndefined();
+  });
+});
+
+describe("a creature's reaction", () => {
+  const cr = (id: string, initiative: number) => ({
+    id, name: id, initiative,
+    source: { kind: "creature" as const, maxHp: 10 },
+    controller: { kind: "dm" as const },
+    disclosure: "vague" as const,
+  });
+  const start = () =>
+    beginCombat(
+      setInitiative(setInitiative(stageCombat([pc("a", null), cr("g", null)]), "a", 20), "g", 10),
+    );
+
+  it("starts available", () => {
+    expect(hasReaction(start(), "g")).toBe(true);
+  });
+
+  it("is spent once taken", () => {
+    const c = { ...start(), reactions: { g: true } };
+    expect(hasReaction(c, "g")).toBe(false);
+  });
+
+  it("comes back on its own turn, not on everyone else's", () => {
+    const c = { ...start(), reactions: { g: true } };
+    // Turn 0 is the character; advancing opens the creature's turn.
+    const next = advance(c, 0);
+    expect(hasReaction(next, "g")).toBe(true);
+  });
+
+  it("survives somebody else's turn opening", () => {
+    const c = { ...start(), turn: 1, reactions: { g: true } };
+    const next = advance(c, 1); // wraps to the character
+    expect(hasReaction(next, "g")).toBe(false);
   });
 });
