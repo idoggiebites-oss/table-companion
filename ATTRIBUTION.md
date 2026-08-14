@@ -39,3 +39,14 @@ licensed. The build is reproducible: `node scripts/build-srd.mjs` refetches and
 rewrites `public/srd/*.json`.
 
 MIT License, Copyright (c) 2018-2020 Adrian Padua, Christopher Ward.
+
+## Access
+
+The deployment is behind a shared passphrase (`SITE_PASSPHRASE`, a Worker
+secret). Cloudflare Access would be the better answer, but it needs a hostname
+on a zone you own and this runs on a workers.dev subdomain, which is
+Cloudflare's. See `worker/gate.ts`.
+
+The gate is a door, not identity: it stops strangers reaching the deployment.
+It is not what keeps a DM's creatures hidden from players — that is the
+disclosure ladder, which works on the seat.

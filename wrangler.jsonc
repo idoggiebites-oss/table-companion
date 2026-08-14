@@ -4,7 +4,15 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
-  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  // run_worker_first: assets are served BEFORE the Worker by default, which
+  // means the gate never saw a request for the app itself. With this the
+  // Worker runs first and forwards to ASSETS once the request is allowed.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
   "durable_objects": {
     "bindings": [{ "name": "ROOM", "class_name": "Room" }]
   },

@@ -11,6 +11,7 @@
  */
 
 import { DurableObject } from "cloudflare:workers";
+import { guard } from "./gate.js";
 import type { DomainEvent } from "../src/domain/events.js";
 import {
   CODE_ALPHABET,
@@ -26,6 +27,14 @@ import {
 
 export interface Env {
   ROOM: DurableObjectNamespace<Room>;
+  /** The built front end. Served by the Worker so the gate comes first. */
+  ASSETS: Fetcher;
+  /**
+   * Optional. Set it and the whole deployment asks for it once per device;
+   * leave it unset and the site is open. See worker/gate.ts for why absence
+   * fails open rather than closed.
+   */
+  SITE_PASSPHRASE?: string;
 }
 
 /**
@@ -333,6 +342,10 @@ const json = (body: unknown, status = 200) =>
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    // Everything, including the assets and the socket, sits behind this.
+    const gate = await guard(request, env.SITE_PASSPHRASE);
+    if (gate.response) return gate.response;
+
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -367,6 +380,7 @@ export default {
       if (action === "ws") return stub.fetch(request);
     }
 
-    return new Response("not found", { status: 404 });
+    // Anything that is not the API is the app itself.
+    return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
