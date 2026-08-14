@@ -77,17 +77,44 @@ await page.getByRole("button", { name: "Add spells" }).click();
 await page.waitForSelector('input[aria-label="Search spells"]', { timeout: 20000 });
 
 // Only what this class can cast, until asked otherwise.
+// Exact: a complete compendium really does give "Mass Cure Wounds" to a UA
+// wizard subclass, so a substring match would be testing the file's contents
+// rather than the filter.
+const exactly = (n) => page.locator(".inv-add .nm").filter({ hasText: new RegExp(`^${n}$`, "i") });
 await page.locator('input[aria-label="Search spells"]').fill("Cure Wounds");
 await page.waitForTimeout(500);
-ok("a wizard is not offered a cleric's spell",
-  await page.locator(".inv-add", { hasText: "Cure Wounds" }).count(), 0);
+ok("a wizard is not offered a cleric's spell", await exactly("Cure Wounds").count(), 0);
 await page.getByRole("button", { name: /only/i }).click();
 await page.waitForTimeout(400);
-ok("unless they ask for everything",
-  await page.locator(".inv-add", { hasText: "Cure Wounds" }).count() > 0, true);
+ok("unless they ask for everything", await exactly("Cure Wounds").count() > 0, true);
+
+// --- what a compendium files under spells but is not one ------------------
+// A complete compendium has 1,539 invocations, maneuvers, metamagics and
+// runes among its 3,443 "spells", and 1,254 of them claim level 0 — so a
+// warlock browsing cantrips would get a wall of invocations before a spell.
+await page.locator('input[aria-label="Search spells"]').fill("");
+await page.waitForTimeout(500);
+const featureChip = page.locator(".chip", { hasText: /class features filed as spells/i });
+const hasFeatures = (await featureChip.count()) > 0;
+if (hasFeatures) {
+  const shown = (await page.locator(".inv-add .nm").allInnerTexts()).map((t) => t.toLowerCase());
+  ok("class features are kept out of the spell list",
+    shown.some((n) => /^[^:]{1,40}:\s/.test(n)), false);
+  ok("but the app says how many it is hiding",
+    /\d{3,}/.test(await featureChip.innerText()), true);
+  await featureChip.click();
+  await page.waitForTimeout(500);
+  const withThem = (await page.locator(".inv-add .nm").allInnerTexts()).map((t) => t.toLowerCase());
+  ok("and will show them if asked — they are hidden, not discarded",
+    withThem.some((n) => /^[^:]{1,40}:\s/.test(n)), true);
+  await featureChip.click();
+  await page.waitForTimeout(400);
+} else {
+  console.log("PASS  no class features in this compendium, nothing to hide: true");
+}
+
 await page.getByRole("button", { name: "Everything" }).click();
 await page.waitForTimeout(300);
-
 for (const name of ["Magic Missile", "Fireball", "Fire Bolt", "Haste"]) {
   await page.locator('input[aria-label="Search spells"]').fill(name);
   await page.waitForTimeout(400);

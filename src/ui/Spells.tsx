@@ -21,7 +21,8 @@ import type { EffectiveBuild } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
 import type { CharacterState } from "../domain/project.js";
 import {
-  canCast, castableBy, groupByLevel, isReady, levelLabel, slotsFor, toKnown,
+  canCast, castableBy, groupByLevel, isClassFeature, isReady, levelLabel,
+  slotsFor, toKnown,
   type KnownSpell, type SlotState,
 } from "../domain/spells.js";
 import type { CompendiumSpell } from "../import/compendium.js";
@@ -49,6 +50,7 @@ export function Spells({
   const [browsing, setBrowsing] = useState(false);
   const [text, setText] = useState("");
   const [onlyMine, setOnlyMine] = useState(true);
+  const [showFeatures, setShowFeatures] = useState(false);
   const [casting, setCasting] = useState<KnownSpell | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
@@ -72,6 +74,11 @@ export function Spells({
   const known = state.spells;
   const groups = groupByLevel(known);
 
+  const hiddenFeatures = useMemo(
+    () => (book ? book.filter((s) => isClassFeature(s)).length : 0),
+    [book],
+  );
+
   const results = useMemo(() => {
     if (!book) return [];
     const q = text.trim().toLowerCase();
@@ -79,13 +86,14 @@ export function Spells({
     return book
       .filter((s) => {
         if (have.has(s.id)) return false;
+        if (!showFeatures && isClassFeature(s)) return false;
         if (q && !s.name.toLowerCase().includes(q)) return false;
         if (onlyMine && !classIds.some((c) => castableBy(s, c))) return false;
         return true;
       })
       .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
       .slice(0, 60);
-  }, [book, text, onlyMine, known, classIds]);
+  }, [book, text, onlyMine, showFeatures, known, classIds]);
 
   function cast(spell: KnownSpell, atLevel: number, ritual = false) {
     append({
@@ -158,6 +166,19 @@ export function Spells({
                   placeholder="fireball, cure wounds…"
                   onChange={(e) => setText(e.target.value)}
                 />
+                {/* Compendiums file invocations, maneuvers and the like under
+                    spells. Hidden rather than dropped — somebody tracks them,
+                    just not from here. */}
+                {hiddenFeatures > 0 && (
+                  <button
+                    className={`chip${showFeatures ? " on" : ""}`}
+                    aria-pressed={showFeatures}
+                    style={{ marginTop: 10 }}
+                    onClick={() => setShowFeatures((v) => !v)}
+                  >
+                    {hiddenFeatures} class features filed as spells
+                  </button>
+                )}
                 <div className="inv-find">
                   {results.map((s) => (
                     <button

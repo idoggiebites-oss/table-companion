@@ -83,6 +83,24 @@ export function castableBy(spell: SpellSource, classId: string): boolean {
   return spell.classes.some((c) => c === want || c.startsWith(`${want} `));
 }
 
+/**
+ * Compendiums file class FEATURES under spells — invocations, maneuvers,
+ * metamagic, runes, infusions, elemental disciplines. In a complete one that
+ * is 1,539 of 3,443 entries, and 1,254 of them claim level 0, so a warlock
+ * browsing cantrips gets a wall of invocations before a single spell.
+ *
+ * Two signals identify them and both are needed. Most carry no school, which
+ * no real spell omits. The rest announce their category before a colon —
+ * "Invocation: Agonizing Blast", "Elemental Discipline: Breath of Winter" —
+ * and some of those do have a school.
+ *
+ * Hidden by default rather than discarded: they are real things somebody
+ * tracks, just not from a spell list.
+ */
+export function isClassFeature(s: { name: string; school: string }): boolean {
+  return s.school.trim() === "" || /^[^:]{1,40}:\s/.test(s.name);
+}
+
 export interface SlotState {
   readonly level: number;
   readonly max: number;

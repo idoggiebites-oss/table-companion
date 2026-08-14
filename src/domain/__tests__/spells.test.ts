@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  canCast, castableBy, groupByLevel, isReady, levelLabel, preparedCount,
+  canCast, castableBy, groupByLevel, isClassFeature, isReady, levelLabel, preparedCount,
   slotsFor, sortSpells, toKnown, type KnownSpell, type SlotState,
 } from "../spells.js";
 
@@ -106,5 +106,36 @@ describe("taking a spell from a compendium", () => {
       id: "bless", name: "Bless", level: 1, school: "enchantment",
       concentration: true, ritual: false, prepared: true,
     });
+  });
+});
+
+describe("what a compendium files under spells but is not one", () => {
+  const feature = (name: string, school = "") => ({ name, school });
+
+  it("catches the ones with no school", () => {
+    // No real spell omits its school.
+    expect(isClassFeature(feature("Invocation: Agonizing Blast"))).toBe(true);
+    expect(isClassFeature(feature("Maneuver: Parry"))).toBe(true);
+  });
+
+  it("and the ones that announce their category, school or not", () => {
+    // Elemental disciplines DO carry a school, so the school test alone
+    // would let a monk's whole feature list into a spell browser.
+    expect(isClassFeature(feature("Elemental Discipline: Breath of Winter", "evocation"))).toBe(true);
+    expect(isClassFeature(feature("Rune: Cloud Rune", "transmutation"))).toBe(true);
+  });
+
+  it("keeps real spells", () => {
+    for (const n of ["Fireball", "Cure Wounds", "Magic Missile", "Wish", "Fire Bolt"]) {
+      expect(isClassFeature(feature(n, "evocation"))).toBe(false);
+    }
+  });
+
+  it("does not mistake a long title for a category", () => {
+    // The prefix has to be short to be a category; a sentence with a colon
+    // in it is not one.
+    expect(isClassFeature(
+      feature("A spell whose name is long and happens to contain: a colon", "evocation"),
+    )).toBe(false);
   });
 });
