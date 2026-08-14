@@ -24,10 +24,15 @@ import {
 } from "../domain/combat.js";
 
 type Surprise = "none" | "monsters" | "players";
+/**
+ * Named sides, not pronouns. "We are" read from the DM's screen is wrong on
+ * its face — the DM is not in the party — and "they" means whichever side you
+ * happened to be thinking of.
+ */
 const SURPRISE_LABEL: Record<Surprise, string> = {
   none: "Nobody",
-  monsters: "They are",
-  players: "We are",
+  monsters: "The encounter",
+  players: "The party",
 };
 import type { EventBody } from "../domain/events.js";
 import type { CampaignState } from "../domain/project.js";
@@ -147,7 +152,7 @@ function StartCombat({
         )}
       </div>
 
-      <span className="label cr-sub" style={{ marginTop: 12 }}>Surprise</span>
+      <span className="label cr-sub" style={{ marginTop: 12 }}>Who is surprised</span>
       <div className="seg">
         {(["none", "monsters", "players"] as const).map((k) => (
           <button
@@ -334,6 +339,7 @@ export function Combat({
   /** Who a player has chosen to swing at, and what they rolled for damage. */
   const [target, setTarget] = useState<Combatant | null>(null);
   const [dealt, setDealt] = useState(0);
+  const [dmPicking, setDmPicking] = useState(false);
   const combat = state.combat;
 
   if (!combat) {
@@ -403,7 +409,13 @@ export function Combat({
           <button
             disabled={dealt <= 0}
             onClick={() => {
-              append({ type: "creatureDamaged", combatantId: target.id, amount: dealt });
+              // A hit does not care which side of the table it landed on, and
+              // damage to a character is what owes a concentration save.
+              append(
+                target.source.kind === "character"
+                  ? { type: "damageApplied", who: target.source.characterId, amount: dealt }
+                  : { type: "creatureDamaged", combatantId: target.id, amount: dealt },
+              );
               setTarget(null);
               setDealt(0);
             }}
@@ -468,12 +480,28 @@ export function Combat({
       <div className="card-body">
         <div className="controls" style={{ marginTop: 0 }}>
           {seat.kind === "dm" && (
-            <button
-              disabled={!canEnd}
-              onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
-            >
-              Advance turn
-            </button>
+            <>
+              {/*
+                * The DM's side of an attack. Creature rows carry a fast "−N"
+                * for chip damage, but a monster swinging at a PLAYER had no
+                * route at all from here — the only way was to leave the fight
+                * for the party screen, which is the one thing you cannot do
+                * mid-turn.
+                */}
+              <button onClick={() => setDmPicking((v) => !v)}>
+                {dmPicking
+                  ? "Cancel"
+                  : active && active.controller.kind === "dm"
+                    ? `Attack with ${active.name}`
+                    : "Attack"}
+              </button>
+              <button
+                disabled={!canEnd}
+                onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
+              >
+                Advance turn
+              </button>
+            </>
           )}
           {seat.kind === "dm" && (
             <>
@@ -487,6 +515,30 @@ export function Combat({
             </>
           )}
         </div>
+        {dmPicking && seat.kind === "dm" && (
+          <div className="tgt">
+            <span className="label">
+              {active ? `${active.name} attacks` : "Attacks"}
+            </span>
+            {/* Everyone but the attacker: monsters turn on each other often
+                enough — charmed, confused, or just badly aimed. */}
+            {combat.order
+              .filter((c) => c.id !== active?.id)
+              .map((c) => (
+                <button
+                  className="tgt-row"
+                  key={c.id}
+                  onClick={() => {
+                    setTarget(c);
+                    setDealt(0);
+                    setDmPicking(false);
+                  }}
+                >
+                  {c.name}
+                </button>
+              ))}
+          </div>
+        )}
         {area && seat.kind === "dm" && (
           <AreaDamage combat={combat} onApply={append} onClose={() => setArea(false)} />
         )}

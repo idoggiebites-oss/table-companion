@@ -79,10 +79,11 @@ await go(dm.page, "fight");
 ok("both characters are offered", await dm.page.locator(".chips .chip").count() >= 2, true);
 // The party split: Bel is on the roof and not in this fight.
 await dm.page.getByRole("button", { name: "Bel Ashcroft", exact: true }).click();
-await dm.page.getByRole("button", { name: "They are" }).click();
+await dm.page.getByRole("button", { name: "The encounter" }).click();
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 await dm.page.locator('input[aria-label="Creature 1 hp"]').fill("12");
+await dm.page.screenshot({ path: `${OUT}/53-surprise.png`, fullPage: true });
 await dm.page.getByRole("button", { name: "Roll for initiative" }).click();
 await p1.page.waitForTimeout(1800);
 
@@ -146,6 +147,30 @@ await dm.page.getByRole("button", { name: "Advance turn" }).click();
 await dm.page.waitForTimeout(900);
 ok("the surprised side is told it cannot act",
   (await dm.page.locator(".card", { hasText: "Round" }).innerText()).toLowerCase().includes("goblin"), true);
+
+// --- the DM's side of an attack ------------------------------------------
+// A monster swinging at a PLAYER had no route from this screen at all: the
+// only way was to leave the fight for the party tab, which is the one thing
+// you cannot do in the middle of a turn.
+ok("the sides are named, not pronouns",
+  (await dm.page.locator(".card", { hasText: "Round" }).innerText()).includes("We are"), false);
+
+await dm.page.getByRole("button", { name: /^Attack/ }).click();
+await dm.page.waitForSelector(".tgt");
+ok("the DM can aim at a player", (await dm.page.locator(".tgt-row").allInnerTexts())
+  .map((t) => t.toLowerCase()).includes("kira vance"), true);
+ok("but not at whoever is swinging",
+  (await dm.page.locator(".tgt-row").allInnerTexts()).map((t) => t.toLowerCase()).includes("goblin"), false);
+await dm.page.screenshot({ path: `${OUT}/54-dm-attack.png`, clip: { x: 0, y: 0, width: 430, height: 900 } });
+await dm.page.locator(".tgt-row", { hasText: /Kira/i }).click();
+await dm.page.locator('input[aria-label="Damage dealt"]').fill("6");
+await dm.page.getByRole("button", { name: "It hits" }).click();
+await p1.page.waitForTimeout(1200);
+await go(p1.page, "sheet");
+ok("and it lands on the player's own sheet",
+  (await p1.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "6 / 12");
+await go(p1.page, "fight");
+
 
 // --- the opportunity attack the reaction pip was always for ---------------
 await p1.page.waitForTimeout(600);
