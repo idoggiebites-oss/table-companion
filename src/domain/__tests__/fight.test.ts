@@ -120,7 +120,7 @@ describe("movement", () => {
 });
 
 describe("a creature's reaction", () => {
-  const cr = (id: string, initiative: number) => ({
+  const cr = (id: string, initiative: number | null) => ({
     id, name: id, initiative,
     source: { kind: "creature" as const, maxHp: 10 },
     controller: { kind: "dm" as const },

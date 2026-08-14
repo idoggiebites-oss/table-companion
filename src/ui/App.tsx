@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Character } from "../domain/build.js";
+import type { Stack } from "../domain/items.js";
 import { actorKey } from "../domain/permissions.js";
 import { turnsUntil } from "../domain/combat.js";
 import { levelsOwed } from "../domain/project.js";
@@ -133,8 +134,18 @@ export function App() {
     if (first) setSeat({ kind: "player", characterId: first.id });
   }, [mayBeDm, seat.kind, builds, setSeat]);
 
-  function create(c: Character) {
+  function create(c: Character, starting?: { items: readonly Stack[]; coins: number }) {
     append({ type: "characterAdded", character: c });
+    // One event for the whole kit, so undoing it takes back everything the
+    // character walked in with rather than half of it.
+    if (starting && (starting.items.length > 0 || starting.coins > 0)) {
+      append({
+        type: "lootGranted",
+        to: { kind: "character", who: c.base.id },
+        items: starting.items,
+        coins: starting.coins,
+      });
+    }
     setAdding(false);
     setBuilding(false);
     // A device that just made a character is presumably going to play it.

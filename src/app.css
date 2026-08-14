@@ -422,6 +422,13 @@ html, body { overscroll-behavior-y: none; }
 .rb-second .rb-input { width: 128px; }
 .rb-hint { color: var(--faint); font-size: 0.76rem; }
 
+/* ---- starting equipment ---- */
+.gear-step { margin: 14px 0 4px; }
+.gear-step .seg { margin-top: 6px; }
+.gear-choice { margin-top: 10px; }
+.gear-choice select { margin-top: 8px; width: 100%; }
+.gear-choice .chip { text-transform: none; letter-spacing: 0; font-size: 0.8rem; }
+
 /* ---- tabs ---- */
 .tabs {
   display: flex; gap: 2px; margin: 0 0 16px;

@@ -17,6 +17,14 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+// The class kit can ask which martial weapon; answer it before creating.
+const answerGear = async (page) => {
+  const sel = page.locator('select[aria-label^="Choose"]');
+  for (let i = 0; i < (await sel.count()); i++) {
+    await sel.nth(i).selectOption({ index: 1 });
+  }
+  await page.waitForTimeout(200);
+};
 
 /** Sections are tabs now; content is one tap away rather than a scroll. */
 const go = async (page, tab) => {
@@ -56,14 +64,18 @@ await page.getByRole("button", { name: "nature", exact: true }).click();
 await page.getByRole("button", { name: "animal handling", exact: true }).click();
 await page.locator('input[aria-label="Background name"]').fill("Soldier");
 await page.locator('input[aria-label="Character name"]').fill("Kira Vance");
+await answerGear(page);
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".hp-big", { timeout: 20000 });
 
 await go(page, "gear");
 const baseAc = Number(await strip().innerText());
 ok("starts unarmoured", baseAc, 12); // 10 + dex +2
-ok("and carrying nothing",
-  (await page.locator(".card", { hasText: "Carrying" }).innerText()).includes("Nothing yet"), true);
+// Characters arrive with their class kit now, so the honest claim is that
+// carrying it is not the same as wearing it — the armour class below proves it.
+ok("and carrying the class kit",
+  (await page.locator(".card", { hasText: "Carrying" }).innerText()).toLowerCase()
+    .includes("chain mail"), true);
 ok("with an empty purse", await page.locator(".inv-purse").innerText(), "0 cp");
 
 await page.locator(".card", { hasText: "Carrying" }).getByRole("button", { name: "Add" }).click();

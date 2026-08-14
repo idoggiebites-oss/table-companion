@@ -18,6 +18,14 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+// The class kit can ask which martial weapon; answer it before creating.
+const answerGear = async (page) => {
+  const sel = page.locator('select[aria-label^="Choose"]');
+  for (let i = 0; i < (await sel.count()); i++) {
+    await sel.nth(i).selectOption({ index: 1 });
+  }
+  await page.waitForTimeout(200);
+};
 
 /** Sections are tabs now; content is one tap away rather than a scroll. */
 const go = async (page, tab) => {
@@ -68,6 +76,7 @@ await page.locator('input[aria-label="Attack 1 name"]').fill("Greataxe");
 await page.selectOption('select[aria-label="Attack 1 ability"]', "str");
 await page.selectOption('select[aria-label="Attack 1 die"]', "12");
 await page.locator('input[aria-label="Attack 1 damage type"]').fill("slashing");
+await answerGear(page);
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".hp-big");
 // str +4, proficiency +3 at level 5

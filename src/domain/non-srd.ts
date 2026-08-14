@@ -133,3 +133,53 @@ export function canAfford(
   if (cost === undefined || current === undefined) return false;
   return pointsSpent(scores) - current + cost <= POINT_BUY_BUDGET;
 }
+
+/**
+ * Starting wealth by class — PHB p.143, NOT SRD. The alternative to taking
+ * the class kit: roll this many d4 and multiply, then buy your own.
+ *
+ * The monk is the one that catches people out: 5d4 with no multiplier, so a
+ * monk starts with pocket change rather than fifty gold.
+ */
+export const STARTING_WEALTH: Record<string, { dice: number; times: number }> = {
+  barbarian: { dice: 2, times: 10 },
+  bard: { dice: 5, times: 10 },
+  cleric: { dice: 5, times: 10 },
+  druid: { dice: 2, times: 10 },
+  fighter: { dice: 5, times: 10 },
+  monk: { dice: 5, times: 1 },
+  paladin: { dice: 5, times: 10 },
+  ranger: { dice: 5, times: 10 },
+  rogue: { dice: 4, times: 10 },
+  sorcerer: { dice: 3, times: 10 },
+  warlock: { dice: 4, times: 10 },
+  wizard: { dice: 4, times: 10 },
+};
+
+/**
+ * Both return COPPER, like every other amount in the app. It also keeps the
+ * average exact: 5d4 averages 12.5, and a monk taking the average has 12 gp
+ * 5 sp rather than whatever rounding a whole-gold answer would have eaten.
+ */
+export function averageWealth(classId: string): number {
+  const w = STARTING_WEALTH[classId];
+  if (!w) return 0;
+  return w.dice * 250 * w.times; // 2.5 average per d4, in copper
+}
+
+export function rollWealth(
+  classId: string,
+  roll: () => number = () => 1 + Math.floor(Math.random() * 4),
+): number {
+  const w = STARTING_WEALTH[classId];
+  if (!w) return 0;
+  let total = 0;
+  for (let i = 0; i < w.dice; i++) total += roll();
+  return total * w.times * 100;
+}
+
+export function describeWealth(classId: string): string {
+  const w = STARTING_WEALTH[classId];
+  if (!w) return "";
+  return w.times === 1 ? `${w.dice}d4 gp` : `${w.dice}d4 × ${w.times} gp`;
+}

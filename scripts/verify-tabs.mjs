@@ -16,6 +16,14 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+// The class kit can ask which martial weapon; answer it before creating.
+const answerGear = async (page) => {
+  const sel = page.locator('select[aria-label^="Choose"]');
+  for (let i = 0; i < (await sel.count()); i++) {
+    await sel.nth(i).selectOption({ index: 1 });
+  }
+  await page.waitForTimeout(200);
+};
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
   await page.waitForTimeout(250);
@@ -65,6 +73,7 @@ await p1.page.getByRole("button", { name: "nature", exact: true }).click();
 await p1.page.getByRole("button", { name: "animal handling", exact: true }).click();
 await p1.page.locator('input[aria-label="Background name"]').fill("Soldier");
 await p1.page.locator('input[aria-label="Character name"]').fill("Kira Vance");
+await answerGear(p1.page);
 await p1.page.getByRole("button", { name: "Create character" }).click();
 await p1.page.waitForSelector(".tabs", { timeout: 20000 });
 await p1.page.waitForTimeout(600);

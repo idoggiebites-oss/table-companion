@@ -32,9 +32,15 @@ import {
 } from "../domain/non-srd.js";
 import type { ClassId, DieSize } from "../domain/resources.js";
 import {
-  loadClasses, loadClassLevels, loadRaces,
+  loadClasses, loadClassLevels, loadEquipment, loadRaces,
   type ClassEntry, type ClassLevels, type RaceEntry,
 } from "../store/srd.js";
+import { indexItems, type Item, type Stack } from "../domain/items.js";
+import { formatCoins } from "../domain/money.js";
+import { averageWealth, describeWealth } from "../domain/non-srd.js";
+import {
+  parseChoice, parseFixed, toStack, type GearOption,
+} from "../domain/starting-gear.js";
 
 const FLAT: Record<Ability, number> = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
 const skillIdOf = (label: string): SkillId | undefined =>
@@ -60,12 +66,18 @@ const PRIORITY: Partial<Record<ClassId, Ability[]>> = {
 export function CreateCharacter({
   onCreate, onCancel,
 }: {
-  onCreate: (c: Character) => void;
+  onCreate: (c: Character, starting?: { items: readonly Stack[]; coins: number }) => void;
   onCancel: () => void;
 }) {
   const [races, setRaces] = useState<RaceEntry[] | null>(null);
   const [classes, setClasses] = useState<ClassEntry[] | null>(null);
   const [levels, setLevels] = useState<ClassLevels | null>(null);
+  const [gear, setGear] = useState<Item[] | null>(null);
+  const [gearMode, setGearMode] = useState<"kit" | "gold">("kit");
+  /** Which lettered option is taken, per choice. */
+  const [picks, setPicks] = useState<Record<number, string>>({});
+  /** What was chosen to satisfy "a martial weapon", keyed choice:phrase. */
+  const [catPicks, setCatPicks] = useState<Record<string, string>>({});
   const [level, setLevel] = useState(1);
 
   const [name, setName] = useState("");
@@ -86,6 +98,7 @@ export function CreateCharacter({
     loadRaces().then(setRaces, () => setRaces([]));
     loadClasses().then(setClasses, () => setClasses([]));
     loadClassLevels().then(setLevels, () => setLevels({}));
+    loadEquipment().then(setGear, () => setGear([]));
   }, []);
 
   const klass = classes?.find((c) => c.id === classId);
@@ -125,6 +138,42 @@ export function CreateCharacter({
   // the preview's whole job is to be the number you will actually see.
   const prof = atLevel?.profBonus ?? proficiencyBonus(level);
 
+  const catalogue = useMemo(() => indexItems(gear ?? []), [gear]);
+  const fixedGear = useMemo(
+    () => (klass ? parseFixed(klass.equipment ?? [], catalogue) : []),
+    [klass, catalogue],
+  );
+  const choices2 = useMemo<GearOption[][]>(
+    () => (klass ? (klass.equipmentChoices ?? []).map((d) => parseChoice(d, catalogue)) : []),
+    [klass, catalogue],
+  );
+
+  /** What the character walks away carrying, and with what in their purse. */
+  const starting = useMemo(() => {
+    if (!klass) return { items: [] as Stack[], coins: 0 };
+    if (gearMode === "gold") return { items: [], coins: averageWealth(klass.id) };
+    const items: Stack[] = [];
+    for (const p of fixedGear) {
+      const st = toStack(p);
+      if (st) items.push(st);
+    }
+    choices2.forEach((opts, i) => {
+      const taken = opts.find((o) => o.letter === (picks[i] ?? opts[0]?.letter));
+      if (!taken) return;
+      taken.phrases.forEach((p, j) => {
+        if (p.kind === "category") {
+          const chosen = catPicks[`${i}:${j}`];
+          const it = chosen ? catalogue[chosen] : undefined;
+          if (it) items.push({ itemId: it.id, name: it.name, qty: p.qty });
+          return;
+        }
+        const st = toStack(p);
+        if (st) items.push(st);
+      });
+    });
+    return { items, coins: 0 };
+  }, [klass, gearMode, fixedGear, choices2, picks, catPicks, catalogue]);
+
   const allAssigned = method === "pointBuy" || ABILITIES.every((a) => assigned[a] !== undefined);
   const skillsNeeded = klass?.skillChoices?.choose ?? 0;
 
@@ -150,8 +199,17 @@ export function CreateCharacter({
         }
       : undefined;
 
+  /** Categories the book asks about and nobody has answered yet. */
+  const unpicked = choices2.flatMap((opts, i) => {
+    const taken = opts.find((o) => o.letter === (picks[i] ?? opts[0]?.letter));
+    return (taken?.phrases ?? []).flatMap((p, j) =>
+      p.kind === "category" && !catPicks[`${i}:${j}`] ? [p.label] : [],
+    );
+  });
+
   const gaps = [
     ...missing(choices ?? {}),
+    ...(gearMode === "kit" ? unpicked : []),
     ...(allAssigned ? [] : ["every score assigned"]),
     ...(classSkills.length === skillsNeeded ? [] : [`${skillsNeeded} class skills`]),
   ];
@@ -483,6 +541,114 @@ export function CreateCharacter({
         </section>
       )}
 
+      {/* Its own step rather than buried in the ability-score block, where it
+          was invisible until two unrelated questions had been answered. Last
+          in the flow because it is the least consequential thing here. */}
+      {klass && race && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label cr-step">5 · Equipment</span>
+            <span className="faint" style={{ fontSize: ".78rem" }}>
+              {gearMode === "gold" ? "buying your own" : `${starting.items.length} items`}
+            </span>
+          </div>
+          <div className="card-body">
+          {/* Starting equipment belongs in creation, not after it: a
+              character who arrives with nothing is one the first fight
+              cannot use. The book writes the choices as prose, so they
+              are taken apart rather than shown as a paragraph to obey. */}
+          {gear !== null && (klass.equipment?.length || klass.equipmentChoices?.length) ? (
+            <div className="gear-step">
+              <span className="label cr-sub">Starting equipment</span>
+              <div className="seg">
+                <button
+                  aria-pressed={gearMode === "kit"}
+                  className={gearMode === "kit" ? "on" : ""}
+                  onClick={() => setGearMode("kit")}
+                >
+                  Take the kit
+                </button>
+                <button
+                  aria-pressed={gearMode === "gold"}
+                  className={gearMode === "gold" ? "on" : ""}
+                  onClick={() => setGearMode("gold")}
+                >
+                  Buy your own
+                </button>
+              </div>
+
+              {gearMode === "gold" ? (
+                <p className="cr-note">
+                  {describeWealth(klass.id)} to spend — you start with{" "}
+                  <b>{formatCoins(averageWealth(klass.id))}</b> and nothing else.
+                  Buy it under Gear once you are in.
+                </p>
+              ) : (
+                <>
+                  {fixedGear.length > 0 && (
+                    <p className="cr-note">
+                      Comes with{" "}
+                      {fixedGear
+                        .map((p) => {
+                          const st = toStack(p);
+                          return st ? (st.qty > 1 ? `${st.qty} × ${st.name}` : st.name) : "";
+                        })
+                        .filter(Boolean)
+                        .join(", ")}.
+                    </p>
+                  )}
+                  {choices2.map((opts, i) => {
+                    const taken = picks[i] ?? opts[0]?.letter;
+                    const chosen = opts.find((o) => o.letter === taken);
+                    return (
+                      <div className="gear-choice" key={i}>
+                        <div className="chips">
+                          {opts.map((o) => (
+                            <button
+                              key={o.letter}
+                              className={`chip${o.letter === taken ? " on" : ""}`}
+                              aria-pressed={o.letter === taken}
+                              onClick={() => setPicks({ ...picks, [i]: o.letter })}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                        {chosen?.phrases.map((p, j) =>
+                          p.kind === "category" ? (
+                            <select
+                              key={j}
+                              aria-label={`Choose ${p.label}`}
+                              value={catPicks[`${i}:${j}`] ?? ""}
+                              onChange={(e) =>
+                                setCatPicks({ ...catPicks, [`${i}:${j}`]: e.target.value })
+                              }
+                            >
+                              <option value="">which {p.label}…</option>
+                              {(gear ?? [])
+                                .filter(
+                                  (it) =>
+                                    it.category === "weapon" &&
+                                    it.weaponCategory === p.weaponCategory &&
+                                    (p.weaponRange === undefined || it.weaponRange === p.weaponRange),
+                                )
+                                .map((it) => (
+                                  <option key={it.id} value={it.id}>{it.name}</option>
+                                ))}
+                            </select>
+                          ) : null,
+                        )}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          ) : null}
+          </div>
+        </section>
+      )}
+
       {klass && race && (
         <section className="card">
           <div className="card-body">
@@ -495,7 +661,7 @@ export function CreateCharacter({
             <div className="row" style={{ marginTop: 12 }}>
               <button
                 disabled={gaps.length > 0 || !choices}
-                onClick={() => choices && onCreate({ base: assemble(choices), deltas: [] })}
+                onClick={() => choices && onCreate({ base: assemble(choices), deltas: [] }, starting)}
               >
                 Create character
               </button>
