@@ -20,11 +20,12 @@ import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
 import { Sources } from "./Sources.js";
+import { Spells } from "./Spells.js";
 import { Tabs, type TabDef } from "./Tabs.js";
 import { Gear } from "./Gear.js";
 
 /** Device-local, like the seat — never in the log. */
-type TabId = "fight" | "party" | "prep" | "book" | "log" | "sheet" | "gear";
+type TabId = "fight" | "party" | "prep" | "book" | "log" | "sheet" | "gear" | "spells";
 import { Shop } from "./Shop.js";
 import { UpdateBar } from "./UpdateBar.js";
 
@@ -91,9 +92,14 @@ export function App() {
     { id: "book", label: "Book" },
     { id: "log", label: "Log" },
   ];
+  /** Only casters get a Spells tab — a fighter has nothing to put on it. */
+  const casts =
+    mine !== undefined &&
+    (mine.spellSlots.some((n) => n > 0) || (mineState?.spells.length ?? 0) > 0);
   const playerTabs: TabDef<TabId>[] = [
     { id: "fight", label: "Fight", dot: myTurn },
     { id: "sheet", label: "Sheet", dot: owed > 0 || saveOwed },
+    ...(casts ? [{ id: "spells" as const, label: "Spells" }] : []),
     { id: "gear", label: "Gear", dot: shopOpen },
     { id: "log", label: "Log" },
   ];
@@ -294,6 +300,10 @@ export function App() {
                   />
                   <Sheet build={mine} state={mineState} campaign={state} append={append} />
                 </>
+              )}
+
+              {current === "spells" && (
+                <Spells build={mine} state={mineState} append={append} />
               )}
 
               {current === "gear" && (

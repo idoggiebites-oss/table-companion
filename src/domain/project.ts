@@ -22,6 +22,7 @@ import {
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import type { Encounter } from "./encounter.js";
 import type { Boon } from "./boons.js";
+import type { KnownSpell } from "./spells.js";
 import { addItem, removeItem, type Stack } from "./items.js";
 import { sellOne, type Npc } from "./npc.js";
 import { levelForXp, type Progression } from "./progression.js";
@@ -55,6 +56,7 @@ export interface CharacterState {
   /** The level the DM has granted in a milestone campaign. */
   readonly milestoneLevel: number;
   readonly boons: readonly Boon[];
+  readonly spells: readonly KnownSpell[];
   readonly inventory: readonly Stack[];
   /** Item ids being worn or wielded. See items.ts for why it is a set. */
   readonly equipped: readonly string[];
@@ -98,6 +100,7 @@ function initialState(build: EffectiveBuild): CharacterState {
     xp: 0,
     milestoneLevel: build.totalLevel,
     boons: [],
+    spells: [],
     inventory: [],
     equipped: [],
     coins: 0,
@@ -500,6 +503,36 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         // Temporary hit points never stack; you take the better pool.
         s = { ...s, tempHp: Math.max(s.tempHp, e.amount) };
         break;
+      case "spellLearned":
+        s = s.spells.some((x) => x.id === e.spell.id)
+          ? s
+          : { ...s, spells: [...s.spells, e.spell] };
+        break;
+      case "spellForgotten":
+        s = { ...s, spells: s.spells.filter((x) => x.id !== e.spellId) };
+        break;
+      case "spellPrepared":
+        s = {
+          ...s,
+          spells: s.spells.map((x) =>
+            x.id === e.spellId ? { ...x, prepared: e.prepared } : x,
+          ),
+        };
+        break;
+      case "spellCast": {
+        // A ritual costs no slot; nor does a cantrip.
+        const free = e.ritual === true || e.atLevel === 0;
+        const id = `slot${e.atLevel}`;
+        const max = build.resources.find((r) => r.id === id)?.max ?? 0;
+        s = {
+          ...s,
+          ...(free ? {} : { spent: spend({ ...s.spent }, id, 1, max) }),
+          // Concentration is exclusive: the new spell displaces the old one,
+          // and any save owed on the old one is moot.
+          ...(e.concentration ? { concentratingOn: e.name, concentrationChecks: [] } : {}),
+        };
+        break;
+      }
       case "boonGranted":
         s = {
           ...s,

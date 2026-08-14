@@ -1,0 +1,287 @@
+/**
+ * The spell list.
+ *
+ * Grouped by level and led by the slots, because the first question at a table
+ * is never "what do I know" — it is "what can I still cast". A spell you
+ * cannot pay for is shown and disabled rather than hidden, so the answer to
+ * "why not" is on screen.
+ *
+ * Casting asks which slot when there is a choice. Upcasting is the most
+ * commonly forgotten option in play, because nothing on a paper sheet suggests
+ * a 1st-level spell can go in a 3rd-level slot; here the options are simply
+ * listed. Where there is no choice — a cantrip, or one slot left — it casts
+ * without asking.
+ *
+ * Browsing needs a compendium. The SRD ships no spell list, so rather than
+ * pretend, an empty state says where spells come from.
+ */
+
+import { useEffect, useMemo, useState } from "react";
+import type { EffectiveBuild } from "../domain/build.js";
+import type { EventBody } from "../domain/events.js";
+import type { CharacterState } from "../domain/project.js";
+import {
+  canCast, castableBy, groupByLevel, isReady, levelLabel, slotsFor, toKnown,
+  type KnownSpell, type SlotState,
+} from "../domain/spells.js";
+import type { CompendiumSpell } from "../import/compendium.js";
+import { readContent } from "../store/content.js";
+
+function useSpellbook(when: boolean): CompendiumSpell[] | null {
+  const [all, setAll] = useState<CompendiumSpell[] | null>(null);
+  useEffect(() => {
+    if (!when || all) return;
+    void readContent("spell").then(
+      (r) => setAll(r as CompendiumSpell[]),
+      () => setAll([]),
+    );
+  }, [when, all]);
+  return all;
+}
+
+export function Spells({
+  build, state, append,
+}: {
+  build: EffectiveBuild;
+  state: CharacterState;
+  append: (body: EventBody) => void;
+}) {
+  const [browsing, setBrowsing] = useState(false);
+  const [text, setText] = useState("");
+  const [onlyMine, setOnlyMine] = useState(true);
+  const [casting, setCasting] = useState<KnownSpell | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+
+  const book = useSpellbook(browsing);
+
+  /** Slots, as the sheet already knows them. */
+  const slots: SlotState[] = useMemo(
+    () =>
+      build.resources
+        .filter((r) => /^slot\d$/.test(r.id))
+        .map((r) => ({
+          level: Number(r.id.slice(4)),
+          max: r.max,
+          left: r.max - (state.spent[r.id] ?? 0),
+        }))
+        .filter((s) => s.max > 0),
+    [build.resources, state.spent],
+  );
+
+  const classIds = build.classes.map((c) => c.classId);
+  const known = state.spells;
+  const groups = groupByLevel(known);
+
+  const results = useMemo(() => {
+    if (!book) return [];
+    const q = text.trim().toLowerCase();
+    const have = new Set(known.map((s) => s.id));
+    return book
+      .filter((s) => {
+        if (have.has(s.id)) return false;
+        if (q && !s.name.toLowerCase().includes(q)) return false;
+        if (onlyMine && !classIds.some((c) => castableBy(s, c))) return false;
+        return true;
+      })
+      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+      .slice(0, 60);
+  }, [book, text, onlyMine, known, classIds]);
+
+  function cast(spell: KnownSpell, atLevel: number, ritual = false) {
+    append({
+      type: "spellCast",
+      who: build.id,
+      spellId: spell.id,
+      name: spell.name,
+      atLevel,
+      concentration: spell.concentration,
+      ...(ritual ? { ritual: true } : {}),
+    });
+    setCasting(null);
+  }
+
+  return (
+    <>
+      <section className="card">
+        <div className="card-hd">
+          <span className="label">Slots</span>
+          <button onClick={() => setBrowsing((v) => !v)}>
+            {browsing ? "Done" : "Add spells"}
+          </button>
+        </div>
+        <div className="slots">
+          {slots.map((s) => (
+            <div className={`slot${s.left === 0 ? " out" : ""}`} key={s.level}>
+              <b className="num">{s.left}</b>
+              <span className="label">{levelLabel(s.level)}</span>
+            </div>
+          ))}
+          {slots.length === 0 && (
+            <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+              No spell slots. Cantrips still work.
+            </p>
+          )}
+        </div>
+        {state.concentratingOn && (
+          <p className="faint src-note">
+            Concentrating on <b>{state.concentratingOn}</b>. Casting another
+            concentration spell replaces it.
+          </p>
+        )}
+      </section>
+
+      {browsing && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label">Add spells</span>
+            <button
+              className={onlyMine ? "on" : ""}
+              aria-pressed={onlyMine}
+              onClick={() => setOnlyMine((v) => !v)}
+            >
+              {onlyMine ? `${classIds.join("/")} only` : "Everything"}
+            </button>
+          </div>
+          <div className="card-body">
+            {book === null && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
+            {book?.length === 0 && (
+              <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+                No spells on this device. The SRD data this app ships has no
+                spell list — import a compendium under Gear to get one.
+              </p>
+            )}
+            {book && book.length > 0 && (
+              <>
+                <input
+                  value={text}
+                  aria-label="Search spells"
+                  placeholder="fireball, cure wounds…"
+                  onChange={(e) => setText(e.target.value)}
+                />
+                <div className="inv-find">
+                  {results.map((s) => (
+                    <button
+                      className="inv-add"
+                      key={s.id}
+                      onClick={() => append({ type: "spellLearned", who: build.id, spell: toKnown(s) })}
+                    >
+                      <span className="nm">{s.name}</span>
+                      <span className="num">{s.level === 0 ? "cantrip" : s.level}</span>
+                      <span className="faint">
+                        {[s.school, s.concentration ? "concentration" : "", s.ritual ? "ritual" : ""]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </button>
+                  ))}
+                  {results.length === 0 && (
+                    <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
+                      Nothing matches.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {groups.map((g) => (
+        <section className="card" key={g.level}>
+          <div className="card-hd">
+            <span className="label">{levelLabel(g.level)}</span>
+            {g.level > 0 && (
+              <span className="label faint">
+                {g.spells.filter((s) => s.prepared).length} prepared
+              </span>
+            )}
+          </div>
+          {g.spells.map((s) => {
+            const ready = isReady(s);
+            const able = canCast(s, slots);
+            return (
+              <div className="sp" key={s.id}>
+                <button className="sp-main" onClick={() => setOpen(open === s.id ? null : s.id)}>
+                  <span className="nm">
+                    {s.name}
+                    {s.concentration && <> <span className="hb">conc</span></>}
+                    {s.ritual && <> <span className="hb">ritual</span></>}
+                  </span>
+                  <span className="faint">{s.school}</span>
+                </button>
+                {g.level > 0 && (
+                  <button
+                    className={`chip${s.prepared ? " on" : ""}`}
+                    aria-label={`${s.prepared ? "Unprepare" : "Prepare"} ${s.name}`}
+                    onClick={() =>
+                      append({
+                        type: "spellPrepared", who: build.id, spellId: s.id, prepared: !s.prepared,
+                      })
+                    }
+                  >
+                    {s.prepared ? "Prepared" : "Prepare"}
+                  </button>
+                )}
+                <button
+                  disabled={!able}
+                  aria-label={`Cast ${s.name}`}
+                  onClick={() => {
+                    const options = slotsFor(s, slots);
+                    // No choice to make: a cantrip, or exactly one slot left.
+                    if (s.level === 0) return cast(s, 0);
+                    if (options.length === 1) return cast(s, options[0]!.level);
+                    setCasting(s);
+                  }}
+                >
+                  Cast
+                </button>
+                {open === s.id && (
+                  <div className="sp-detail">
+                    <span className="faint">
+                      {!ready
+                        ? "Not prepared."
+                        : !able
+                          ? "No slot left for this."
+                          : s.level === 0
+                            ? "Costs nothing."
+                            : `Needs a ${levelLabel(s.level).toLowerCase()} slot or better.`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      ))}
+
+      {known.length === 0 && !browsing && (
+        <section className="card">
+          <div className="card-body">
+            <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
+              No spells yet. Add some — they come from an imported compendium,
+              since the SRD data this app ships has no spell list.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {casting && (
+        <div className="tgt sp-cast">
+          <span className="label">Cast {casting.name} at</span>
+          {slotsFor(casting, slots).map((s) => (
+            <button className="tgt-row" key={s.level} onClick={() => cast(casting, s.level)}>
+              {levelLabel(s.level)}
+              <span className="faint num"> · {s.left} left</span>
+            </button>
+          ))}
+          {casting.ritual && (
+            <button className="tgt-row" onClick={() => cast(casting, 0, true)}>
+              As a ritual <span className="faint">· no slot</span>
+            </button>
+          )}
+          <button onClick={() => setCasting(null)}>Cancel</button>
+        </div>
+      )}
+    </>
+  );
+}

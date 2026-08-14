@@ -13,6 +13,7 @@ import { isRevertible } from "../domain/events.js";
 import { DM_ACTOR } from "../domain/permissions.js";
 import { describeBoon } from "../domain/boons.js";
 import { formatCoins } from "../domain/money.js";
+import { levelLabel } from "../domain/spells.js";
 import { describeRoll, resolveRoll } from "../domain/roll.js";
 
 const time = (at: number) =>
@@ -104,6 +105,16 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return e.feet >= 0 ? `Moved ${e.feet} ft` : `Took back ${Math.abs(e.feet)} ft`;
     case "opportunityTaken":
       return `Opportunity attack${e.attackerWho ? ` by ${nameOf(e.attackerWho)}` : ""}`;
+    case "spellLearned":
+      return `${nameOf(e.who)} learned ${e.spell.name}`;
+    case "spellForgotten":
+      return `${nameOf(e.who)} forgot a spell`;
+    case "spellPrepared":
+      return `${nameOf(e.who)} ${e.prepared ? "prepared" : "unprepared"} a spell`;
+    case "spellCast":
+      return `${nameOf(e.who)} cast ${e.name}${
+        e.ritual ? " as a ritual" : e.atLevel > 0 ? ` at ${levelLabel(e.atLevel).toLowerCase()}` : ""
+      }`;
     case "boonGranted":
       return `${nameOf(e.who)} gained ${describeBoon(e.boon)}`;
     case "boonRemoved":

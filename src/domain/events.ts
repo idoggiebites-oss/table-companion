@@ -18,6 +18,7 @@ import type { Encounter } from "./encounter.js";
 import type { Progression } from "./progression.js";
 import type { Boon } from "./boons.js";
 import type { Stack } from "./items.js";
+import type { KnownSpell } from "./spells.js";
 import type { Npc } from "./npc.js";
 import type { Statblock } from "./statblock.js";
 import type { ConditionId } from "./edition.js";
@@ -178,6 +179,30 @@ export type DomainEvent = Meta &
     /** Signed, in copper. Undo is replay-without-it, so no inverse is stored. */
     | { readonly type: "coinsChanged"; readonly who: CharacterId; readonly delta: number }
     /** Blessings and buffs. Shown, never applied — see boons.ts. */
+    | { readonly type: "spellLearned"; readonly who: CharacterId; readonly spell: KnownSpell }
+    | { readonly type: "spellForgotten"; readonly who: CharacterId; readonly spellId: string }
+    | {
+        readonly type: "spellPrepared";
+        readonly who: CharacterId;
+        readonly spellId: string;
+        readonly prepared: boolean;
+      }
+    /**
+     * Casting is one event because it does three things — spends the slot,
+     * takes over concentration, and names what was cast. Undoing it has to
+     * give back all three, and separate events could be undone apart.
+     */
+    | {
+        readonly type: "spellCast";
+        readonly who: CharacterId;
+        readonly spellId: string;
+        readonly name: string;
+        /** The slot level spent. 0 is a cantrip, and costs nothing. */
+        readonly atLevel: number;
+        readonly concentration: boolean;
+        /** Rituals cost no slot, which is the whole point of them. */
+        readonly ritual?: boolean;
+      }
     | { readonly type: "boonGranted"; readonly who: CharacterId; readonly boon: Boon }
     | { readonly type: "boonRemoved"; readonly who: CharacterId; readonly boonId: string }
 

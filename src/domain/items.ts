@@ -55,6 +55,11 @@ export interface Item {
   readonly maxDex?: number;
   readonly strMinimum?: number;
   readonly stealthDisadvantage?: boolean;
+
+  /** Imported content only: the SRD equipment list has no magic items. */
+  readonly magic?: true;
+  /** "common", "rare", "legendary" — rarity, or a short qualifier. */
+  readonly detail?: string;
 }
 
 export interface Stack {
