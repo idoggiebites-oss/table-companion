@@ -18,15 +18,24 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
+
 await page.goto(URL, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Load sample" }).click();
 await page.waitForSelector('select[aria-label="Seat"]');
 
-// a player must not be able to look monsters up — that is the disclosure ladder
-ok("player has no reference", await page.getByRole("button", { name: "Monsters" }).count(), 0);
+// A player must not be able to look monsters up — that is the disclosure
+// ladder. With tabs the claim gets stronger: the section does not exist for
+// them at all, so there is nothing to find rather than something to hide.
+ok("a player has no Book tab", await page.locator('[data-tab="book"]').count(), 0);
 
 await page.selectOption('select[aria-label="Seat"]', "dm");
-await page.waitForSelector(".pm-name");
+await page.waitForSelector(".tabs");
+await go(page, "book");
 ok("dm has one", await page.getByRole("button", { name: "Monsters" }).count(), 1);
 
 // the data is not fetched until it is asked for
@@ -76,6 +85,7 @@ ok("every result is within the band", crs.every((c) => {
 await ctx.setOffline(true);
 await page.reload({ waitUntil: "domcontentloaded" });
 await page.waitForSelector('select[aria-label="Seat"]', { timeout: 20000 });
+await go(page, "book");
 await page.getByRole("button", { name: "Monsters" }).click();
 await page.waitForSelector(".mrow", { timeout: 20000 });
 ok("the reference works with no network", (await page.locator(".mrow").count()) > 0, true);

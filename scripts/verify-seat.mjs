@@ -16,6 +16,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1300 } });
   const page = await ctx.newPage();
@@ -58,7 +64,9 @@ ok("the DM may sit anywhere — including in a character",
   await seats(dm.page), ["the DM", "Kira Vance"]);
 await dm.page.selectOption('select[aria-label="Seat"]', "dm");
 await dm.page.waitForTimeout(400);
+await go(dm.page, "book");
 ok("and the DM's own tools are there", await dm.page.getByRole("button", { name: "Monsters" }).count(), 1);
+await go(dm.page, "party");
 
 const player = await device("player");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
@@ -72,8 +80,9 @@ ok("a player is offered characters and nothing else", await seats(player.page), 
 ok("and is not left sitting in the DM's seat by default",
   await player.page.locator('select[aria-label="Seat"]').inputValue(), await dm.page
     .locator('select[aria-label="Seat"] option', { hasText: "Kira Vance" }).getAttribute("value"));
+// Stronger with tabs: the section does not exist for them at all.
 ok("so the monster reference is not theirs to open",
-  await player.page.getByRole("button", { name: "Monsters" }).count(), 0);
+  await player.page.locator('[data-tab="book"]').count(), 0);
 
 // Reload: the answer has to survive, on both sides, or a DM refreshing the
 // page loses their own campaign.
@@ -124,6 +133,7 @@ await tablet.page.waitForTimeout(1200);
 ok("the right key seats the tablet as a DM too", await seats(tablet.page), ["the DM", "Kira Vance"]);
 await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
 await tablet.page.waitForTimeout(400);
+await go(tablet.page, "book");
 ok("with the DM's tools", await tablet.page.getByRole("button", { name: "Monsters" }).count(), 1);
 
 // Additive, not a transfer: the laptop is still the DM. A DM with two devices

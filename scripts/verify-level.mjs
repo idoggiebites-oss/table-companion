@@ -17,6 +17,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1300 } });
   const page = await ctx.newPage();

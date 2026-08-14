@@ -13,6 +13,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1200 } });
   const page = await ctx.newPage();
@@ -31,6 +37,7 @@ await dm.page.waitForSelector('select[aria-label="Seat"]');
 await dm.page.selectOption('select[aria-label="Seat"]', "dm");
 await dm.page.waitForSelector(".pm-name");
 
+await go(dm.page, "prep");
 await dm.page.getByRole("button", { name: "Add a creature" }).click();
 await dm.page.waitForSelector('input[aria-label="Creature name"]', { timeout: 20000 });
 
@@ -67,6 +74,7 @@ ok("saved", (await dm.page.locator(".sv-row .nm").first().innerText()), "Bandit 
 ok("with its numbers", (await dm.page.locator(".sv-row").first().innerText()).includes("58 HP"), true);
 
 // it behaves like any other creature in the reference
+await go(dm.page, "book");
 await dm.page.getByRole("button", { name: "Monsters" }).click();
 await dm.page.waitForSelector(".mrow", { timeout: 20000 });
 await dm.page.locator('input[aria-label="Search monsters"]').fill("warlord");
@@ -78,6 +86,7 @@ await dm.page.waitForSelector(".sb");
 ok("its statblock renders", (await dm.page.locator(".sb").innerText()).includes("Greataxe"), true);
 
 // and in the encounter builder, and into initiative
+await go(dm.page, "prep");
 await dm.page.getByRole("button", { name: "Build" }).click();
 await dm.page.waitForSelector('input[aria-label="Add a monster"]');
 await dm.page.locator('input[aria-label="Add a monster"]').fill("warlord");
@@ -110,6 +119,7 @@ await tablet.page.locator('input[aria-label="DM key"]').fill(dmKey);
 await tablet.page.getByRole("button", { name: "Claim DM" }).click();
 await tablet.page.waitForTimeout(1200);
 await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
+await go(tablet.page, "prep");
 await tablet.page.waitForSelector(".sv-row", { timeout: 20000 });
 ok("the creature reached the other device",
   (await tablet.page.locator(".saved").innerText()).includes("Bandit Warlord"), true);

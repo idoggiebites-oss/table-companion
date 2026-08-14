@@ -13,6 +13,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1200 } });
   const page = await ctx.newPage();
@@ -32,6 +38,7 @@ await laptop.page.waitForSelector('select[aria-label="Seat"]');
 await laptop.page.selectOption('select[aria-label="Seat"]', "dm");
 await laptop.page.waitForSelector(".pm-name");
 
+await go(laptop.page, "prep");
 await laptop.page.getByRole("button", { name: "Build" }).click();
 await laptop.page.waitForSelector('input[aria-label="Add a monster"]', { timeout: 20000 });
 
@@ -67,6 +74,7 @@ ok("hit points set to rolled", await laptop.page.locator('button[aria-label="Gob
 
 await laptop.page.locator('input[aria-label="Encounter name"]').fill("Road ambush");
 await laptop.page.getByRole("button", { name: "Save for later" }).click();
+await go(laptop.page, "prep");
 await laptop.page.waitForSelector(".sv-row");
 ok("saved for later", await laptop.page.locator(".sv-row .nm").innerText(), "Road ambush");
 
@@ -85,6 +93,8 @@ await tablet.page.locator('input[aria-label="DM key"]').fill(dmKey);
 await tablet.page.getByRole("button", { name: "Claim DM" }).click();
 await tablet.page.waitForTimeout(1200);
 await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
+await tablet.page.waitForTimeout(600);
+await go(tablet.page, "prep");
 await tablet.page.waitForSelector(".sv-row", { timeout: 20000 });
 ok("the prep arrived on the other device",
   await tablet.page.locator(".sv-row .nm").innerText(), "Road ambush");

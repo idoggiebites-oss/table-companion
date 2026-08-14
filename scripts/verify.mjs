@@ -21,6 +21,12 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
+
 await page.goto(URL, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Load sample" }).click();
 await page.waitForSelector(".hp-big");
@@ -55,9 +61,11 @@ ok("rested to full", (await hp()).replace(/\s+/g, " "), "52 / 52");
 ok("slots back", await slotRow.locator(".ct").innerText(), "4 of 4");
 
 // undo the rest from the feed — replay without it, no inverse operation
+await go(page, "log");
 const restRow = page.locator(".fr", { hasText: "Long rest" }).first();
 await restRow.getByRole("button", { name: "Undo" }).click();
 await page.waitForTimeout(700);
+await go(page, "sheet");
 ok("undo restores pre-rest hp", (await hp()).replace(/\s+/g, " "), "23 / 52");
 ok("undo restores spent slots", await slotRow.locator(".ct").innerText(), "2 of 4");
 await page.screenshot({ path: `${OUT}/4-undone.png` });

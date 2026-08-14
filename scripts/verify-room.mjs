@@ -14,6 +14,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 const errors = [];
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 900 } });
@@ -95,6 +101,7 @@ ok("room rejoined automatically after reload", await player.page.locator(".rb-co
 ok("state intact after reload", await hp(player), "35 / 52");
 
 // --- undo crosses devices -------------------------------------------------
+await go(dm.page, "log");
 await dm.page.locator(".fr", { hasText: "took 3" }).first().getByRole("button", { name: "Undo" }).click();
 await player.page.waitForTimeout(800);
 ok("undo on the dm corrected the player", await hp(player), "38 / 52");

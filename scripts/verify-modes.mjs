@@ -12,6 +12,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1100 } });
   const page = await ctx.newPage();
@@ -40,6 +46,7 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
 // A goblin goes first, so the player starts the fight waiting.
 // Initiative is rolled after staging now.
+await go(dm.page, "fight");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 
@@ -67,10 +74,12 @@ await player.page.locator('button[aria-label="Reaction available"]').click();
 await player.page.waitForTimeout(400);
 ok("reaction spent while another creature is up",
   await player.page.locator('button[aria-label="Reaction spent"]').count(), 1);
+await go(dm.page, "log");
 ok("the table sees it",
   (await dm.page.locator(".feed").innerText()).includes("used their reaction"), true);
 
 // ---- acting --------------------------------------------------------------
+await go(dm.page, "fight");
 await dm.page.getByRole("button", { name: "Advance turn" }).click();
 await player.page.waitForTimeout(900);
 ok("now acting", await player.page.locator(".pt.acting").count(), 1);

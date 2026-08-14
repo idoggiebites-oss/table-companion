@@ -17,6 +17,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1400 } });
   const page = await ctx.newPage();
@@ -38,19 +44,25 @@ await dm.page.waitForTimeout(800);
 // could prep anything. It is now offered ALONGSIDE the planning surface,
 // because an empty table is genuinely ambiguous: a DM about to prep, or
 // someone who just opened the app wanting a character.
+await go(dm.page, "prep");
 ok("planning is available without making a character first",
   await dm.page.locator(".card", { hasText: "People" }).count(), 1);
+ok("and so is prep — the encounter builder is right here",
+  await dm.page.getByRole("button", { name: "Build" }).count(), 1);
+await go(dm.page, "party");
 ok("and session zero is still offered, not forced",
   await dm.page.getByRole("button", { name: "Build a character" }).count(), 1);
-ok("nothing about the DM's screen waits on a character",
-  await dm.page.getByRole("button", { name: "Build" }).count() > 0, true);
-ok("and so is the encounter builder, with nobody in the party yet",
+
+await go(dm.page, "book");
+ok("and the monster reference, with nobody in the party yet",
   await dm.page.getByRole("button", { name: "Monsters" }).count(), 1);
+await go(dm.page, "party");
 ok("making one is offered, not required",
   await dm.page.getByRole("button", { name: "Add character" }).count(), 1);
 await dm.page.screenshot({ path: `${OUT}/46-dm-table.png`, fullPage: true });
 
 // --- an NPC who never rolls anything --------------------------------------
+await go(dm.page, "prep");
 await dm.page.getByRole("button", { name: "Add someone" }).click();
 await dm.page.locator('input[aria-label="NPC name"]').fill("Marta the Harbourmaster");
 await dm.page.locator('input[aria-label="NPC role"]').fill("harbourmaster");
@@ -108,16 +120,24 @@ await player.page.waitForSelector(".hp-big", { timeout: 20000 });
 await dm.page.waitForTimeout(1500);
 
 // --- the shop is only there while the DM has it open ----------------------
+// Asserted from the Gear tab itself — checking for absence while sitting on
+// another tab would pass for the wrong reason.
+await go(player.page, "gear");
 ok("no shop before the party walks into one",
   await player.page.getByRole("button", { name: "Buy Rapier" }).count(), 0);
+
+await go(dm.page, "prep");
 await dm.page.getByRole("button", { name: /Open Halbrek's shop/ }).click();
 await player.page.waitForTimeout(1600);
 ok("opening it puts it on the player's screen",
   await player.page.getByRole("button", { name: "Buy Rapier" }).count(), 1);
+ok("and marks the tab, so it is noticed from anywhere",
+  await player.page.locator('[data-tab="gear"] .tab-dot').count(), 1);
 ok("what you cannot afford is shown, not hidden",
   await player.page.getByRole("button", { name: "Buy Rapier" }).isDisabled(), true);
 
 // --- loot, to the party and then divided ----------------------------------
+await go(dm.page, "party");
 await dm.page.locator('input[aria-label="Loot"]').fill("120 gp");
 await dm.page.getByRole("button", { name: "To the party" }).click();
 await dm.page.waitForTimeout(600);
@@ -138,14 +158,18 @@ ok("and the rapier is carried",
 await player.page.screenshot({ path: `${OUT}/47-shop.png`, fullPage: true });
 
 // --- boons: per member, shown and never applied ---------------------------
+await go(dm.page, "party");
 await dm.page.getByRole("button", { name: /Give Kira Vance a boon/ }).click();
 await dm.page.getByRole("button", { name: "Bless +1d4" }).click();
 await player.page.waitForTimeout(1600);
+await go(player.page, "sheet");
 ok("the boon reaches the player",
   /bless \+1d4/i.test(await player.page.locator(".card", { hasText: "Yours until they end" }).innerText()), true);
 
 // Equip the rapier so there is an attack to roll.
+await go(player.page, "gear");
 await player.page.getByRole("button", { name: "Equip Rapier" }).click();
+await go(player.page, "sheet");
 await player.page.waitForTimeout(500);
 const toHit = await player.page.locator(".atk .m").first().innerText();
 await player.page.locator(".atk").first().click();

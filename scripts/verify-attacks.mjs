@@ -18,6 +18,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 const row = (name) => page.locator(".atk", { hasText: name }).first();
 
 await page.goto(URL, { waitUntil: "networkidle" });
@@ -42,12 +48,17 @@ ok("attack row marked", await row("Longbow").getAttribute("class"), "atk sel");
 await page.screenshot({ path: `${OUT}/15-attack-roll.png` });
 await page.keyboard.press("Escape");
 
+await go(page, "log");
 ok("roll reached the feed", (await page.locator(".feed").innerText()).includes("Longbow 20"), true);
+await go(page, "sheet");
 
 // a hand-entered attack derives its bonus from ability and proficiency
 page.once("dialog", (d) => d.accept()); // must be armed before the click
 await page.getByRole("button", { name: "Start over" }).click();
 await page.waitForSelector('input[type="file"]');
+// The manual form is folded away by default now — thirty fields should not
+// be the first thing on an empty table.
+await page.getByRole("button", { name: "Enter by hand" }).click();
 await page.locator("#nm").fill("Brom");
 await page.selectOption("#cl", "fighter");
 await page.locator("#lv").fill("5");

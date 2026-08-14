@@ -13,6 +13,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1000 } });
   const page = await ctx.newPage();
@@ -53,18 +59,23 @@ ok("dm sees it in the party view",
   (await dm.page.locator(".pm-hp").innerText()).replace(/\s+/g, " "), "40 / 52");
 
 // and the feed says who
+await go(dm.page, "log");
 const dmFeed = (await dm.page.locator(".feed").innerText()).replace(/\s+/g, " ");
 ok("feed attributes the DM", dmFeed.includes("Kira Vance took 12 DM"), true);
+await go(player.page, "log");
 const playerFeed = (await player.page.locator(".feed").innerText()).replace(/\s+/g, " ");
 ok("player's feed shows the same attribution", playerFeed.includes("took 12 DM"), true);
 
 // a player's own change is signed with their name
+await go(player.page, "sheet");
 await player.page.locator(".controls input").first().fill("4");
 await player.page.getByRole("button", { name: "Heal", exact: true }).click();
 await dm.page.waitForTimeout(900);
+await go(dm.page, "party");
 ok("player's heal reached the dm", (await dm.page.locator(".pm-hp").innerText()).replace(/\s+/g, " "), "44 / 52");
 // A player's own action is NOT signed — a signature is for when someone else
 // changed your sheet, and signing yourself is noise on every row.
+await go(dm.page, "log");
 ok("a player's own action is not signed",
   (await dm.page.locator(".feed").innerText()).replace(/\s+/g, " ").toLowerCase()
     .includes("kira vance healed 4 kira vance"), false);
@@ -76,6 +87,7 @@ await player.page.screenshot({ path: `${OUT}/23-player-after-dm.png` });
 await player.page.locator('input[aria-label="Spell to concentrate on"]').fill("Hunter's Mark");
 await player.page.getByRole("button", { name: "Concentrate", exact: true }).click();
 await dm.page.waitForTimeout(900);
+await go(dm.page, "party");
 ok("dm sees concentration", (await dm.page.locator(".pm-meta .chip.conc").first().innerText()).toLowerCase(), "hunter's mark");
 
 // damage from the DM owes the player a save, on the player's device
@@ -87,6 +99,7 @@ ok("dm can see a save is owed too",
   (await dm.page.locator(".pm-meta").innerText()).toLowerCase().includes("save owed · dc 11"), true);
 
 // undo from the DM reaches back across
+await go(dm.page, "log");
 await dm.page.locator(".fr", { hasText: "took 22" }).first().getByRole("button", { name: "Undo" }).click();
 await player.page.waitForTimeout(900);
 ok("undo cleared the save on the player", await player.page.locator(".alarm").count(), 0);

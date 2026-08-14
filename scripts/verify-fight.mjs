@@ -17,6 +17,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1400 } });
   const page = await ctx.newPage();
@@ -69,6 +75,7 @@ await p2.page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" 
 await dm.page.waitForTimeout(1800);
 
 // --- the DM decides who is in it -----------------------------------------
+await go(dm.page, "fight");
 ok("both characters are offered", await dm.page.locator(".chips .chip").count() >= 2, true);
 // The party split: Bel is on the roof and not in this fight.
 await dm.page.getByRole("button", { name: "Bel Ashcroft", exact: true }).click();
@@ -158,6 +165,7 @@ await p1.page.waitForTimeout(900);
 ok("its damage lands too",
   (await dm.page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "0/12");
 
+await go(dm.page, "log");
 const feed = await dm.page.locator(".card", { hasText: "Action log" }).innerText();
 ok("the log says who took it", feed.includes("Opportunity attack by Kira Vance"), true);
 

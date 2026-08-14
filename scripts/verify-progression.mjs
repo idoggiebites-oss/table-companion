@@ -14,6 +14,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1200 } });
   const page = await ctx.newPage();
@@ -43,13 +49,16 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 // --- milestone mode makes XP absent, not greyed ---------------------------
 await dm.page.getByRole("button", { name: "Milestone" }).click();
 await dm.page.waitForTimeout(400);
+await go(dm.page, "party");
 ok("no XP column in a milestone campaign", await dm.page.locator(".prow .xp").count(), 0);
-ok("and no XP award control", await dm.page.locator('input[aria-label="XP to award"]').count(), 0);
+ok("and no XP award control",
+  await dm.page.locator('input[aria-label="XP to award"]').count(), 0);
 await dm.page.getByRole("button", { name: "Experience" }).click();
 await dm.page.waitForTimeout(400);
 ok("experience mode brings it back", await dm.page.locator(".prow .xp").count(), 1);
 
 // --- a threshold crossed mid-fight must not interrupt ---------------------
+await go(dm.page, "fight");
 await dm.page.getByRole("button", { name: "Roll for initiative" }).click();
 await dm.page.waitForSelector('input[aria-label="Kira Vance initiative"]');
 await dm.page.locator('input[aria-label="Kira Vance initiative"]').fill("15");
@@ -58,6 +67,7 @@ await dm.page.getByRole("button", { name: "Begin", exact: true }).click();
 await dm.page.waitForSelector(".cbt");
 await player.page.waitForSelector(".cbt", { timeout: 15000 });
 
+await go(dm.page, "party");
 await dm.page.locator('input[aria-label="XP to award"]').fill("48000");
 await dm.page.getByRole("button", { name: "Award the party" }).click();
 await player.page.waitForTimeout(900);
@@ -65,7 +75,9 @@ await player.page.waitForTimeout(900);
 ok("the DM sees a level owed", await dm.page.locator(".owe.on").innerText(), "1 LEVEL OWED");
 ok("nothing interrupts the player mid-fight", await player.page.locator(".alarm").count(), 0);
 ok("their combat view is untouched", await player.page.locator(".pt").count(), 1);
-ok("but a quiet banner is waiting", await player.page.locator(".lv").count(), 1);
+ok("but the sheet tab is marked", await player.page.locator('[data-tab="sheet"] .tab-dot').count(), 1);
+await go(player.page, "sheet");
+ok("and a quiet banner is waiting there", await player.page.locator(".lv").count(), 1);
 ok("which says nothing is waiting on it",
   (await player.page.locator(".lv .faint").innerText()).includes("Nothing is waiting"), true);
 await player.page.screenshot({ path: `${OUT}/32-pending.png` });

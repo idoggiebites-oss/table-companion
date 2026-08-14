@@ -18,6 +18,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 const face = (n) => page.locator(".rp-pad button", { hasText: new RegExp(`^${n}$`) });
 
 await page.goto(URL, { waitUntil: "networkidle" });
@@ -62,6 +68,7 @@ ok("escape dismisses", await page.locator(".rollpad").count(), 0);
 // rolls reach the feed and change no state
 const hp = (await page.locator(".hp-big").innerText()).replace(/\s+/g, " ");
 ok("rolling changed no state", hp, "52 / 52");
+await go(page, "log");
 const feed = (await page.locator(".feed").innerText()).replace(/\s+/g, " ");
 ok("feed records the advantage roll", feed.includes("(7 dropped)"), true);
 await page.screenshot({ path: `${OUT}/7-feed.png`, fullPage: true });

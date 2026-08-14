@@ -19,6 +19,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 const face = (n) => page.locator(".rp-pad button", { hasText: new RegExp(`^${n}$`) });
 const damage = async (n) => {
   await page.locator(".controls input").first().fill(String(n));
@@ -78,17 +84,21 @@ ok("held on a success", (await page.locator(".chip.conc").innerText()).toLowerCa
 await page.keyboard.press("Escape");
 
 // Undo is replay, not time travel. Reverting the newest save re-owes it...
+await go(page, "log");
 await page.locator(".fr", { hasText: "concentration save" }).first()
   .getByRole("button", { name: "Undo" }).click();
 await page.waitForTimeout(200);
+await go(page, "sheet");
 ok("undoing the latest save re-owes it", await page.locator(".alarm").count(), 1);
 ok("still on the later spell", (await page.locator(".chip.conc").innerText()).toLowerCase(), "spike growth");
 
 // ...while reverting the OLD failed save changes nothing visible, because the
 // later concentrationStarted still replays and still clears what it cleared.
+await go(page, "log");
 await page.locator(".fr", { hasText: "concentration save" }).last()
   .getByRole("button", { name: "Undo" }).click();
 await page.waitForTimeout(200);
+await go(page, "sheet");
 ok("reverting an older save does not resurrect the older spell",
   (await page.locator(".chip.conc").innerText()).toLowerCase(), "spike growth");
 

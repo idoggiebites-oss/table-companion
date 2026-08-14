@@ -20,6 +20,13 @@ const titleCase = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 const spaced = (s: string) => s.replace(/([A-Z])/g, " $1").toLowerCase();
 
 export function NewCharacter({ onCreate }: { onCreate: (c: Character) => void }) {
+  /**
+   * Folded away by default. This form is thirty-odd fields, and it was the
+   * first thing on an empty table — a wall of inputs in front of a DM who
+   * mostly wants to prep a session. Loading a sample and importing both still
+   * work without opening it.
+   */
+  const [byHand, setByHand] = useState(false);
   const [imported, setImported] = useState<BuildBase | null>(null);
   /**
    * The form edits one class. A multiclass import would lose the rest on
@@ -102,11 +109,16 @@ export function NewCharacter({ onCreate }: { onCreate: (c: Character) => void })
       <section className="card">
         <div className="card-hd">
           <span className="label">New character</span>
-          <button type="button" onClick={() => onCreate(kiraSample())}>
-            Load sample
-          </button>
+          <span className="row">
+            <button type="button" onClick={() => setByHand((v) => !v)}>
+              {byHand ? "Hide" : "Enter by hand"}
+            </button>
+            <button type="button" onClick={() => onCreate(kiraSample())}>
+              Load sample
+            </button>
+          </span>
         </div>
-        <div className="card-body">
+        <div className="card-body" hidden={!byHand && !imported}>
           {imported && (
             <p className="faint" style={{ fontSize: ".85rem", marginTop: 0 }}>
               Filled in from {imported.source === "fightclub" ? "a Fight Club export" : "an import"} —

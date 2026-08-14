@@ -18,7 +18,7 @@ import type { RollMode } from "../domain/roll.js";
 import { RollPad, type RollTarget } from "./RollPad.js";
 import type { CampaignState } from "../domain/project.js";
 import { HpBar, healthStep, VAGUE_LABEL } from "./HpBar.js";
-import { Inventory, useCatalogue } from "./Inventory.js";
+import { useCatalogue } from "./Inventory.js";
 import { acBoons, boonsFor, describeBoon } from "../domain/boons.js";
 import { armourClass, attacksFromEquipment } from "../domain/equipment.js";
 import { equippedItems, indexItems } from "../domain/items.js";
@@ -328,17 +328,6 @@ export function Sheet({
           </div>
         </section>
       )}
-
-      <Inventory
-        who={who}
-        inventory={state.inventory}
-        equipped={state.equipped}
-        coins={state.coins}
-        catalogue={catalogue}
-        items={items ?? []}
-        editable
-        append={append}
-      />
 
       {attacks.length > 0 && (
         <section className="card">

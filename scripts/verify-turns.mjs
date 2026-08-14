@@ -14,6 +14,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1000 } });
   const page = await ctx.newPage();
@@ -45,6 +51,7 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
 // DM sets up a fight: Kira plus two goblins
 // Setup names who is in the fight; initiative is rolled after staging.
+await go(dm.page, "fight");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin Boss");
 

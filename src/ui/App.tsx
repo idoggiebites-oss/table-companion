@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Character } from "../domain/build.js";
 import { actorKey } from "../domain/permissions.js";
+import { turnsUntil } from "../domain/combat.js";
 import { levelsOwed } from "../domain/project.js";
 import { useCampaign } from "../store/useCampaign.js";
 import { useSeat } from "../store/useSeat.js";
@@ -17,12 +18,18 @@ import { Progression } from "./Progression.js";
 import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
+import { Tabs, type TabDef } from "./Tabs.js";
+import { Gear } from "./Gear.js";
+
+/** Device-local, like the seat — never in the log. */
+type TabId = "fight" | "party" | "prep" | "book" | "log" | "sheet" | "gear";
 import { Shop } from "./Shop.js";
 import { UpdateBar } from "./UpdateBar.js";
 
 export function App() {
   const [seat, setSeat] = useSeat();
-  const [showFeed, setShowFeed] = useState(true);
+  /** Null until you pick one, so the sensible default can change under you. */
+  const [tab, setTab] = useState<TabId | null>(null);
   const [adding, setAdding] = useState(false);
   const [building, setBuilding] = useState(false);
 
@@ -48,6 +55,8 @@ export function App() {
   const mine =
     seat.kind === "player" ? state.builds[seat.characterId] : undefined;
   const mineState = mine ? state.characters[mine.id] : undefined;
+  /** A save owed NOW is the one thing allowed to take the screen. */
+  const saveOwed = mineState ? mineState.concentrationChecks.length > 0 : false;
 
   /**
    * The DM's screen is a planning surface, not a character sheet. Making a
@@ -61,10 +70,63 @@ export function App() {
   const dmView = seat.kind === "dm" && mayBeDm;
   const needsCharacter = (builds.length === 0 && !dmView) || adding || building;
 
+  /**
+   * Split by responsibility, not by screen size. The DM's are the postures
+   * they actually switch between: running the fight, looking after the
+   * party, prepping, looking something up. The players' are theirs.
+   */
+  const owed = mine ? levelsOwed(state, mine.id) : 0;
+  const shopOpen = state.openTrader !== null;
+  const myTurn =
+    state.combat !== null &&
+    mine !== undefined &&
+    turnsUntil(state.combat, mine.id) === 0;
+
+  const dmTabs: TabDef<TabId>[] = [
+    { id: "fight", label: "Fight", dot: state.combat?.phase === "rolling" },
+    { id: "party", label: "Party" },
+    { id: "prep", label: "Prep" },
+    { id: "book", label: "Book" },
+    { id: "log", label: "Log" },
+  ];
+  const playerTabs: TabDef<TabId>[] = [
+    { id: "fight", label: "Fight", dot: myTurn },
+    { id: "sheet", label: "Sheet", dot: owed > 0 || saveOwed },
+    { id: "gear", label: "Gear", dot: shopOpen },
+    { id: "log", label: "Log" },
+  ];
+  const tabs = dmView ? dmTabs : playerTabs;
+  /**
+   * Where you land before choosing. Never "Fight" when there is no fight —
+   * that is a dead screen with "No fight yet" on it. A player's home is their
+   * sheet; a DM's is the party they are looking after.
+   */
+  const home: TabId = state.combat !== null ? "fight" : dmView ? "party" : "sheet";
+  // A seat change can also leave you on a tab the other side does not have.
+  const current = tab !== null && tabs.some((t) => t.id === tab) ? tab : home;
+
   // A fresh device defaults to the DM's seat, which is right when it is alone
   // and wrong the instant it joins someone else's room. Move it off rather
   // than merely hiding the option — otherwise a player who never touches the
   // selector spends the session looking at the DM's screen.
+  /**
+   * A fight starting moves everyone to it. This is the "combat focus mode"
+   * the players' side was always meant to have — on the transition only, so
+   * it happens once per fight rather than fighting you for the screen.
+   */
+  const inFight = state.combat !== null;
+  const wasFighting = useRef(inFight);
+  useEffect(() => {
+    if (inFight && !wasFighting.current) setTab("fight");
+    wasFighting.current = inFight;
+  }, [inFight]);
+
+  const wasOwed = useRef(saveOwed);
+  useEffect(() => {
+    if (saveOwed && !wasOwed.current) setTab("sheet");
+    wasOwed.current = saveOwed;
+  }, [saveOwed]);
+
   useEffect(() => {
     if (mayBeDm || seat.kind !== "dm") return;
     const first = builds[0];
@@ -104,11 +166,6 @@ export function App() {
             <button onClick={() => setAdding(true)}>Add character</button>
           )}
           {builds.length > 0 && (
-            <button onClick={() => setShowFeed((v) => !v)}>
-              {showFeed ? "Hide log" : "Show log"}
-            </button>
-          )}
-          {builds.length > 0 && (
             <button
               onClick={() => {
                 if (confirm("Discard everything on this device?")) reset();
@@ -140,6 +197,10 @@ export function App() {
         </div>
       )}
 
+      {!needsCharacter && (
+        <Tabs tabs={tabs} active={current} onPick={setTab} />
+      )}
+
       {needsCharacter ? (
         building ? (
           <CreateCharacter onCreate={create} onCancel={() => setBuilding(false)} />
@@ -162,65 +223,89 @@ export function App() {
         )
       ) : (
         <>
-          <Combat state={state} seat={seat} append={append} />
+          {/* The fight is always the first tab, on both sides. */}
+          {current === "fight" && (
+            <Combat state={state} seat={seat} append={append} />
+          )}
 
           {dmView ? (
             <>
-              {/* An empty table is ambiguous: a DM about to prep, or someone
-                  who just opened the app and wants a character. Offering both
-                  costs one card and settles it without guessing. */}
-              {builds.length === 0 && (
+              {/* Session zero lives with the party, because that tab is who
+                  is at this table — and it is where an empty campaign lands. */}
+              {current === "party" && (
                 <>
-                  <section className="card">
-                    <div className="card-hd">
-                      <span className="label">Session zero</span>
-                      <button onClick={() => setBuilding(true)}>Build a character</button>
-                    </div>
-                    <div className="card-body">
-                      <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
-                        Nobody yet. Make one here or bring one in — or leave it
-                        and prep the session below.
-                      </p>
-                    </div>
-                  </section>
-                  <NewCharacter onCreate={create} />
+                  {builds.length === 0 && (
+                    <>
+                      <section className="card">
+                        <div className="card-hd">
+                          <span className="label">Session zero</span>
+                          <button onClick={() => setBuilding(true)}>Build a character</button>
+                        </div>
+                        <div className="card-body">
+                          <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
+                            Nobody yet. Make one here or bring one in — or leave
+                            it and prep the session under Prep.
+                          </p>
+                        </div>
+                      </section>
+                      <NewCharacter onCreate={create} />
+                    </>
+                  )}
+                  <Party state={state} seat={seat} append={append} />
+                  <Progression state={state} append={append} />
                 </>
               )}
-              <Party state={state} seat={seat} append={append} />
-              <Npcs state={state} append={append} />
-              <Progression state={state} append={append} />
-              <EncounterBuilder state={state} append={append} />
-              <Homebrew state={state} append={append} />
-              <Reference homebrew={state.homebrew} />
+
+              {current === "prep" && (
+                <>
+                  <EncounterBuilder state={state} append={append} />
+                  <Npcs state={state} append={append} />
+                  <Homebrew state={state} append={append} />
+                </>
+              )}
+
+              {current === "book" && <Reference homebrew={state.homebrew} />}
             </>
           ) : mine && mineState ? (
             <>
-              <LevelUp
-                build={mine}
-                owed={levelsOwed(state, mine.id)}
-                append={append}
-              />
-              <Shop
-                state={state}
-                who={mine.id}
-                coins={mineState.coins}
-                append={append}
-              />
-              <Sheet build={mine} state={mineState} campaign={state} append={append} />
+              {current === "sheet" && (
+                <>
+                  <LevelUp
+                    build={mine}
+                    owed={levelsOwed(state, mine.id)}
+                    append={append}
+                  />
+                  <Sheet build={mine} state={mineState} campaign={state} append={append} />
+                </>
+              )}
+
+              {current === "gear" && (
+                <>
+                  <Shop
+                    state={state}
+                    who={mine.id}
+                    coins={mineState.coins}
+                    append={append}
+                  />
+                  <Gear build={mine} state={mineState} append={append} />
+                </>
+              )}
             </>
           ) : (
-            <section className="card">
-              <div className="card-body">
-                <p className="faint" style={{ margin: 0 }}>
-                  That seat has no character on this device yet.
-                </p>
-              </div>
-            </section>
+            current !== "log" && (
+              <section className="card">
+                <div className="card-body">
+                  <p className="faint" style={{ margin: 0 }}>
+                    That seat has no character on this device yet.
+                  </p>
+                </div>
+              </section>
+            )
           )}
         </>
       )}
 
-      {builds.length > 0 && showFeed && (
+      {current === "log" && !needsCharacter && (
         <section className="card">
           <div className="card-hd">
             <span className="label">Action log</span>

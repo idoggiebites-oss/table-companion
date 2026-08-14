@@ -18,8 +18,8 @@ import {
 } from "../domain/statblock.js";
 import { loadMonsters } from "../store/srd.js";
 import {
-  activeCombatant, awaitingRolls, controls, DISCLOSURE, isSurprised, mayEndTurn,
-  movementLeft, turnsUntil, visibleTo,
+  activeCombatant, awaitingRolls, controls, DISCLOSURE, mayEndTurn, turnsUntil,
+  visibleTo,
   type Combat, type Combatant, type Disclosure, type Seat,
 } from "../domain/combat.js";
 

@@ -13,6 +13,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sections are tabs now; content is one tap away rather than a scroll. */
+const go = async (page, tab) => {
+  await page.locator(`[data-tab="${tab}"]`).click();
+  await page.waitForTimeout(250);
+};
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1100 } });
   const page = await ctx.newPage();
@@ -41,7 +47,8 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
 // a fight with three goblins and the character
 for (const [n, , hp] of [[1, 15, 12], [2, 14, 12], [3, 13, 12]]) {
-  await dm.page.getByRole("button", { name: "Add creature" }).click();
+  await go(dm.page, "fight");
+await dm.page.getByRole("button", { name: "Add creature" }).click();
   await dm.page.locator(`input[aria-label="Creature ${n} name"]`).fill(`Goblin ${n}`);
   await dm.page.locator(`input[aria-label="Creature ${n} hp"]`).fill(String(hp));
 }
@@ -57,6 +64,7 @@ await dm.page.waitForSelector(".cbt");
 await player.page.waitForSelector(".cbt", { timeout: 15000 });
 
 // the player concentrates, so the blast has to owe them a save
+await go(player.page, "sheet");
 await player.page.locator('input[aria-label="Spell to concentrate on"]').fill("Hunter's Mark");
 await player.page.getByRole("button", { name: "Concentrate", exact: true }).click();
 await dm.page.waitForTimeout(700);
@@ -76,19 +84,23 @@ await dm.page.screenshot({ path: `${OUT}/24-area.png` });
 
 await dm.page.getByRole("button", { name: /^Apply to 3$/ }).click();
 await player.page.waitForTimeout(900);
+await go(dm.page, "fight");
 
+await go(dm.page, "fight");
 ok("goblins in the blast dropped", await dm.page.locator(".cbt", { hasText: "Goblin 1" }).locator(".hp").innerText(), "0/12");
 ok("the goblin left out is untouched", await dm.page.locator(".cbt", { hasText: "Goblin 3" }).locator(".hp").innerText(), "12/12");
 ok("the character took half", (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "38 / 52");
 ok("and owes a save against what they actually took",
   (await player.page.locator(".alarm-q").innerText()).replace(/\s+/g, " "), "A Constitution save is owed · DC 10");
 
+await go(dm.page, "log");
 const feed = (await dm.page.locator(".feed").innerText()).replace(/\s+/g, " ");
 ok("the feed shows one line for the whole blast", feed.includes("Fireball · 28 fire · 3 targets · 1 saved"), true);
 
 // one undo puts all of it back
 await dm.page.locator(".fr", { hasText: "Fireball" }).first().getByRole("button", { name: "Undo" }).click();
 await player.page.waitForTimeout(900);
+await go(dm.page, "fight");
 ok("one undo restored both goblins", await dm.page.locator(".cbt", { hasText: "Goblin 1" }).locator(".hp").innerText(), "12/12");
 ok("and the character", (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "52 / 52");
 ok("and cleared the save it owed", await player.page.locator(".alarm").count(), 0);
