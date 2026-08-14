@@ -48,6 +48,8 @@ export function Homebrew({
   const [open, setOpen] = useState(false);
   const [f, setF] = useState(blank);
   const [srd, setSrd] = useState<Statblock[] | null>(null);
+  /** Set once the DM types an XP themselves; their number is not overwritten. */
+  const [xpTouched, setXpTouched] = useState(false);
 
   useEffect(() => {
     if (open && !srd) loadMonsters().then(setSrd, () => setSrd([]));
@@ -57,6 +59,17 @@ export function Homebrew({
   const dice = parseDice(f.hitDice);
   const hp = averageHp(f.hitDice);
   const suggested = srd ? suggestXp(srd, f.cr) : null;
+
+  /*
+   * The creature list can be tens of megabytes once a compendium ships with
+   * the app, so choosing a challenge rating before it arrives used to leave
+   * the default XP sitting there — quietly wrong, and only corrected if the
+   * DM noticed the hint underneath. The suggestion now lands when it does.
+   */
+  useEffect(() => {
+    if (suggested === null || xpTouched) return;
+    setF((cur) => (cur.xp === suggested ? cur : { ...cur, xp: suggested }));
+  }, [suggested, xpTouched]);
 
   function save() {
     const id = `hb-${f.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || Date.now().toString(36)}`;
@@ -173,6 +186,9 @@ export function Homebrew({
                 onChange={(e) => {
                   const cr = Number(e.target.value);
                   const xp = srd ? suggestXp(srd, cr) : null;
+                  // A new challenge rating is a new question, so the DM's
+                  // previous answer stops standing in the way of the hint.
+                  setXpTouched(false);
                   setF({ ...f, cr, ...(xp === null ? {} : { xp }) });
                 }}
               >
@@ -183,7 +199,15 @@ export function Homebrew({
             </div>
             <div style={{ flex: "1 1 110px" }}>
               <label className="label" htmlFor="hb-xp">XP</label>
-              <input id="hb-xp" aria-label="Homebrew XP" {...num("xp")} />
+              <input
+                id="hb-xp"
+                aria-label="Homebrew XP"
+                {...num("xp")}
+                onChange={(e) => {
+                  setXpTouched(true);
+                  num("xp").onChange(e);
+                }}
+              />
             </div>
           </div>
           {suggested !== null && suggested !== f.xp && (

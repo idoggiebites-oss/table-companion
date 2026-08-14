@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Character } from "../domain/build.js";
 import type { Stack } from "../domain/items.js";
+import type { KnownSpell } from "../domain/spells.js";
 import { actorKey } from "../domain/permissions.js";
 import { turnsUntil } from "../domain/combat.js";
 import { levelsOwed } from "../domain/project.js";
@@ -141,8 +142,14 @@ export function App() {
     if (first) setSeat({ kind: "player", characterId: first.id });
   }, [mayBeDm, seat.kind, builds, setSeat]);
 
-  function create(c: Character, starting?: { items: readonly Stack[]; coins: number }) {
+  function create(
+    c: Character,
+    starting?: { items: readonly Stack[]; coins: number; spells?: readonly KnownSpell[] },
+  ) {
     append({ type: "characterAdded", character: c });
+    for (const spell of starting?.spells ?? []) {
+      append({ type: "spellLearned", who: c.base.id, spell });
+    }
     // One event for the whole kit, so undoing it takes back everything the
     // character walked in with rather than half of it.
     if (starting && (starting.items.length > 0 || starting.coins > 0)) {

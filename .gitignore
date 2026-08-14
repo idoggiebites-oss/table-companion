@@ -4,3 +4,7 @@ dist
 *.local
 worker-configuration.d.ts
 .wrangler
+
+# Built from a compendium by scripts/build-compendium.mjs. These are the
+# published books: they belong on the machine doing the deploying, not here.
+public/content/

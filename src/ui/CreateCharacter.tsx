@@ -33,8 +33,13 @@ import {
 import type { ClassId, DieSize } from "../domain/resources.js";
 import {
   loadBackgrounds, loadClasses, loadClassLevels, loadEquipment, loadRaces,
+  loadSpells,
   type BackgroundEntry, type ClassEntry, type ClassLevels, type RaceEntry,
 } from "../store/srd.js";
+import type { CompendiumSpell } from "../import/compendium.js";
+import {
+  castableBy, isClassFeature, levelLabel, toKnown, type KnownSpell,
+} from "../domain/spells.js";
 import { indexItems, type Item, type Stack } from "../domain/items.js";
 import { formatCoins } from "../domain/money.js";
 import { averageWealth, describeWealth } from "../domain/non-srd.js";
@@ -66,13 +71,19 @@ const PRIORITY: Partial<Record<ClassId, Ability[]>> = {
 export function CreateCharacter({
   onCreate, onCancel,
 }: {
-  onCreate: (c: Character, starting?: { items: readonly Stack[]; coins: number }) => void;
+  onCreate: (
+    c: Character,
+    starting?: { items: readonly Stack[]; coins: number; spells?: readonly KnownSpell[] },
+  ) => void;
   onCancel: () => void;
 }) {
   const [races, setRaces] = useState<RaceEntry[] | null>(null);
   const [classes, setClasses] = useState<ClassEntry[] | null>(null);
   const [levels, setLevels] = useState<ClassLevels | null>(null);
   const [gear, setGear] = useState<Item[] | null>(null);
+  const [book, setBook] = useState<CompendiumSpell[]>([]);
+  const [spellFilter, setSpellFilter] = useState("");
+  const [chosenSpells, setChosenSpells] = useState<KnownSpell[]>([]);
   const [gearMode, setGearMode] = useState<"kit" | "gold">("kit");
   /** Which lettered option is taken, per choice. */
   const [picks, setPicks] = useState<Record<number, string>>({});
@@ -104,6 +115,7 @@ export function CreateCharacter({
     loadClassLevels().then(setLevels, () => setLevels({}));
     loadEquipment().then(setGear, () => setGear([]));
     loadBackgrounds().then(setBackgrounds, () => setBackgrounds([]));
+    loadSpells().then(setBook, () => setBook([]));
   }, []);
 
   /** Keeps the chosen race listed even when it falls out of the filter. */
@@ -193,6 +205,47 @@ export function CreateCharacter({
     });
     return { items, coins: 0 };
   }, [klass, gearMode, fixedGear, choices2, picks, catPicks, catalogue]);
+
+  /**
+   * How many of each the class gets at this level, straight from the table.
+   * A wizard at 1 knows three cantrips and six spells; at 5 it is four and
+   * more — asking the builder to know that is the point of having the table.
+   */
+  const cantripsKnown = atLevel?.cantrips ?? 0;
+  const spellsKnown = atLevel?.known ?? 0;
+  const hasSlots = (atLevel?.slots ?? []).some((n) => n > 0);
+  const castsAtAll = cantripsKnown > 0 || spellsKnown > 0 || hasSlots;
+
+  const pickedCantrips = chosenSpells.filter((s) => s.level === 0).length;
+  const pickedSpells = chosenSpells.filter((s) => s.level > 0).length;
+
+  const spellChoices = useMemo(() => {
+    if (!klass || !castsAtAll) return [];
+    const q = spellFilter.trim().toLowerCase();
+    const have = new Set(chosenSpells.map((s) => s.id));
+    // The highest slot level that exists, as an index. findLastIndex is not
+    // in this lib target, and a reverse scan says the same thing.
+    const slots = atLevel?.slots ?? [];
+    let topSlot = -1;
+    for (let i = slots.length - 1; i >= 0; i--) {
+      if ((slots[i] ?? 0) > 0) {
+        topSlot = i;
+        break;
+      }
+    }
+    return book
+      .filter((s) => {
+        if (have.has(s.id) || isClassFeature(s)) return false;
+        if (!castableBy(s, klass.id)) return false;
+        // Nothing you could not cast: a spell above your best slot is not a
+        // choice, it is a tease.
+        if (s.level > topSlot + 1) return false;
+        if (q && !s.name.toLowerCase().includes(q)) return false;
+        return true;
+      })
+      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+      .slice(0, 80);
+  }, [book, klass, castsAtAll, spellFilter, chosenSpells, atLevel]);
 
   const allAssigned = method === "pointBuy" || ABILITIES.every((a) => assigned[a] !== undefined);
   const skillsNeeded = klass?.skillChoices?.choose ?? 0;
@@ -722,6 +775,91 @@ export function CreateCharacter({
         </section>
       )}
 
+      {/* Only for casters, and only as many as the class table allows. The
+          counts are the point: a wizard is told three cantrips and six
+          spells, not left to remember it. */}
+      {klass && race && castsAtAll && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label cr-step">6 · Spells</span>
+            <span className="faint" style={{ fontSize: ".78rem" }}>
+              {cantripsKnown > 0 && `${pickedCantrips} of ${cantripsKnown} cantrips`}
+              {cantripsKnown > 0 && (spellsKnown > 0 || hasSlots) && " · "}
+              {/* A prepared caster has no "spells known" and the table says so
+                  by leaving it at zero. Counting up rather than down is the
+                  honest way to show a limit that does not exist. */}
+              {spellsKnown > 0
+                ? `${pickedSpells} of ${spellsKnown} spells`
+                : hasSlots && `${pickedSpells} spells`}
+            </span>
+          </div>
+          <div className="card-body">
+            {book.length === 0 ? (
+              <p className="cr-note" style={{ marginTop: 0 }}>
+                No spell list on this device. The SRD data shipped here has
+                none — a compendium provides it, and you can pick spells later
+                under Spells.
+              </p>
+            ) : (
+              <>
+                {chosenSpells.length > 0 && (
+                  <div className="chips" style={{ marginBottom: 10 }}>
+                    {chosenSpells.map((sp) => (
+                      <button
+                        key={sp.id}
+                        className="chip on"
+                        aria-label={`Remove ${sp.name}`}
+                        onClick={() => setChosenSpells(chosenSpells.filter((x) => x.id !== sp.id))}
+                      >
+                        {sp.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <input
+                  value={spellFilter}
+                  aria-label="Filter spells"
+                  placeholder={`filter ${klass.name.toLowerCase()} spells…`}
+                  onChange={(e) => setSpellFilter(e.target.value)}
+                />
+                <div className="inv-find">
+                  {spellChoices.map((sp) => {
+                    const full =
+                      sp.level === 0
+                        ? pickedCantrips >= cantripsKnown
+                        : spellsKnown > 0 && pickedSpells >= spellsKnown;
+                    return (
+                      <button
+                        className="inv-add"
+                        key={sp.id}
+                        disabled={full}
+                        onClick={() => setChosenSpells([...chosenSpells, toKnown(sp)])}
+                      >
+                        <span className="nm">{sp.name}</span>
+                        <span className="num">
+                          {sp.level === 0 ? "cantrip" : levelLabel(sp.level).toLowerCase()}
+                        </span>
+                        <span className="faint">{sp.school}</span>
+                      </button>
+                    );
+                  })}
+                  {spellChoices.length === 0 && (
+                    <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
+                      Nothing matches.
+                    </p>
+                  )}
+                </div>
+                <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
+                  {spellsKnown === 0 && hasSlots
+                    ? `A ${klass.name.toLowerCase()} prepares from a book rather than knowing a fixed few, so there is no number to hit here. Take what you like, or leave it — the Spells tab does the same job afterwards.`
+                    : "Take what you like now or leave it — the Spells tab does the same job afterwards."}
+                </p>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
       {klass && race && (
         <section className="card">
           <div className="card-body">
@@ -734,7 +872,7 @@ export function CreateCharacter({
             <div className="row" style={{ marginTop: 12 }}>
               <button
                 disabled={gaps.length > 0 || !choices}
-                onClick={() => choices && onCreate({ base: assemble(choices), deltas: [] }, starting)}
+                onClick={() => choices && onCreate({ base: assemble(choices), deltas: [] }, { ...starting, spells: chosenSpells })}
               >
                 Create character
               </button>

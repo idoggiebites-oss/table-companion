@@ -62,7 +62,12 @@ await dm.page.locator('input[aria-label="Homebrew hit dice"]').fill("9d8+18");
 
 // XP is suggested from SRD creatures at the same CR, never asserted
 await dm.page.selectOption('select[aria-label="Homebrew challenge rating"]', "6");
-await dm.page.waitForTimeout(300);
+// A shipped compendium makes the creature list 13MB, so the suggestion
+// arrives when the fetch does rather than on a fixed timer.
+for (let i = 0; i < 60; i++) {
+  if ((await dm.page.locator('input[aria-label="Homebrew XP"]').inputValue()) !== "200") break;
+  await dm.page.waitForTimeout(500);
+}
 ok("XP suggested for CR 6", await dm.page.locator('input[aria-label="Homebrew XP"]').inputValue(), "2300");
 
 await dm.page.locator('input[aria-label="Action name"]').fill("Greataxe");

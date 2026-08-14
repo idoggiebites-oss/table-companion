@@ -203,6 +203,16 @@ function parseCr(s: string): number {
   return num(t);
 }
 
+/** "150/600" or "20" → what the attack line prints. */
+function parseRange(raw: string): { range?: { normal: number; long?: number } } {
+  const m = /^(\d+)\s*(?:\/\s*(\d+))?/.exec(raw.trim());
+  if (!m) return {};
+  const normal = Number(m[1]);
+  if (!Number.isFinite(normal) || normal <= 0) return {};
+  const long = m[2] ? Number(m[2]) : undefined;
+  return { range: { normal, ...(long ? { long } : {}) } };
+}
+
 function parseItem(el: Element): Item {
   const name = text(el, "name");
   const type = text(el, "type");
@@ -236,6 +246,7 @@ function parseItem(el: Element): Item {
           ...(text(el, "dmgType")
             ? { damageType: DAMAGE_TYPE[text(el, "dmgType")] ?? text(el, "dmgType").toLowerCase() }
             : {}),
+          ...parseRange(text(el, "range")),
         }
       : {}),
 

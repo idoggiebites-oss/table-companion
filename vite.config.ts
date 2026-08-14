@@ -30,6 +30,25 @@ export default defineConfig({
          * left out of the precache and simply fails offline.
          */
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,json}"],
+        // The bundled compendium is 30MB and must not go in the precache —
+        // it would blow past workbox's file-size limit and make first load
+        // pay for content most sessions never open. It is fetched on demand
+        // and kept by the HTTP cache instead.
+        globIgnores: ["content/**"],
+        // Too big to precache, too useful to lose offline. Fetched on first
+        // need and kept afterwards, so a table that opened the app once at
+        // home still has its spells in a basement with no signal.
+        runtimeCaching: [
+          {
+            urlPattern: /\/content\/.*\.json$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "compendium",
+              expiration: { maxEntries: 16, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
         cleanupOutdatedCaches: true,
         /*
          * Claim the page that installed us, so the app is offline-capable

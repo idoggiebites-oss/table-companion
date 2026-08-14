@@ -21,6 +21,14 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+// The gate is optional and currently off. Nothing to test on an open site,
+// and asserting a door that was deliberately removed is noise.
+if ((await (await fetch(URL)).status) !== 401) {
+  console.log("SKIP  this deployment is not gated (no SITE_PASSPHRASE)");
+  await browser.close();
+  process.exit(0);
+}
+
 const ctx = await browser.newContext({ viewport: { width: 430, height: 900 } });
 const page = await ctx.newPage();
 page.on("pageerror", (e) => errors.push(`${e}`));

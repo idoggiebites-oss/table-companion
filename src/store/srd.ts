@@ -32,6 +32,8 @@ export interface RaceEntry {
 }
 
 import type { Item } from "../domain/items.js";
+import type { CompendiumSpell } from "../import/compendium.js";
+import { loadBundled } from "./bundled.js";
 import { mergeById, readContent } from "./content.js";
 
 export interface ClassLevel {
@@ -69,6 +71,7 @@ let classes: Promise<ClassEntry[]> | null = null;
 let classLevels: Promise<ClassLevels> | null = null;
 let equipment: Promise<Item[]> | null = null;
 let backgrounds: Promise<BackgroundEntry[]> | null = null;
+let spells: Promise<CompendiumSpell[]> | null = null;
 let conditions: Promise<ConditionDescription[]> | null = null;
 
 async function load<T>(path: string): Promise<T[]> {
@@ -80,15 +83,18 @@ async function load<T>(path: string): Promise<T[]> {
 export function loadMonsters(): Promise<Statblock[]> {
   monsters ??= Promise.all([
     load<Statblock>("/srd/monsters.json"),
+    loadBundled("monster"),
     readContent("monster").catch(() => [] as Statblock[]),
-  ]).then(([srd, imported]) => mergeById(srd, imported));
+  ]).then(([srd, shipped, imported]) => mergeById(mergeById(srd, shipped), imported));
   return monsters;
 }
 
 export function loadRaces(): Promise<RaceEntry[]> {
   races ??= Promise.all([
     load<RaceEntry>("/srd/races.json"),
-    readContent("race").catch(() => []),
+    Promise.all([loadBundled("race"), readContent("race").catch(() => [])]).then(
+      ([shipped, mine]) => [...shipped, ...mine],
+    ),
   ]).then(([srd, imported]) =>
     // A compendium race has traits and no subraces — it lists "Elf, Wood" as
     // its own entry rather than nesting. Mapped into the shipped shape so the
@@ -123,7 +129,8 @@ export interface BackgroundEntry {
  * is imported — which is why the builder offers a custom one either way.
  */
 export function loadBackgrounds(): Promise<BackgroundEntry[]> {
-  backgrounds ??= readContent("background")
+  backgrounds ??= Promise.all([loadBundled("background"), readContent("background")])
+    .then(([shipped, mine]) => mergeById(shipped, mine))
     .then((rows) =>
       rows.map((b) => ({
         id: b.id,
@@ -155,8 +162,9 @@ export function loadEquipment(): Promise<Item[]> {
       if (!r.ok) throw new Error(`equipment: HTTP ${r.status}`);
       return r.json() as Promise<Item[]>;
     }),
+    loadBundled("item"),
     readContent("item").catch(() => [] as Item[]),
-  ]).then(([srd, imported]) => mergeById(srd, imported));
+  ]).then(([srd, shipped, imported]) => mergeById(mergeById(srd, shipped), imported));
   return equipment;
 }
 
@@ -166,6 +174,14 @@ export function forgetLoaded(): void {
   monsters = null;
   races = null;
   backgrounds = null;
+  spells = null;
+}
+
+export function loadSpells(): Promise<CompendiumSpell[]> {
+  spells ??= Promise.all([loadBundled("spell"), readContent("spell")]).then(
+    ([shipped, mine]) => mergeById(shipped, mine),
+  );
+  return spells;
 }
 
 export function loadConditions(): Promise<ConditionDescription[]> {

@@ -48,8 +48,12 @@ await page.waitForSelector(".mrow", { timeout: 20000 });
 const after = await page.evaluate(() =>
   performance.getEntriesByType("resource").filter((r) => r.name.includes("monsters.json")).length);
 ok("fetched on first open", after, 1);
-ok("the whole SRD is there",
-  (await page.locator(".card-body p.faint").last().innerText()).includes("of 334"), true);
+// 334 SRD creatures, plus whatever a shipped compendium adds. Asserting the
+// floor keeps this true either way.
+const total = Number(
+  /of (\d+)/.exec(await page.locator(".card-body p.faint").last().innerText())?.[1] ?? "0",
+);
+ok("the whole SRD is there, and anything shipped with it", total >= 334, true);
 
 await page.locator('input[aria-label="Search monsters"]').fill("goblin");
 await page.waitForTimeout(300);

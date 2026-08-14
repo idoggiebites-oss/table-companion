@@ -37,9 +37,13 @@ await page.goto(URL, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Build a character" }).click();
 await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
 const raceCount = async () => (await page.locator('select[aria-label="Race"] option').count()) - 1;
-ok("the shipped race list is nine long", await raceCount(), 9);
-ok("and short enough to need no filter",
-  await page.locator('input[aria-label="Filter races"]').count(), 0);
+// A deployment built WITHOUT a compendium ships nine SRD races; one built
+// with it already has hundreds. Both are valid, so this checks the shape
+// rather than a number that depends on how the deployment was made.
+const before = await raceCount();
+const shipped = (await (await fetch(new global.URL("/content/index.json", URL))).status) === 200;
+ok(shipped ? "a shipped compendium is already in the list" : "the SRD list is nine long",
+  shipped ? before > 500 : before === 9, true);
 await page.getByRole("button", { name: "Cancel" }).click();
 await page.waitForTimeout(400);
 

@@ -26,16 +26,13 @@ import {
   type KnownSpell, type SlotState,
 } from "../domain/spells.js";
 import type { CompendiumSpell } from "../import/compendium.js";
-import { readContent } from "../store/content.js";
+import { loadSpells } from "../store/srd.js";
 
 function useSpellbook(when: boolean): CompendiumSpell[] | null {
   const [all, setAll] = useState<CompendiumSpell[] | null>(null);
   useEffect(() => {
     if (!when || all) return;
-    void readContent("spell").then(
-      (r) => setAll(r as CompendiumSpell[]),
-      () => setAll([]),
-    );
+    void loadSpells().then(setAll, () => setAll([]));
   }, [when, all]);
   return all;
 }

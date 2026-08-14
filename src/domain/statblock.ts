@@ -110,7 +110,12 @@ export function averageHp(expr: string): number {
  * overwrite, not an authority.
  */
 export function suggestXp(all: readonly Statblock[], cr: number): number | null {
-  const at = all.filter((m) => m.cr === cr && !m.homebrew).map((m) => m.xp);
+  // Zero means "this source did not say", not "worth nothing". A compendium
+  // carries no XP at all, so counting its zeroes as answers makes the most
+  // common value nothing at every challenge rating.
+  const at = all
+    .filter((m) => m.cr === cr && !m.homebrew && m.xp > 0)
+    .map((m) => m.xp);
   if (at.length === 0) return null;
   const counts = new Map<number, number>();
   for (const xp of at) counts.set(xp, (counts.get(xp) ?? 0) + 1);

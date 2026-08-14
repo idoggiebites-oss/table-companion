@@ -40,6 +40,16 @@ rewrites `public/srd/*.json`.
 
 MIT License, Copyright (c) 2018-2020 Adrian Padua, Christopher Ward.
 
+## Bundled compendium
+
+`scripts/build-compendium.mjs` bakes a Fight Club compendium into
+`public/content/`, which the app then loads like the SRD data. That directory
+is gitignored: those files are the published books, and they belong on the
+machine doing the deploying rather than in this repository.
+
+A deployment built without running that script ships the SRD alone and works
+exactly as before — the per-device import is still there.
+
 ## Access
 
 The deployment is behind a shared passphrase (`SITE_PASSPHRASE`, a Worker
