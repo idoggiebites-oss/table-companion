@@ -37,7 +37,10 @@ async function device(name) {
   page.on("console", (m) => {
     // The deliberate wrong-key attempt below is answered with a 403, which the
     // browser logs. That is the server working, not a fault.
-    if (m.type() !== "error" || /403 \(Forbidden\)/.test(m.text())) return;
+    // Production sends no status text, so this reads "403 ()" there and
+    // "403 (Forbidden)" locally. Either way it is the server refusing the
+    // deliberate wrong key below.
+    if (m.type() !== "error" || /\b403\b/.test(m.text())) return;
     errors.push(`${name}: ${m.text()}`);
   });
   await page.goto(URL, { waitUntil: "networkidle" });
