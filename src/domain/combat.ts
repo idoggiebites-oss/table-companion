@@ -34,19 +34,39 @@ export type Disclosure = (typeof DISCLOSURE)[number];
 export interface Combatant {
   readonly id: string;
   readonly name: string;
-  readonly initiative: number;
+  /**
+   * Null until it has been rolled. Not zero: "has not rolled yet" and "rolled
+   * badly" are different facts, and the whole point of starting a fight
+   * together is knowing who the table is still waiting on.
+   */
+  readonly initiative: number | null;
   readonly source: CombatantSource;
   readonly controller: Controller;
   readonly disclosure: Disclosure;
+  /** Misses its first turn. Set for one SIDE when the DM calls an ambush. */
+  readonly surprised?: boolean;
+  /** Feet per round. Absent means the app does not track its movement. */
+  readonly speed?: number;
 }
 
+/**
+ * A fight starts before it starts. Everyone rolling initiative is a real
+ * moment at the table — the DM says "roll for initiative" and then waits —
+ * and modelling it as a phase is what lets every device show who is still
+ * outstanding instead of one person collecting numbers verbally.
+ */
+export type CombatPhase = "rolling" | "active";
+
 export interface Combat {
+  readonly phase: CombatPhase;
   readonly round: number;
-  /** Index into `order`. */
+  /** Index into `order`. Meaningless while rolling. */
   readonly turn: number;
   readonly order: readonly Combatant[];
   /** Current hit points for creature combatants, by combatant id. */
   readonly creatureHp: Readonly<Record<string, number>>;
+  /** Feet moved this turn, by combatant id. Cleared when their turn opens. */
+  readonly moved: Readonly<Record<string, number>>;
 }
 
 /**
@@ -57,17 +77,88 @@ export interface Combat {
 export function sortOrder(combatants: readonly Combatant[]): Combatant[] {
   return combatants
     .map((c, i) => ({ c, i }))
-    .sort((a, b) => b.c.initiative - a.c.initiative || a.i - b.i)
+    .sort((a, b) => {
+      // Anyone who has not rolled sorts last rather than as a zero, so a
+      // half-rolled order still reads correctly while the table waits.
+      const ai = a.c.initiative;
+      const bi = b.c.initiative;
+      if (ai === null && bi === null) return a.i - b.i;
+      if (ai === null) return 1;
+      if (bi === null) return -1;
+      return bi - ai || a.i - b.i;
+    })
     .map(({ c }) => c);
+}
+
+function seedHp(order: readonly Combatant[]): Record<string, number> {
+  const hp: Record<string, number> = {};
+  for (const c of order) {
+    if (c.source.kind === "creature") hp[c.id] = c.source.maxHp;
+  }
+  return hp;
+}
+
+/** The roster, before anyone has rolled. */
+export function stageCombat(order: readonly Combatant[]): Combat {
+  return {
+    phase: "rolling",
+    round: 1,
+    turn: 0,
+    order: [...order],
+    creatureHp: seedHp(order),
+    moved: {},
+  };
 }
 
 export function startCombat(order: readonly Combatant[]): Combat {
   const sorted = sortOrder(order);
-  const hp: Record<string, number> = {};
-  for (const c of sorted) {
-    if (c.source.kind === "creature") hp[c.id] = c.source.maxHp;
-  }
-  return { round: 1, turn: 0, order: sorted, creatureHp: hp };
+  return {
+    phase: "active",
+    round: 1,
+    turn: 0,
+    order: sorted,
+    creatureHp: seedHp(sorted),
+    moved: {},
+  };
+}
+
+export function setInitiative(combat: Combat, id: string, value: number): Combat {
+  return {
+    ...combat,
+    order: combat.order.map((c) => (c.id === id ? { ...c, initiative: value } : c)),
+  };
+}
+
+export function awaitingRolls(combat: Combat): readonly Combatant[] {
+  return combat.order.filter((c) => c.initiative === null);
+}
+
+/**
+ * Settles the order. Anyone who still has not rolled is dropped rather than
+ * placed arbitrarily — a fight that starts with somebody at a made-up
+ * position is worse than one that starts without them, and they can be added
+ * back by staging again.
+ */
+export function beginCombat(combat: Combat): Combat {
+  const rolled = combat.order.filter((c) => c.initiative !== null);
+  return {
+    ...combat,
+    phase: "active",
+    round: 1,
+    turn: 0,
+    order: sortOrder(rolled),
+    moved: {},
+  };
+}
+
+/** Surprise costs you the first round only. */
+export function isSurprised(combat: Combat, c: Combatant): boolean {
+  return c.surprised === true && combat.round === 1;
+}
+
+export function movementLeft(combat: Combat, c: Combatant): number | null {
+  if (c.speed === undefined) return null;
+  return Math.max(0, c.speed - (combat.moved[c.id] ?? 0));
 }
 
 /**
@@ -80,14 +171,20 @@ export function startCombat(order: readonly Combatant[]): Combat {
  */
 export function advance(combat: Combat, from: number): Combat {
   if (combat.order.length === 0) return combat;
+  if (combat.phase !== "active") return combat;
   if (from !== combat.turn) return combat;
   const next = combat.turn + 1;
+  const moved = { ...combat.moved };
+  // Movement comes back when your turn opens, exactly like the economy.
+  const opening = combat.order[next >= combat.order.length ? 0 : next];
+  if (opening) delete moved[opening.id];
   return next >= combat.order.length
-    ? { ...combat, turn: 0, round: combat.round + 1 }
-    : { ...combat, turn: next };
+    ? { ...combat, turn: 0, round: combat.round + 1, moved }
+    : { ...combat, turn: next, moved };
 }
 
 export function activeCombatant(combat: Combat): Combatant | null {
+  if (combat.phase !== "active") return null;
   return combat.order[combat.turn] ?? null;
 }
 

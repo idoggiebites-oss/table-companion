@@ -50,8 +50,11 @@ await dm.page.waitForTimeout(400);
 ok("experience mode brings it back", await dm.page.locator(".prow .xp").count(), 1);
 
 // --- a threshold crossed mid-fight must not interrupt ---------------------
+await dm.page.getByRole("button", { name: "Roll for initiative" }).click();
+await dm.page.waitForSelector('input[aria-label="Kira Vance initiative"]');
 await dm.page.locator('input[aria-label="Kira Vance initiative"]').fill("15");
-await dm.page.getByRole("button", { name: "Start combat", exact: true }).click();
+await dm.page.getByRole("button", { name: "Set Kira Vance initiative" }).click();
+await dm.page.getByRole("button", { name: "Begin", exact: true }).click();
 await dm.page.waitForSelector(".cbt");
 await player.page.waitForSelector(".cbt", { timeout: 15000 });
 

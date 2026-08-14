@@ -39,11 +39,17 @@ await player.page.selectOption('select[aria-label="Seat"]', { label: "Kira Vance
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
 // A goblin goes first, so the player starts the fight waiting.
-await dm.page.locator('input[aria-label="Kira Vance initiative"]').fill("12");
+// Initiative is rolled after staging now.
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
-await dm.page.locator('input[aria-label="Creature 1 initiative"]').fill("20");
-await dm.page.getByRole("button", { name: "Start combat", exact: true }).click();
+
+await dm.page.getByRole("button", { name: "Roll for initiative" }).click();
+await dm.page.waitForSelector('input[aria-label="Kira Vance initiative"]');
+for (const [name, roll] of [["Kira Vance", 12], ["Goblin", 20]]) {
+  await dm.page.locator(`input[aria-label="${name} initiative"]`).fill(String(roll));
+  await dm.page.getByRole("button", { name: `Set ${name} initiative` }).click();
+}
+await dm.page.getByRole("button", { name: "Begin", exact: true }).click();
 await player.page.waitForSelector(".pt", { timeout: 15000 });
 
 // ---- waiting -------------------------------------------------------------

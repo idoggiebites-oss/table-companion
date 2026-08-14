@@ -95,6 +95,39 @@ export type DomainEvent = Meta &
         readonly modifier: number;
       }
     | { readonly type: "combatStarted"; readonly order: readonly Combatant[] }
+    /**
+     * The roster, before anyone has rolled. Separate from combatStarted
+     * because "roll for initiative" is a real moment the table spends
+     * together, and every device should show who is still outstanding.
+     */
+    | { readonly type: "combatStaged"; readonly combatants: readonly Combatant[] }
+    | {
+        readonly type: "initiativeRolled";
+        readonly combatantId: string;
+        readonly value: number;
+      }
+    | { readonly type: "combatBegan" }
+    /** Signed feet. Undo is replay-without-it, so no inverse is stored. */
+    | {
+        readonly type: "movementSpent";
+        readonly combatantId: string;
+        readonly feet: number;
+      }
+    /**
+     * An opportunity attack. Spends the reaction and says who it was against,
+     * so the log answers "why has the fighter no reaction left".
+     */
+    | {
+        readonly type: "opportunityTaken";
+        /**
+         * NOT `by`: every event already carries a `by` in its metadata (who
+         * signed it), and EventBody omits the metadata keys — so a field
+         * named `by` here is silently stripped from the body.
+         */
+        readonly attacker: string;
+        readonly attackerWho?: CharacterId;
+        readonly against: string;
+      }
     | { readonly type: "combatEnded" }
     /** How this campaign advances. A setting, not a preference. */
     | { readonly type: "progressionSet"; readonly mode: Progression }

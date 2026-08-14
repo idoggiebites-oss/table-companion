@@ -40,13 +40,19 @@ await player.page.selectOption('select[aria-label="Seat"]', { label: "Kira Vance
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
 // a fight with three goblins and the character
-for (const [n, init, hp] of [[1, 15, 12], [2, 14, 12], [3, 13, 12]]) {
+for (const [n, , hp] of [[1, 15, 12], [2, 14, 12], [3, 13, 12]]) {
   await dm.page.getByRole("button", { name: "Add creature" }).click();
   await dm.page.locator(`input[aria-label="Creature ${n} name"]`).fill(`Goblin ${n}`);
-  await dm.page.locator(`input[aria-label="Creature ${n} initiative"]`).fill(String(init));
   await dm.page.locator(`input[aria-label="Creature ${n} hp"]`).fill(String(hp));
 }
-await dm.page.getByRole("button", { name: "Start combat", exact: true }).click();
+// Initiative is rolled after staging now, not typed on the setup panel.
+await dm.page.getByRole("button", { name: "Roll for initiative" }).click();
+await dm.page.waitForSelector('input[aria-label="Kira Vance initiative"]');
+for (const [name, roll] of [["Kira Vance", 16], ["Goblin 1", 15], ["Goblin 2", 14], ["Goblin 3", 13]]) {
+  await dm.page.locator(`input[aria-label="${name} initiative"]`).fill(String(roll));
+  await dm.page.getByRole("button", { name: `Set ${name} initiative` }).click();
+}
+await dm.page.getByRole("button", { name: "Begin", exact: true }).click();
 await dm.page.waitForSelector(".cbt");
 await player.page.waitForSelector(".cbt", { timeout: 15000 });
 

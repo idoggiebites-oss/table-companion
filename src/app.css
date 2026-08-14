@@ -422,6 +422,23 @@ html, body { overscroll-behavior-y: none; }
 .rb-second .rb-input { width: 128px; }
 .rb-hint { color: var(--faint); font-size: 0.76rem; }
 
+/* ---- combat: movement, targets, the swing ---- */
+.mv { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; flex-wrap: wrap; }
+.mv-n { display: flex; align-items: baseline; gap: 6px; }
+.mv-n b { font-size: 1.3rem; color: var(--ink); }
+.mv-n small { color: var(--faint); font-size: 0.72rem; }
+.mv-acts { display: flex; gap: 6px; margin-left: auto; }
+.mv-acts button { padding: 6px 10px; font-size: 0.62rem; }
+.tgt { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.tgt-row { text-align: left; padding: 9px 11px; }
+.pt-atk, .pt-opp { width: 100%; margin-top: 10px; padding: 11px; }
+.swing {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 12px; border-top: 1px solid var(--rule); background: var(--sunk);
+}
+.init-head { display: flex; justify-content: space-between; align-items: baseline; }
+.init-waiting { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+
 /* ---- npcs, boons, loot ---- */
 .npc-row { flex-wrap: wrap; }
 .npc-row .nm { flex: 1 1 auto; min-width: 0; }

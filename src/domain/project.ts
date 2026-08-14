@@ -15,7 +15,8 @@ import {
   type Character, type CharacterId, type EffectiveBuild,
 } from "./build.js";
 import {
-  activeCombatant, advance, FRESH_ECONOMY, startCombat,
+  activeCombatant, advance, beginCombat, FRESH_ECONOMY, setInitiative,
+  stageCombat, startCombat,
   type Combat, type Economy,
 } from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
@@ -224,6 +225,43 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       const rest = { ...state.encounters };
       delete rest[e.encounterId];
       return { ...state, encounters: rest };
+    }
+    case "combatStaged":
+      return { ...state, combat: stageCombat(e.combatants) };
+    case "initiativeRolled":
+      return state.combat
+        ? { ...state, combat: setInitiative(state.combat, e.combatantId, e.value) }
+        : state;
+    case "combatBegan":
+      return state.combat ? { ...state, combat: beginCombat(state.combat) } : state;
+    case "movementSpent": {
+      if (!state.combat) return state;
+      const at = state.combat.moved[e.combatantId] ?? 0;
+      // NET feet, allowed to go negative: a Dash is negative spend, and
+      // clamping at zero made extra movement impossible to represent — a dash
+      // after moving 15 gave back 30 instead of 45. The floor belongs in
+      // movementLeft, which is where "how much is left" is actually asked.
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          moved: { ...state.combat.moved, [e.combatantId]: at + e.feet },
+        },
+      };
+    }
+    case "opportunityTaken": {
+      // The reaction is spent by the same event, so undoing the attack gives
+      // it back — two events could be undone apart and leave a lie.
+      if (!e.attackerWho) return state;
+      const c = state.characters[e.attackerWho];
+      if (!c) return state;
+      return {
+        ...state,
+        characters: {
+          ...state.characters,
+          [e.attackerWho]: { ...c, economy: { ...c.economy, reaction: true } },
+        },
+      };
     }
     case "progressionSet":
       return { ...state, progression: e.mode };

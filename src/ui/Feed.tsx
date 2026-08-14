@@ -94,6 +94,16 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `${nameOf(e.who)} put away ${e.name}`;
     case "coinsChanged":
       return `${nameOf(e.who)} ${e.delta >= 0 ? "gained" : "spent"} ${formatCoins(Math.abs(e.delta))}`;
+    case "combatStaged":
+      return `Roll for initiative — ${e.combatants.length} in the fight`;
+    case "initiativeRolled":
+      return `Initiative ${e.value}`;
+    case "combatBegan":
+      return "The fight begins";
+    case "movementSpent":
+      return e.feet >= 0 ? `Moved ${e.feet} ft` : `Took back ${Math.abs(e.feet)} ft`;
+    case "opportunityTaken":
+      return `Opportunity attack${e.attackerWho ? ` by ${nameOf(e.attackerWho)}` : ""}`;
     case "boonGranted":
       return `${nameOf(e.who)} gained ${describeBoon(e.boon)}`;
     case "boonRemoved":
