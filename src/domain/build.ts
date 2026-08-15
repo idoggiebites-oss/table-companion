@@ -55,6 +55,12 @@ export interface BuildBase {
   readonly speed: number;
   /** Taken at an improvement level. Shown on the sheet, never applied. */
   readonly feats?: readonly { readonly id: string; readonly name: string }[];
+  /**
+   * What the class asked and what was answered — a domain, a patron, a
+   * fighting style. Recorded, never mechanised: the app cannot know what
+   * eighty-five domains do.
+   */
+  readonly choices?: readonly { readonly of: string; readonly name: string }[];
   readonly saveProficiencies: readonly Ability[];
   readonly skillProficiencies: readonly SkillId[];
   /** Max slots by spell level; index 0 is 1st level. Empty for non-casters. */
@@ -119,6 +125,7 @@ export interface EffectiveBuild {
   readonly resources: readonly ResolvedResource[];
   readonly attacks: readonly ResolvedAttack[];
   readonly feats: readonly { readonly id: string; readonly name: string }[];
+  readonly choices: readonly { readonly of: string; readonly name: string }[];
 }
 
 function totalLevelOf(classes: readonly ClassEntry[]): number {
@@ -237,6 +244,7 @@ export function effectiveBuild(character: Character): EffectiveBuild {
     hitDie: b.hitDie,
     armourClass: b.armourClass,
     feats: b.feats ?? [],
+    choices: b.choices ?? [],
     speed: b.speed,
     saveMods,
     skillMods,

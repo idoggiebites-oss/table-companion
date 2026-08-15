@@ -16,13 +16,19 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
-// The class kit can ask which martial weapon; answer it before creating.
+// The builder asks two kinds of question before it will finish: which martial
+// weapon the kit means, and what the class asks about itself — a domain, a
+// fighting style. Answer both.
 const answerGear = async (page) => {
   const sel = page.locator('select[aria-label^="Choose"]');
   for (let i = 0; i < (await sel.count()); i++) {
     await sel.nth(i).selectOption({ index: 1 });
   }
-  await page.waitForTimeout(200);
+  const cls = page.locator(".card", { hasText: "Your class" }).locator("select");
+  for (let i = 0; i < (await cls.count()); i++) {
+    await cls.nth(i).selectOption({ index: 1 });
+  }
+  await page.waitForTimeout(250);
 };
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();

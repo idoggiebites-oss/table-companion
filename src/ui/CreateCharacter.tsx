@@ -45,6 +45,7 @@ import {
   featureOf, mechanicalTraits,
 } from "../domain/guidance.js";
 import { SpellPick } from "./SpellPick.js";
+import { choicesBy, findChoices } from "../domain/subclass.js";
 import type { CompendiumFeat } from "../import/compendium.js";
 import {
   indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
@@ -117,6 +118,8 @@ export function CreateCharacter({
   >({});
   const [featList, setFeatList] = useState<CompendiumFeat[]>([]);
   const [featFilter, setFeatFilter] = useState("");
+  const [classPicks, setClassPicks] = useState<Record<string, string>>({});
+  const [pickFilter, setPickFilter] = useState<Record<string, string>>({});
   const [subraceId, setSubraceId] = useState<string>("");
   const [method, setMethod] = useState<ScoreMethod>("array");
   const [assigned, setAssigned] = useState<Partial<Record<Ability, number>>>({});
@@ -303,6 +306,17 @@ export function CreateCharacter({
       .slice(0, 80);
   }, [book, klass, castsAtAll, spellFilter, chosenSpells, atLevel]);
 
+  /**
+   * What the class asks about itself. A cleric without a domain is not a
+   * cleric, and the builder was making them.
+   */
+  const classChoices = useMemo(() => {
+    const table = klass && levels ? (levels[klass.id] ?? []) : [];
+    const feats = table.flatMap((row) => row.features.map((n) => ({ level: row.level, name: n })));
+    return choicesBy(findChoices(feats), level);
+  }, [klass, levels, level]);
+  const picksDone = classChoices.every((c) => classPicks[c.of]);
+
   /** Improvement levels this character has already passed. */
   const earnedLevels = asiLevels.filter((l) => l <= level);
   const spentAt = (lvl: number) => {
@@ -335,6 +349,9 @@ export function CreateCharacter({
           classSkills,
           level,
           improvements: earnedLevels.map((l) => improvements[l] ?? {}),
+          picks: classChoices
+            .filter((c) => classPicks[c.of])
+            .map((c) => ({ of: c.of, name: classPicks[c.of]! })),
           ...(atLevel?.slots.length ? { spellSlots: atLevel.slots } : {}),
         }
       : undefined;
@@ -351,6 +368,7 @@ export function CreateCharacter({
     ...missing(choices ?? {}),
     ...(gearMode === "kit" ? unpicked : []),
     ...(improvementsDone ? [] : ["your improvements"]),
+    ...(picksDone ? [] : classChoices.filter((c) => !classPicks[c.of]).map((c) => c.of.toLowerCase())),
     ...(allAssigned ? [] : ["every score assigned"]),
     ...(classSkills.length === skillsNeeded ? [] : [`${skillsNeeded} class skills`]),
   ];
@@ -942,6 +960,61 @@ export function CreateCharacter({
               )}
             </div>
           ) : null}
+          </div>
+        </section>
+      )}
+
+      {klass && race && classChoices.length > 0 && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label cr-step">6 · Your class</span>
+            <span className="faint" style={{ fontSize: ".78rem" }}>
+              {classChoices.filter((c) => classPicks[c.of]).length} of {classChoices.length}
+            </span>
+          </div>
+          <div className="card-body">
+            {classChoices.map((c) => {
+              const q = (pickFilter[c.of] ?? "").trim().toLowerCase();
+              const shown = c.options.filter((o) => !q || o.name.toLowerCase().includes(q));
+              return (
+                <div className="chooser" key={c.of}>
+                  <div className="chooser-hd" style={{ cursor: "default" }}>
+                    <span className="nm">{c.of}</span>
+                    <span className="faint num">level {c.level}</span>
+                  </div>
+                  <div className="chooser-body">
+                    {c.options.length > 12 && (
+                      <input
+                        value={pickFilter[c.of] ?? ""}
+                        aria-label={`Filter ${c.of}`}
+                        placeholder={`filter ${c.options.length}…`}
+                        onChange={(e) =>
+                          setPickFilter((f) => ({ ...f, [c.of]: e.target.value }))
+                        }
+                      />
+                    )}
+                    <select
+                      aria-label={c.of}
+                      value={classPicks[c.of] ?? ""}
+                      style={{ marginTop: 8 }}
+                      onChange={(e) => setClassPicks((p) => ({ ...p, [c.of]: e.target.value }))}
+                    >
+                      <option value="">choose…</option>
+                      {shown.slice(0, 200).map((o) => (
+                        <option key={o.name} value={o.name}>{o.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
+            {/* Recorded, never mechanised — the app cannot know what
+                eighty-five domains do, and half-applying them would be worse
+                than being clear that it applies none. */}
+            <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
+              Written on your sheet. What each one grants is yours to read and
+              tell the table.
+            </p>
           </div>
         </section>
       )}

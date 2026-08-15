@@ -54,6 +54,17 @@ await page.locator('input[aria-label="Background name"]').fill("Sage");
 await page.locator('input[aria-label="Character name"]').fill("Bel Ashcroft");
 const sel = page.locator('select[aria-label^="Choose"]');
 for (let i = 0; i < (await sel.count()); i++) await sel.nth(i).selectOption({ index: 1 });
+// And whatever the class asks about itself — a domain, a tradition.
+const cls = page.locator(".card", { hasText: "Your class" }).locator("select");
+for (let i = 0; i < (await cls.count()); i++) await cls.nth(i).selectOption({ index: 1 });
+// A wizard at 5 has passed level 4, so it owes an improvement too.
+const rows = page.locator(".card", { hasText: "Improvements" }).locator(".chooser");
+for (let i = 0; i < (await rows.count()); i++) {
+  const chips = rows.nth(i).locator(".lv-abils .chip:not([disabled])");
+  await chips.first().click();
+  await chips.first().click();
+}
+await page.waitForTimeout(400);
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".tabs", { timeout: 20000 });
 

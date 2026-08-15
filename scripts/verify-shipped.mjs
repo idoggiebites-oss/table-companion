@@ -83,8 +83,37 @@ ok("and it says why there is no kit", /no kit written down/i.test(gearText), tru
 await page.locator('input[aria-label="Filter races"]').fill("");
 await page.waitForTimeout(300);
 
+// --- what the class asks about itself ------------------------------------
+// A cleric without a domain is not a cleric, and the builder was making them.
+// The later steps need a race chosen, so pick one first.
+await page.locator('input[aria-label="Filter races"]').fill("human");
+await page.waitForTimeout(500);
+const humans = await page.locator('select[aria-label="Race"] option').allInnerTexts();
+await page.selectOption('select[aria-label="Race"]', { label: humans[1] });
+await page.locator('input[aria-label="Filter races"]').fill("");
+await page.selectOption('select[aria-label="Class"]', "cleric");
+await page.waitForTimeout(1400);
+ok("a class with a level-1 subclass asks for it",
+  await page.getByText("6 · Your class").count(), 1);
+ok("naming the question the book asks",
+  await page.locator('select[aria-label="Divine Domain"]').count(), 1);
+const domains = await page.locator('select[aria-label="Divine Domain"] option').count();
+ok("with the options read out of its own feature list", domains > 10, true);
+ok("and a filter, because there are dozens",
+  await page.locator('input[aria-label="Filter Divine Domain"]').count(), 1);
+
+await page.selectOption('select[aria-label="Class"]', "fighter");
+await page.waitForTimeout(1200);
+// The same reading finds Fighting Style, which is written the same way.
+ok("a fighter is asked for a fighting style at 1",
+  await page.locator('select[aria-label="Fighting Style"]').count(), 1);
+ok("but not for an archetype it has not reached",
+  await page.locator('select[aria-label="Martial Archetype"]').count(), 0);
+
 await page.selectOption('select[aria-label="Class"]', "wizard");
 await page.waitForTimeout(900);
+ok("a wizard at 1 is asked nothing — its tradition comes at 2",
+  await page.getByText("6 · Your class").count(), 0);
 
 const races = (await page.locator('select[aria-label="Race"] option').count()) - 1;
 ok("races arrive without importing anything", races > 200, true);

@@ -58,6 +58,8 @@ export interface CreationChoices {
    * at 8 has passed 4 and 8 and should arrive with both spent — the builder
    * was stating the points owed and giving nowhere to spend them.
    */
+  /** A domain, a patron, a fighting style — whatever the class asked. */
+  readonly picks?: readonly { readonly of: string; readonly name: string }[];
   readonly improvements?: readonly {
     readonly abilities?: Partial<Record<Ability, number>>;
     readonly feat?: { readonly id: string; readonly name: string };
@@ -174,6 +176,7 @@ export function assemble(choices: CreationChoices, id = `c${Date.now().toString(
             .flatMap((i) => (i.feat ? [i.feat] : [])),
         }
       : {}),
+    ...(choices.picks?.length ? { choices: choices.picks } : {}),
     saveProficiencies: choices.klass.saves,
     skillProficiencies: skills,
     spellSlots: choices.spellSlots ?? choices.klass.spellSlots,

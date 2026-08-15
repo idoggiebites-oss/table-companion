@@ -112,6 +112,10 @@ ok("including its name",
 await page.locator('input[aria-label="Character name"]').fill("Bel Ashcroft");
 const sel = page.locator('select[aria-label^="Choose"]');
 for (let i = 0; i < (await sel.count()); i++) await sel.nth(i).selectOption({ index: 1 });
+// And whatever the class asks about itself — a domain, a fighting style.
+const cls = page.locator(".card", { hasText: "Your class" }).locator("select");
+for (let i = 0; i < (await cls.count()); i++) await cls.nth(i).selectOption({ index: 1 });
+await page.waitForTimeout(300);
 await page.waitForTimeout(300);
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".tabs", { timeout: 20000 });

@@ -330,6 +330,22 @@ export function Sheet({
 
       <Features build={build} />
 
+      {build.choices.length > 0 && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label">Your class</span>
+          </div>
+          <div className="src">
+            {build.choices.map((c) => (
+              <div className="src-row" key={c.of}>
+                <span className="nm">{c.name}</span>
+                <span className="faint">{c.of}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {build.feats.length > 0 && (
         <section className="card">
           <div className="card-hd">

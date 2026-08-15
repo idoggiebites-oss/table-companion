@@ -194,7 +194,24 @@ export function loadClassLevels(): Promise<ClassLevels> {
   ]).then(([srd, extra]) => {
     const out: Record<string, readonly ClassLevel[]> = { ...srd };
     for (const c of extra) {
-      if (out[c.id]) continue; // the shipped table is the better one
+      const shipped = out[c.id];
+      if (shipped) {
+        /*
+         * The shipped table has the better slots and proficiency bonus, but
+         * knows nothing about subclasses — 5e-database keeps those in their
+         * own file. A compendium writes them into the feature list, which is
+         * where the builder reads a cleric's domains from, so the NAMES are
+         * merged in while the numbers are left alone.
+         */
+        out[c.id] = shipped.map((row) => {
+          const also = c.features
+            .filter((f) => f.level === row.level)
+            .map((f) => f.name)
+            .filter((n) => !row.features.includes(n));
+          return also.length > 0 ? { ...row, features: [...row.features, ...also] } : row;
+        });
+        continue;
+      }
       out[c.id] = Array.from({ length: 20 }, (_, i) => ({
         level: i + 1,
         profBonus: proficiencyBonus(i + 1),
