@@ -189,6 +189,30 @@ export type DomainEvent = Meta &
      * A player's attack, waiting on the DM. Nothing lands until it is
      * resolved — see attackflow.ts for why the player cannot apply it.
      */
+    /**
+     * The DM asking for a roll. Everything a player needs to answer it, and
+     * nothing they should not have — the DC is optional, because "roll
+     * Perception" and "beat 15" are different amounts of information.
+     */
+    | {
+        readonly type: "checkAsked";
+        /** NOT `id`: every event carries one in its metadata, and EventBody
+            omits the metadata keys — see opportunityTaken's `attacker`. */
+        readonly checkId: string;
+        readonly who: readonly CharacterId[];
+        /** A skill id, an ability for a save, or free text. */
+        readonly what: string;
+        readonly kind: "skill" | "save" | "ability";
+        readonly dc?: number;
+        readonly note?: string;
+      }
+    | {
+        readonly type: "checkAnswered";
+        readonly checkId: string;
+        readonly who: CharacterId;
+        readonly total: number;
+      }
+    | { readonly type: "checkClosed"; readonly checkId: string }
     | { readonly type: "attackClaimed"; readonly claim: AttackClaim }
     | {
         readonly type: "attackResolved";

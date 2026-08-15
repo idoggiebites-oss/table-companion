@@ -923,3 +923,41 @@ html, body { overscroll-behavior-y: none; }
 .feat-hd .nm { flex: 1 1 auto; color: var(--ink-dim); }
 .feat-hd .faint { flex: 0 0 auto; font-size: 0.76rem; }
 .feat-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
+
+/* ---- the turn menu ---- */
+.menu { display: flex; flex-direction: column; margin: 10px 0; }
+.menu-row { border-bottom: 1px solid var(--rule); }
+.menu-row:last-of-type { border-bottom: 0; }
+.menu-row.off { opacity: 0.45; }
+.menu-hd {
+  display: flex; align-items: baseline; gap: 8px; width: 100%;
+  padding: 10px 12px; border: 0; background: none; text-align: left;
+}
+.menu-hd .nm { flex: 1 1 auto; color: var(--ink); }
+/* The cost sits with the name, because that is the question being answered. */
+.menu-hd .cost {
+  flex: 0 0 auto; font-size: 0.56rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.menu-more { padding: 0 12px 12px; }
+.menu-more .what { margin: 0; font-size: 0.84rem; color: var(--ink-dim); line-height: 1.5; }
+.menu-more .then { margin: 6px 0 0; font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.menu-take { margin-top: 10px; padding: 9px 14px; }
+.pt-more { width: 100%; margin-top: 8px; padding: 10px; }
+.pt-took {
+  margin: 10px 0 0; padding: 9px 11px; font-size: 0.82rem; line-height: 1.5;
+  color: var(--ink-dim); background: var(--sunk);
+}
+
+/* ---- asking for a roll ---- */
+.ask {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 16px; border-top: 1px solid var(--rule);
+}
+.ask .nm { color: var(--ink); }
+.ask-answers { display: flex; flex-wrap: wrap; gap: 6px; }
+.ask .faint { font-size: 0.78rem; }
+.ask button { align-self: flex-start; padding: 6px 10px; font-size: 0.6rem; }
+/* Owed now, so it is edged like the concentration alarm rather than filed. */
+.ask-mine { border-color: var(--edge); }
+.ask-mine.done { opacity: 0.7; }

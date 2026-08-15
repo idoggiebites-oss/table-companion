@@ -22,6 +22,7 @@ import {
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import type { Encounter } from "./encounter.js";
 import type { AttackClaim } from "./attackflow.js";
+import type { CheckRequest } from "./checks.js";
 import type { Boon } from "./boons.js";
 import type { KnownSpell } from "./spells.js";
 import { addItem, removeItem, type Stack } from "./items.js";
@@ -83,6 +84,8 @@ export interface CampaignState {
   readonly stash: { readonly items: readonly Stack[]; readonly coins: number };
   /** Attacks a player has rolled, waiting for the DM to say they land. */
   readonly claims: readonly AttackClaim[];
+  /** Rolls the DM has asked the table for. */
+  readonly checks: readonly CheckRequest[];
   readonly progression: Progression;
 }
 
@@ -282,6 +285,30 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     }
     case "progressionSet":
       return { ...state, progression: e.mode };
+    case "checkAsked":
+      return state.checks.some((c) => c.id === e.checkId)
+        ? state
+        : {
+            ...state,
+            checks: [
+              ...state.checks,
+              {
+                id: e.checkId, who: e.who, what: e.what, kind: e.kind,
+                ...(e.dc === undefined ? {} : { dc: e.dc }),
+                ...(e.note === undefined ? {} : { note: e.note }),
+                answers: {}, at: e.at,
+              },
+            ],
+          };
+    case "checkAnswered":
+      return {
+        ...state,
+        checks: state.checks.map((c) =>
+          c.id === e.checkId ? { ...c, answers: { ...c.answers, [e.who]: e.total } } : c,
+        ),
+      };
+    case "checkClosed":
+      return { ...state, checks: state.checks.filter((c) => c.id !== e.checkId) };
     case "attackClaimed":
       return state.claims.some((c) => c.id === e.claim.id)
         ? state
@@ -721,7 +748,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
 export const EMPTY_STATE: CampaignState = {
   sources: {}, builds: {}, characters: {}, combat: null,
   encounters: {}, homebrew: {}, progression: "xp",
-  npcs: {}, openTrader: null, stash: { items: [], coins: 0 }, claims: [],
+  npcs: {}, openTrader: null, stash: { items: [], coins: 0 }, claims: [], checks: [],
 };
 
 /**

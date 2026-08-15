@@ -13,6 +13,7 @@
 
 import { useState } from "react";
 import type { ResolvedAttack } from "../domain/attack.js";
+import { blockedBecause, STANDARD_ACTIONS } from "../domain/actions.js";
 import { Swing } from "./Swing.js";
 import {
   activeCombatant, controls, ECONOMY, isSurprised, movementLeft, turnsUntil,
@@ -113,7 +114,9 @@ export function PlayerTurn({
     damage: number;
   }) => void;
 }) {
-  const [picking, setPicking] = useState<null | "attack" | "opportunity">(null);
+  const [picking, setPicking] = useState<null | "attack" | "opportunity" | "menu">(null);
+  const [took, setTook] = useState<string | null>(null);
+  const [looking, setLooking] = useState<string | null>(null);
   const who = seat.characterId;
   const active = activeCombatant(combat);
   const acting = active?.source.kind === "character" && active.source.characterId === who;
@@ -143,7 +146,61 @@ export function PlayerTurn({
           <>
             <Pips who={who} character={character} kinds={ECONOMY} append={append} />
             {self && <Movement combat={combat} combatant={self} append={append} />}
-            {picking === "attack" ? (
+            {picking === "menu" ? (
+              <div className="menu">
+                {/*
+                  * Names and costs only, until you point at one. Eleven
+                  * explanations at once is a rulebook, and a rulebook is what
+                  * a new player already could not read — the whole list has
+                  * to fit on the screen for the menu to be the teaching.
+                  */}
+                {STANDARD_ACTIONS.map((a) => {
+                  const why = blockedBecause(a, character.economy, attacks.length > 0);
+                  const shown = looking === a.id;
+                  return (
+                    <div className={`menu-row${why ? " off" : ""}`} key={a.id}>
+                      <button
+                        className="menu-hd"
+                        aria-expanded={shown}
+                        aria-label={a.name}
+                        onClick={() => setLooking(shown ? null : a.id)}
+                      >
+                        <span className="nm">{a.name}</span>
+                        <span className="cost">{a.cost}</span>
+                      </button>
+                      {shown && (
+                        <div className="menu-more">
+                          <p className="what">{why ?? a.what}</p>
+                          {!why && a.then && <p className="then">{a.then}</p>}
+                          {!why && (
+                            <button
+                              className="menu-take"
+                              onClick={() => {
+                                if (a.id === "attack") return setPicking("attack");
+                                append({ type: "economySpent", who, kind: a.cost });
+                                if (a.id === "dash" && self?.speed) {
+                                  append({
+                                    type: "movementSpent",
+                                    combatantId: self.id,
+                                    feet: -self.speed,
+                                  });
+                                }
+                                setTook(a.id);
+                                setLooking(null);
+                                setPicking(null);
+                              }}
+                            >
+                              Do it
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <button onClick={() => setPicking(null)}>Back</button>
+              </div>
+            ) : picking === "attack" ? (
               <Swing
                 attacks={attacks}
                 targets={visibleTargets}
@@ -159,17 +216,26 @@ export function PlayerTurn({
               <>
                 <button
                   className="pt-atk"
-                  disabled={character.economy.action}
+                  disabled={character.economy.action || attacks.length === 0}
                   onClick={() => setPicking("attack")}
                 >
                   {attacks.length > 0 ? `Attack with ${attacks[0]!.name}` : "Attack"}
                   {attacks.length > 1 && <small> or something else</small>}
                 </button>
-                {/* Beginners do not know an attack IS the action, so the
-                    button that stops working has to say what it spent. */}
+                <button className="pt-more" onClick={() => setPicking("menu")}>
+                  What else can I do?
+                </button>
+                {took && (
+                  <p className="pt-took">
+                    {STANDARD_ACTIONS.find((a) => a.id === took)?.name} taken.{" "}
+                    {STANDARD_ACTIONS.find((a) => a.id === took)?.then ??
+                      "Tell the table."}
+                  </p>
+                )}
+                {/* Beginners do not know an attack IS the action. */}
                 <p className="pt-why">
                   {character.economy.action
-                    ? "Your action is gone — attacking costs it. You can still move, and you keep your reaction for somebody else's turn."
+                    ? "Your action is gone. You can still move, and you keep your reaction for somebody else's turn."
                     : "Attacking costs your action. You get one a turn."}
                 </p>
               </>

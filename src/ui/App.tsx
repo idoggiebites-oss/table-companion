@@ -20,6 +20,8 @@ import { Progression } from "./Progression.js";
 import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
+import { AnswerCheck } from "./AnswerCheck.js";
+import { AskCheck } from "./AskCheck.js";
 import { Sources } from "./Sources.js";
 import { Spells } from "./Spells.js";
 import { Tabs, type TabDef } from "./Tabs.js";
@@ -272,6 +274,15 @@ export function App() {
         <Tabs tabs={tabs} active={current} onPick={setTab} />
       )}
 
+      {/* A roll the DM asked for is owed NOW, so it sits above whatever tab
+          you happen to be on rather than waiting to be found. */}
+      {mine &&
+        state.checks
+          .filter((c) => c.who.includes(mine.id))
+          .map((c) => (
+            <AnswerCheck key={c.id} check={c} build={mine} append={append} />
+          ))}
+
       {/* Somebody has joined a campaign that already has characters. They are
           either one of the people on the list or a new arrival, and a
           dropdown of existing names strands the second kind. */}
@@ -367,6 +378,7 @@ export function App() {
                     </>
                   )}
                   <Party state={state} seat={seat} append={append} />
+                  <AskCheck state={state} append={append} />
                   <Progression state={state} append={append} />
                 </>
               )}
