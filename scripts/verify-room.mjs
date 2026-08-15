@@ -15,6 +15,16 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/** Sit as a character: a device claims its own once, then picks a seat. */
+const sitAs = async (page, name) => {
+  // A device joining a campaign that already has characters is asked which
+  // one it is, once; after that it is an ordinary seat change.
+  const join = page.locator(".join-row", { hasText: name });
+  if (await join.count()) await join.first().click();
+  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  await page.waitForTimeout(500);
+};
+
 /** Sections are tabs now; content is one tap away rather than a scroll. */
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
@@ -47,6 +57,10 @@ await dm.page.waitForFunction(() => document.querySelector(".rb-status")?.textCo
 ok("dm is live", (await dm.page.locator(".rb-status").innerText()).startsWith("LIVE"), true);
 
 await dm.page.getByRole("button", { name: "Load sample" }).click();
+// A room's DM is not moved into a character they create — they make them for
+// other people — so playing this one is a deliberate choice.
+await dm.page.waitForSelector(".seatbar");
+await sitAs(dm.page, "Kira Vance");
 await dm.page.waitForSelector(".hp-big");
 await damage(dm, 12);
 await dm.page.waitForTimeout(600);
@@ -56,8 +70,8 @@ ok("dm applied damage", await hp(dm), "40 / 52");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 // A joining device starts in the DM seat; taking a character is the real flow.
-await player.page.waitForSelector('select[aria-label="Seat"]', { timeout: 15000 });
-await player.page.selectOption('select[aria-label="Seat"]', { label: "Kira Vance" });
+await player.page.waitForSelector(".seatbar", { timeout: 15000 });
+await sitAs(player.page, "Kira Vance");
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 ok("player received the character", await hp(player), "40 / 52");
 ok("player sees the same code", await player.page.locator(".rb-code").innerText(), code);

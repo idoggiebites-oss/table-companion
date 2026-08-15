@@ -40,7 +40,9 @@ import type { CompendiumSpell } from "../import/compendium.js";
 import {
   castableBy, isClassFeature, levelLabel, toKnown, type KnownSpell,
 } from "../domain/spells.js";
-import { indexItems, type Item, type Stack } from "../domain/items.js";
+import {
+  indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
+} from "../domain/items.js";
 import { formatCoins } from "../domain/money.js";
 import { describeWealthFor, wealthFor } from "../domain/non-srd.js";
 import {
@@ -73,7 +75,12 @@ export function CreateCharacter({
 }: {
   onCreate: (
     c: Character,
-    starting?: { items: readonly Stack[]; coins: number; spells?: readonly KnownSpell[] },
+    starting?: {
+      items: readonly Stack[];
+      coins: number;
+      equip?: readonly string[];
+      spells?: readonly KnownSpell[];
+    },
   ) => void;
   onCancel: () => void;
 }) {
@@ -198,8 +205,10 @@ export function CreateCharacter({
 
   /** What the character walks away carrying, and with what in their purse. */
   const starting = useMemo(() => {
-    if (!klass) return { items: [] as Stack[], coins: 0 };
-    if (gearMode === "gold") return { items: [], coins: wealthFor(klass.id, klass.wealth) };
+    if (!klass) return { items: [] as Stack[], coins: 0, equip: [] as string[] };
+    if (gearMode === "gold") {
+      return { items: [], coins: wealthFor(klass.id, klass.wealth), equip: [] };
+    }
     const items: Stack[] = [];
     for (const p of fixedGear) {
       const st = toStack(p);
@@ -219,7 +228,24 @@ export function CreateCharacter({
         if (st) items.push(st);
       });
     });
-    return { items, coins: 0 };
+    /*
+     * What to put ON them. A character whose kit sits in a pack has no
+     * attacks and no armour class from it, and the first thing they are told
+     * when they try to swing is to go and equip something — which is the
+     * hidden step this whole screen exists to remove.
+     *
+     * One weapon, one set of armour, one shield: the obvious reading of a
+     * starting kit, and all of it changeable under Gear.
+     */
+    const equip: string[] = [];
+    const first = (test: (i: Item) => boolean) =>
+      items.map((s) => catalogue[s.itemId]).find((i): i is Item => i !== undefined && test(i));
+    const weapon = first(isWeapon);
+    const armour = first(isArmour);
+    const shield = first(isShield);
+    for (const i of [weapon, armour, shield]) if (i) equip.push(i.id);
+
+    return { items, coins: 0, equip };
   }, [klass, gearMode, fixedGear, choices2, picks, catPicks, catalogue]);
 
   /**

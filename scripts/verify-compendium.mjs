@@ -24,6 +24,16 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sit as a character: a device claims its own once, then picks a seat. */
+const sitAs = async (page, name) => {
+  // A device joining a campaign that already has characters is asked which
+  // one it is, once; after that it is an ordinary seat change.
+  const join = page.locator(".join-row", { hasText: name });
+  if (await join.count()) await join.first().click();
+  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  await page.waitForTimeout(500);
+};
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
   await page.waitForTimeout(250);
@@ -73,7 +83,7 @@ ok("and it did not quietly take the creatures", /creatures/.test(imported), fals
 await page.screenshot({ path: `${OUT}/58-imported.png`, fullPage: true });
 
 // The payoff: imported items appear wherever the SRD ones do, with prices.
-await page.selectOption('select[aria-label="Seat"]', { label: "Kira Vance" });
+await sitAs(page, "Kira Vance");
 await page.waitForTimeout(800);
 await go(page, "gear");
 await page.locator(".card", { hasText: "Carrying" }).getByRole("button", { name: "Add" }).click();

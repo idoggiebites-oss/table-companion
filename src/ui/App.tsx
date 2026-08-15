@@ -31,7 +31,7 @@ import { Shop } from "./Shop.js";
 import { UpdateBar } from "./UpdateBar.js";
 
 export function App() {
-  const [seat, setSeat] = useSeat();
+  const { seat, mine: myCharacters, setSeat, claim } = useSeat();
   /** Null until you pick one, so the sensible default can change under you. */
   const [tab, setTab] = useState<TabId | null>(null);
   const [adding, setAdding] = useState(false);
@@ -72,6 +72,26 @@ export function App() {
    * already lets them sit anywhere.
    */
   const dmView = seat.kind === "dm" && mayBeDm;
+  /**
+   * What this device may sit in: its own characters, plus whoever it is
+   * already sitting in — a DM who takes a character from their own dropdown
+   * has not "claimed" it, and dropping it from the list would strand them.
+   */
+  const seatable = dmView
+    ? builds
+    : builds.filter(
+        (b) =>
+          myCharacters.includes(b.id) ||
+          (seat.kind === "player" && seat.characterId === b.id),
+      );
+
+  /**
+   * Someone who has joined a campaign that already has characters and holds
+   * none of them. Keyed on the seat rather than on the list being empty, so
+   * a device already sitting somewhere is never asked again.
+   */
+  const needsClaim =
+    !dmView && seat.kind === "dm" && myCharacters.length === 0 && builds.length > 0;
   const needsCharacter = (builds.length === 0 && !dmView) || adding || building;
 
   /**
@@ -138,15 +158,29 @@ export function App() {
 
   useEffect(() => {
     if (mayBeDm || seat.kind !== "dm") return;
-    const first = builds[0];
+    // Only into a character this device owns. Dropping them into the first
+    // one in the party is what let a player read somebody else's sheet.
+    const first = builds.find((b) => myCharacters.includes(b.id));
     if (first) setSeat({ kind: "player", characterId: first.id });
-  }, [mayBeDm, seat.kind, builds, setSeat]);
+  }, [mayBeDm, seat.kind, builds, myCharacters, setSeat]);
 
   function create(
     c: Character,
-    starting?: { items: readonly Stack[]; coins: number; spells?: readonly KnownSpell[] },
+    starting?: {
+      items: readonly Stack[];
+      coins: number;
+      equip?: readonly string[];
+      spells?: readonly KnownSpell[];
+    },
   ) {
     append({ type: "characterAdded", character: c });
+    // Worn and wielded straight away: a kit in a pack gives no attacks and no
+    // armour class, and "go and equip something" is the hidden step this is
+    // meant to remove.
+    for (const itemId of starting?.equip ?? []) {
+      const name = starting?.items.find((i) => i.itemId === itemId)?.name ?? itemId;
+      append({ type: "itemEquipped", who: c.base.id, itemId, name });
+    }
     for (const spell of starting?.spells ?? []) {
       append({ type: "spellLearned", who: c.base.id, spell });
     }
@@ -162,10 +196,15 @@ export function App() {
     }
     setAdding(false);
     setBuilding(false);
-    // A device that just made a character is presumably going to play it.
-    if (seat.kind === "player" || builds.length === 0) {
-      setSeat({ kind: "player", characterId: c.base.id });
-    }
+    /*
+     * A device that just made a character owns it and sits in it — unless it
+     * is the DM of a room, who makes characters for other people and for
+     * companions and should not be yanked out of their own screen.
+     *
+     * dmRole rather than dmView: a device with no room at all reads as the DM
+     * by default, and that is exactly the person who wants their own sheet.
+     */
+    if (dmRole !== true) claim(c.base.id);
   }
 
   if (!ready) return <div className="app"><p className="faint">Loading…</p></div>;
@@ -204,26 +243,77 @@ export function App() {
 
       {builds.length > 0 && (
         <div className="seatbar">
-          <span className="label">I am</span>
-          <select
-            aria-label="Seat"
-            value={seat.kind === "dm" ? "dm" : `pc:${seat.characterId}`}
-            onChange={(e) => {
-              const v = e.target.value;
-              setSeat(v === "dm" ? { kind: "dm" } : { kind: "player", characterId: v.slice(3) });
-            }}
-          >
-            {mayBeDm && <option value="dm">the DM</option>}
-            {builds.map((b) => (
-              <option key={b.id} value={`pc:${b.id}`}>{b.name}</option>
-            ))}
-          </select>
+          {needsClaim ? (
+            <span className="label">Joining the table</span>
+          ) : (
+            <>
+              <span className="label">I am</span>
+              <select
+                aria-label="Seat"
+                value={seat.kind === "dm" ? "dm" : `pc:${seat.characterId}`}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSeat(v === "dm" ? { kind: "dm" } : { kind: "player", characterId: v.slice(3) });
+                }}
+              >
+                {mayBeDm && <option value="dm">the DM</option>}
+                {/* Only this device's own characters. */}
+                {seatable.map((b) => (
+                  <option key={b.id} value={`pc:${b.id}`}>{b.name}</option>
+                ))}
+              </select>
+            </>
+          )}
           {adding && <button onClick={() => setAdding(false)}>Cancel</button>}
         </div>
       )}
 
-      {!needsCharacter && (
+      {!needsCharacter && !needsClaim && (
         <Tabs tabs={tabs} active={current} onPick={setTab} />
+      )}
+
+      {/* Somebody has joined a campaign that already has characters. They are
+          either one of the people on the list or a new arrival, and a
+          dropdown of existing names strands the second kind. */}
+      {needsClaim && !needsCharacter && (
+        <>
+          <section className="card">
+            <div className="card-hd">
+              <span className="label">Which one are you?</span>
+            </div>
+            <div className="join">
+              {builds.map((b) => (
+                <button className="join-row" key={b.id} onClick={() => claim(b.id)}>
+                  <span className="nm">{b.name}</span>
+                  <span className="faint">
+                    {b.classes.map((c) => `${c.classId} ${c.level}`).join(" · ")}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="card-body">
+              <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+                Pick your character and this device remembers it. Nobody else&rsquo;s
+                sheet will be offered again.
+              </p>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="card-hd">
+              <span className="label">Or you are new</span>
+              <button onClick={() => setBuilding(true)}>Build a character</button>
+            </div>
+            <div className="card-body">
+              <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+                Turning up mid-campaign is normal. Build one at whatever level
+                the party is, or bring one in below.
+              </p>
+            </div>
+          </section>
+
+          <NewCharacter onCreate={create} />
+        </>
       )}
 
       {needsCharacter ? (

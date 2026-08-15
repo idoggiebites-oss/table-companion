@@ -36,9 +36,11 @@ const SURPRISE_LABEL: Record<Surprise, string> = {
 };
 import type { EventBody } from "../domain/events.js";
 import type { CampaignState } from "../domain/project.js";
+import { describeVerdict, sortClaims, verdictFor } from "../domain/attackflow.js";
 import { AreaDamage } from "./AreaDamage.js";
 import { healthStep, VAGUE_LABEL } from "./HpBar.js";
 import { PlayerTurn } from "./PlayerTurn.js";
+import { useAttacks } from "./useAttacks.js";
 
 const nextDisclosure = (d: Disclosure): Disclosure =>
   DISCLOSURE[(DISCLOSURE.indexOf(d) + 1) % DISCLOSURE.length]!;
@@ -71,7 +73,7 @@ function StartCombat({
   const [sittingOut, setSittingOut] = useState<string[]>([]);
   const inFight = characters.filter((b) => !sittingOut.includes(b.id)).map((b) => b.id);
   const [surprise, setSurprise] = useState<Surprise>("none");
-  const [creatures, setCreatures] = useState<{ name: string; maxHp: number }[]>([]);
+  const [creatures, setCreatures] = useState<{ name: string; maxHp: number; ac?: number }[]>([]);
   /**
    * Loaded whenever prep exists, not when a panel is opened. Dropping an
    * encounter in without the statblocks is how six goblins once arrived with
@@ -99,6 +101,7 @@ function StartCombat({
           // An unknown statblock lands as 1, which is visible as wrong rather
           // than plausible — the same choice the encounter builder makes.
           maxHp: sb ? (entry.hpMode === "rolled" ? rollHp(sb.hitDice) : sb.hp) : 1,
+          ...(sb ? { ac: sb.ac } : {}),
         });
       }
     }
@@ -123,7 +126,7 @@ function StartCombat({
         id: `cr-${Date.now().toString(36)}-${i}`,
         name: c.name || `Creature ${i + 1}`,
         initiative: null,
-        source: { kind: "creature" as const, maxHp: c.maxHp },
+        source: { kind: "creature" as const, maxHp: c.maxHp, ...(c.ac ? { ac: c.ac } : {}) },
         controller: { kind: "dm" as const },
         disclosure: "vague" as const,
         surprised: surprise === "monsters",
@@ -185,6 +188,23 @@ function StartCombat({
             value={c.maxHp}
             onChange={(e) =>
               setCreatures(creatures.map((x, n) => (n === i ? { ...x, maxHp: Math.max(1, +e.target.value || 1) } : x)))
+            }
+          />
+          <input
+            type="number"
+            aria-label={`Creature ${i + 1} armour class`}
+            placeholder="AC"
+            value={c.ac ?? ""}
+            style={{ width: 62 }}
+            onChange={(e) =>
+              setCreatures(
+                creatures.map((x, n) => {
+                  if (n !== i) return x;
+                  const ac = Number(e.target.value);
+                  const { ac: _drop, ...rest } = x;
+                  return Number.isFinite(ac) && ac > 0 ? { ...rest, ac } : rest;
+                }),
+              )
             }
           />
           <button
@@ -349,6 +369,12 @@ export function Combat({
   const [reactor, setReactor] = useState<Combatant | null>(null);
   const combat = state.combat;
 
+  // What the seated player is holding, so the walkthrough can name the weapon
+  // rather than asking for "your attack bonus".
+  const seated = seat.kind === "player" ? state.builds[seat.characterId] : undefined;
+  const seatedState = seated ? state.characters[seated.id] : undefined;
+  const { attacks: playerAttacks } = useAttacks(seated, seatedState);
+
   if (!combat) {
     return (
       <section className="card">
@@ -395,9 +421,24 @@ export function Combat({
           seat={seat}
           character={state.characters[seat.characterId]!}
           append={append}
-          onAttack={(c) => {
-            setTarget(c);
-            setDealt(0);
+          attacks={playerAttacks}
+          onSwing={(swing) => {
+            // Claimed, not applied: the DM says whether it lands.
+            append({
+              type: "attackClaimed",
+              claim: {
+                id: `atk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+                who: seated?.id ?? "",
+                whoName: seated?.name ?? "",
+                targetId: swing.target.id,
+                targetName: swing.target.name,
+                weapon: swing.attack.name,
+                toHit: swing.toHit,
+                damage: swing.damage,
+                damageType: swing.attack.damageType,
+                at: Date.now(),
+              },
+            });
           }}
         />
       )}
@@ -430,6 +471,41 @@ export function Combat({
             It hits
           </button>
           <button onClick={() => setTarget(null)}>Missed</button>
+        </div>
+      )}
+
+      {/* Claims wait here. A player rolled; nothing has happened yet. */}
+      {seat.kind === "dm" && state.claims.length > 0 && (
+        <div className="claims">
+          {sortClaims(state.claims).map((c) => {
+            const target = combat.order.find((x) => x.id === c.targetId);
+            const ac = target?.source.kind === "creature" ? target.source.ac : undefined;
+            const verdict = verdictFor(c.toHit, ac);
+            return (
+              <div className={`claim v-${verdict}`} key={c.id}>
+                <span className="nm">
+                  {c.whoName} → {c.targetName}
+                  <span className="faint"> · {c.weapon}</span>
+                </span>
+                <span className="say">{describeVerdict(c.toHit, ac)}</span>
+                <span className="dmg num">{c.damage} {c.damageType}</span>
+                <span className="acts">
+                  <button
+                    aria-label={`Apply ${c.damage} to ${c.targetName}`}
+                    onClick={() => append({ type: "attackResolved", claimId: c.id, applied: true })}
+                  >
+                    {verdict === "misses" ? "Hits anyway" : "It hits"}
+                  </button>
+                  <button
+                    aria-label={`Reject ${c.whoName}'s attack`}
+                    onClick={() => append({ type: "attackResolved", claimId: c.id, applied: false })}
+                  >
+                    Missed
+                  </button>
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 

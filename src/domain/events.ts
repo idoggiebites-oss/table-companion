@@ -16,6 +16,7 @@ import type { ClassId } from "./resources.js";
 import type { Combatant, Disclosure, EconomyKind, TargetRef } from "./combat.js";
 import type { Encounter } from "./encounter.js";
 import type { Progression } from "./progression.js";
+import type { AttackClaim } from "./attackflow.js";
 import type { Boon } from "./boons.js";
 import type { Stack } from "./items.js";
 import type { KnownSpell } from "./spells.js";
@@ -179,6 +180,17 @@ export type DomainEvent = Meta &
     /** Signed, in copper. Undo is replay-without-it, so no inverse is stored. */
     | { readonly type: "coinsChanged"; readonly who: CharacterId; readonly delta: number }
     /** Blessings and buffs. Shown, never applied — see boons.ts. */
+    /**
+     * A player's attack, waiting on the DM. Nothing lands until it is
+     * resolved — see attackflow.ts for why the player cannot apply it.
+     */
+    | { readonly type: "attackClaimed"; readonly claim: AttackClaim }
+    | {
+        readonly type: "attackResolved";
+        readonly claimId: string;
+        /** False is a miss, or a DM saying no. Either way nothing lands. */
+        readonly applied: boolean;
+      }
     | { readonly type: "spellLearned"; readonly who: CharacterId; readonly spell: KnownSpell }
     | { readonly type: "spellForgotten"; readonly who: CharacterId; readonly spellId: string }
     | {

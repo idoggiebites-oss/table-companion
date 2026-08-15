@@ -21,6 +21,7 @@ import {
 } from "./combat.js";
 import { checkFor, type ConcentrationCheck } from "./concentration.js";
 import type { Encounter } from "./encounter.js";
+import type { AttackClaim } from "./attackflow.js";
 import type { Boon } from "./boons.js";
 import type { KnownSpell } from "./spells.js";
 import { addItem, removeItem, type Stack } from "./items.js";
@@ -80,6 +81,8 @@ export interface CampaignState {
   readonly openTrader: string | null;
   /** Loot given to the party as a whole, waiting to be divided. */
   readonly stash: { readonly items: readonly Stack[]; readonly coins: number };
+  /** Attacks a player has rolled, waiting for the DM to say they land. */
+  readonly claims: readonly AttackClaim[];
   readonly progression: Progression;
 }
 
@@ -279,6 +282,44 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     }
     case "progressionSet":
       return { ...state, progression: e.mode };
+    case "attackClaimed":
+      return state.claims.some((c) => c.id === e.claim.id)
+        ? state
+        : { ...state, claims: [...state.claims, e.claim] };
+    case "attackResolved": {
+      const claim = state.claims.find((c) => c.id === e.claimId);
+      if (!claim) return state;
+      const rest = { ...state, claims: state.claims.filter((c) => c.id !== e.claimId) };
+      if (!e.applied || claim.damage <= 0) return rest;
+
+      // Resolution is where damage finally lands, on whichever side was hit —
+      // and damage to a character is what owes a concentration save, so it
+      // goes through the same path everything else uses.
+      const target = state.combat?.order.find((c) => c.id === claim.targetId);
+      if (target?.source.kind === "character") {
+        const before = rest.characters[target.source.characterId];
+        if (!before) return rest;
+        return {
+          ...rest,
+          characters: {
+            ...rest.characters,
+            [target.source.characterId]: applyDamage(before, claim.damage),
+          },
+        };
+      }
+      if (!rest.combat) return rest;
+      const at = rest.combat.creatureHp[claim.targetId] ?? 0;
+      return {
+        ...rest,
+        combat: {
+          ...rest.combat,
+          creatureHp: {
+            ...rest.combat.creatureHp,
+            [claim.targetId]: Math.max(0, at - claim.damage),
+          },
+        },
+      };
+    }
     case "npcSaved":
       return { ...state, npcs: { ...state.npcs, [e.npc.id]: e.npc } };
     case "npcDeleted": {
@@ -677,7 +718,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
 export const EMPTY_STATE: CampaignState = {
   sources: {}, builds: {}, characters: {}, combat: null,
   encounters: {}, homebrew: {}, progression: "xp",
-  npcs: {}, openTrader: null, stash: { items: [], coins: 0 },
+  npcs: {}, openTrader: null, stash: { items: [], coins: 0 }, claims: [],
 };
 
 /**

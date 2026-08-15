@@ -14,6 +14,16 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/** Sit as a character: a device claims its own once, then picks a seat. */
+const sitAs = async (page, name) => {
+  // A device joining a campaign that already has characters is asked which
+  // one it is, once; after that it is an ordinary seat change.
+  const join = page.locator(".join-row", { hasText: name });
+  if (await join.count()) await join.first().click();
+  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  await page.waitForTimeout(500);
+};
+
 /** Sections are tabs now; content is one tap away rather than a scroll. */
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
@@ -33,7 +43,7 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector('select[aria-label="Seat"]');
+await dm.page.waitForSelector(".seatbar");
 await dm.page.selectOption('select[aria-label="Seat"]', "dm");
 await dm.page.waitForSelector(".pm-name");
 
@@ -113,7 +123,7 @@ await dm.page.screenshot({ path: `${OUT}/31-homebrew-fight.png` });
 const tablet = await device("tablet");
 await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
-await tablet.page.waitForSelector('select[aria-label="Seat"]', { timeout: 20000 });
+await tablet.page.waitForSelector(".seatbar", { timeout: 20000 });
 await tablet.page.waitForTimeout(1000);
 // The DM's second device is still the DM, but it has to prove it — joining
 // with the room code makes you a player, whoever you are.

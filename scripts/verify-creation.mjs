@@ -13,6 +13,16 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sit as a character: a device claims its own once, then picks a seat. */
+const sitAs = async (page, name) => {
+  // A device joining a campaign that already has characters is asked which
+  // one it is, once; after that it is an ordinary seat change.
+  const join = page.locator(".join-row", { hasText: name });
+  if (await join.count()) await join.first().click();
+  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  await page.waitForTimeout(500);
+};
 // The class kit can ask which martial weapon; answer it before creating.
 const answerGear = async (page) => {
   const sel = page.locator('select[aria-label^="Choose"]');

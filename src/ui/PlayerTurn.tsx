@@ -12,6 +12,8 @@
  */
 
 import { useState } from "react";
+import type { ResolvedAttack } from "../domain/attack.js";
+import { Swing } from "./Swing.js";
 import {
   activeCombatant, controls, ECONOMY, isSurprised, movementLeft, turnsUntil,
   visibleTo, type Combat, type Combatant, type EconomyKind, type Seat,
@@ -95,54 +97,21 @@ function Movement({
   );
 }
 
-/**
- * Who you are swinging at.
- *
- * Only creatures the disclosure ladder already shows you — a target list is
- * exactly the wrong place to leak the existence of something hidden.
- */
-function Targets({
-  combat, seat, label, onPick, onClose,
-}: {
-  combat: Combat;
-  seat: Extract<Seat, { kind: "player" }>;
-  label: string;
-  onPick: (c: Combatant) => void;
-  onClose: () => void;
-}) {
-  const targets = combat.order.filter(
-    (c) =>
-      visibleTo(seat, c) &&
-      c.source.kind === "creature" &&
-      (combat.creatureHp[c.id] ?? 1) > 0,
-  );
-  return (
-    <div className="tgt">
-      <span className="label">{label}</span>
-      {targets.map((c) => (
-        <button className="tgt-row" key={c.id} onClick={() => onPick(c)}>
-          {c.name}
-        </button>
-      ))}
-      {targets.length === 0 && (
-        <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
-          Nothing you can see.
-        </p>
-      )}
-      <button onClick={onClose}>Cancel</button>
-    </div>
-  );
-}
-
 export function PlayerTurn({
-  combat, seat, character, append, onAttack,
+  combat, seat, character, append, attacks = [], onSwing,
 }: {
   combat: Combat;
   seat: Extract<Seat, { kind: "player" }>;
   character: CharacterState;
   append: (body: EventBody) => void;
-  /** Hands the chosen target up so the sheet can open the right roll. */
-  onAttack?: (target: Combatant) => void;
+  /** What they are actually holding — the walkthrough names the weapon. */
+  attacks?: readonly ResolvedAttack[];
+  onSwing?: (a: {
+    attack: ResolvedAttack;
+    target: Combatant;
+    toHit: number;
+    damage: number;
+  }) => void;
 }) {
   const [picking, setPicking] = useState<null | "attack" | "opportunity">(null);
   const who = seat.characterId;
@@ -154,6 +123,12 @@ export function PlayerTurn({
 
   const self = combat.order.find(
     (c) => c.source.kind === "character" && c.source.characterId === who,
+  );
+  const visibleTargets = combat.order.filter(
+    (c) =>
+      visibleTo(seat, c) &&
+      c.source.kind === "creature" &&
+      (combat.creatureHp[c.id] ?? 1) > 0,
   );
 
   if (acting) {
@@ -169,22 +144,21 @@ export function PlayerTurn({
             <Pips who={who} character={character} kinds={ECONOMY} append={append} />
             {self && <Movement combat={combat} combatant={self} append={append} />}
             {picking === "attack" ? (
-              <Targets
-                combat={combat}
-                seat={seat}
-                label="Attack which"
-                onClose={() => setPicking(null)}
-                onPick={(c) => {
+              <Swing
+                attacks={attacks}
+                targets={visibleTargets}
+                onCancel={() => setPicking(null)}
+                onSend={(swing) => {
                   if (!character.economy.action) {
                     append({ type: "economySpent", who, kind: "action" });
                   }
-                  onAttack?.(c);
-                  setPicking(null);
+                  onSwing?.(swing);
                 }}
               />
             ) : (
               <button className="pt-atk" onClick={() => setPicking("attack")}>
-                Attack
+                {attacks.length > 0 ? `Attack with ${attacks[0]!.name}` : "Attack"}
+                {attacks.length > 1 && <small> or something else</small>}
               </button>
             )}
           </>
@@ -225,22 +199,20 @@ export function PlayerTurn({
       {/* The reaction pip has always been here for this. An opportunity
           attack is the reason it stays on screen while you do nothing. */}
       {picking === "opportunity" ? (
-        <Targets
-          combat={combat}
-          seat={seat}
-          label="Opportunity attack on"
-          onClose={() => setPicking(null)}
-          onPick={(c) => {
+        <Swing
+          attacks={attacks}
+          targets={visibleTargets}
+          onCancel={() => setPicking(null)}
+          onSend={(swing) => {
             if (self) {
               append({
                 type: "opportunityTaken",
                 attacker: self.id,
                 attackerWho: who,
-                against: c.id,
+                against: swing.target.id,
               });
             }
-            onAttack?.(c);
-            setPicking(null);
+            onSwing?.(swing);
           }}
         />
       ) : (

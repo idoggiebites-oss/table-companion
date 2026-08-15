@@ -18,6 +18,16 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/** Sit as a character: a device claims its own once, then picks a seat. */
+const sitAs = async (page, name) => {
+  // A device joining a campaign that already has characters is asked which
+  // one it is, once; after that it is an ordinary seat change.
+  const join = page.locator(".join-row", { hasText: name });
+  if (await join.count()) await join.first().click();
+  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  await page.waitForTimeout(500);
+};
+
 /** Sections are tabs now; content is one tap away rather than a scroll. */
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
@@ -26,7 +36,7 @@ const go = async (page, tab) => {
 
 await page.goto(URL, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector('select[aria-label="Seat"]');
+await page.waitForSelector(".seatbar");
 
 // A player must not be able to look monsters up — that is the disclosure
 // ladder. With tabs the claim gets stronger: the section does not exist for
@@ -88,7 +98,7 @@ ok("every result is within the band", crs.every((c) => {
 // and it survives losing the network, which is the whole point at a table
 await ctx.setOffline(true);
 await page.reload({ waitUntil: "domcontentloaded" });
-await page.waitForSelector('select[aria-label="Seat"]', { timeout: 20000 });
+await page.waitForSelector(".seatbar", { timeout: 20000 });
 await go(page, "book");
 await page.getByRole("button", { name: "Monsters" }).click();
 await page.waitForSelector(".mrow", { timeout: 20000 });

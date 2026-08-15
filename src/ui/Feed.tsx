@@ -105,6 +105,11 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return e.feet >= 0 ? `Moved ${e.feet} ft` : `Took back ${Math.abs(e.feet)} ft`;
     case "opportunityTaken":
       return `Opportunity attack${e.attackerWho ? ` by ${nameOf(e.attackerWho)}` : ""}`;
+    case "attackClaimed":
+      return `${e.claim.whoName} attacked ${e.claim.targetName} with ${e.claim.weapon} · ${
+        e.claim.toHit} to hit, ${e.claim.damage} ${e.claim.damageType}`;
+    case "attackResolved":
+      return e.applied ? "The attack landed" : "The attack missed";
     case "spellLearned":
       return `${nameOf(e.who)} learned ${e.spell.name}`;
     case "spellForgotten":

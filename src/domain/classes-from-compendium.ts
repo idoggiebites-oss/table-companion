@@ -17,7 +17,7 @@
  * real route the builder already offers.
  */
 
-import { ABILITIES, SKILL_IDS, type Ability } from "./abilities.js";
+import { SKILL_IDS, type Ability } from "./abilities.js";
 
 const ABILITY_BY_NAME: Record<string, Ability> = {
   strength: "str", dexterity: "dex", constitution: "con",

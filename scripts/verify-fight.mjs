@@ -17,6 +17,16 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/** Sit as a character: a device claims its own once, then picks a seat. */
+const sitAs = async (page, name) => {
+  // A device joining a campaign that already has characters is asked which
+  // one it is, once; after that it is an ordinary seat change.
+  const join = page.locator(".join-row", { hasText: name });
+  if (await join.count()) await join.first().click();
+  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  await page.waitForTimeout(500);
+};
 // The class kit can ask which martial weapon; answer it before creating.
 const answerGear = async (page) => {
   const sel = page.locator('select[aria-label^="Choose"]');
@@ -80,7 +90,7 @@ await p2.page.waitForSelector('button:has-text("Add character")', { timeout: 200
 await p2.page.getByRole("button", { name: "Add character" }).click();
 await build(p2.page, "Bel Ashcroft", "rogue", ["Acrobatics", "Deception", "Investigation", "Stealth"]);
 await p2.page.waitForTimeout(800);
-await p2.page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitAs(p2.page, "Bel Ashcroft");
 await dm.page.waitForTimeout(1800);
 
 // --- the DM decides who is in it -----------------------------------------
@@ -92,6 +102,9 @@ await dm.page.getByRole("button", { name: "The encounter" }).click();
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 await dm.page.locator('input[aria-label="Creature 1 hp"]').fill("12");
+// An armour class lets the DM's screen work out the verdict; without one it
+// says so rather than guessing.
+await dm.page.locator('input[aria-label="Creature 1 armour class"]').fill("15");
 await dm.page.screenshot({ path: `${OUT}/53-surprise.png`, fullPage: true });
 await dm.page.getByRole("button", { name: "Roll for initiative" }).click();
 await p1.page.waitForTimeout(1800);
@@ -135,21 +148,54 @@ await p1.page.getByRole("button", { name: "Dash" }).click();
 await p1.page.waitForTimeout(500);
 ok("a dash gives the speed back on top", await p1.page.locator(".mv-n .num").innerText(), "45");
 
-// --- attacking a creature the DM put there --------------------------------
-await p1.page.getByRole("button", { name: "Attack", exact: true }).click();
-await p1.page.waitForSelector(".tgt");
-ok("the player can pick the DM's creature",
+// --- a player's attack, one question at a time ----------------------------
+// Written for somebody who has never played: the app names the weapon, the
+// die and the modifier, and asks for one thing per screen.
+await p1.page.getByRole("button", { name: /^Attack with/ }).click();
+await p1.page.waitForSelector(".swing-step");
+ok("it asks who, offering only what the player can see",
   (await p1.page.locator(".tgt-row").allInnerTexts()).map((t) => t.toLowerCase()), ["goblin"]);
 await p1.page.locator(".tgt-row").first().click();
-await p1.page.waitForTimeout(500);
+await p1.page.waitForTimeout(400);
+
+const ask = (await p1.page.locator(".swing-ask").innerText()).replace(/\s+/g, " ");
+ok("then names the die and the modifier in one sentence", /Roll a d20 and add \+\d/.test(ask), true);
 ok("spending the action is not a second thing to remember",
-  await p1.page.locator('[aria-label="Action spent"]').count(), 1);
-await p1.page.locator('input[aria-label="Damage dealt"]').fill("7");
-await p1.page.getByRole("button", { name: "It hits" }).click();
-await p1.page.waitForTimeout(900);
-ok("the damage reached the DM's screen",
-  (await dm.page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "5/12");
+  await p1.page.locator('[aria-label="Action spent"]').count(), 0);
+
+await p1.page.locator('input[aria-label="Attack roll total"]').fill("18");
+await p1.page.getByRole("button", { name: "Next" }).click();
+await p1.page.waitForTimeout(400);
+ok("then what damage to roll, by name",
+  /Roll \dd\d/.test((await p1.page.locator(".swing-ask").innerText()).replace(/\s+/g, " ")), true);
 await p1.page.screenshot({ path: `${OUT}/50-attack.png`, fullPage: true });
+
+await p1.page.locator('input[aria-label="Damage roll total"]').fill("7");
+await p1.page.getByRole("button", { name: "Send to the DM" }).click();
+await p1.page.waitForTimeout(900);
+
+// Nothing has happened yet. That is the point: a player who could apply
+// damage themselves would learn a creature's armour class by trial.
+ok("the action is spent once it is sent",
+  await p1.page.locator('[aria-label="Action spent"]').count(), 1);
+ok("but nothing has landed",
+  (await dm.page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "12/12");
+ok("the player is told it is waiting",
+  /nothing changes until/i.test(await p1.page.locator(".swing-step").innerText()), true);
+
+// The DM sees the claim, with the verdict worked out but not taken.
+await dm.page.waitForSelector(".claim", { timeout: 15000 });
+const claim = (await dm.page.locator(".claim").innerText()).replace(/\s+/g, " ");
+ok("the DM sees who swung at what", /Kira Vance → Goblin/.test(claim), true);
+ok("with the roll against the armour class", /18 against 15 — hits/i.test(claim), true);
+ok("and the damage they rolled", /7 slashing/i.test(claim), true);
+await dm.page.screenshot({ path: `${OUT}/51-claim.png`, fullPage: true });
+
+await dm.page.getByRole("button", { name: /Apply 7 to Goblin/ }).click();
+await dm.page.waitForTimeout(900);
+ok("confirming is what applies it",
+  (await dm.page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "5/12");
+ok("and clears the queue", await dm.page.locator(".claim").count(), 0);
 
 // --- surprise -------------------------------------------------------------
 await dm.page.getByRole("button", { name: "Advance turn" }).click();
@@ -219,18 +265,26 @@ await dm.page.waitForTimeout(700);
 await p1.page.waitForTimeout(600);
 ok("a waiting player is offered one",
   await p1.page.getByRole("button", { name: "Opportunity attack" }).count(), 1);
+// The same walkthrough off-turn, so a beginner is not shown a second,
+// different way to make an attack.
 await p1.page.getByRole("button", { name: "Opportunity attack" }).click();
-await p1.page.waitForSelector(".tgt");
+await p1.page.waitForSelector(".swing-step");
 await p1.page.locator(".tgt-row").first().click();
-await p1.page.waitForTimeout(800);
+await p1.page.waitForTimeout(400);
+await p1.page.locator('input[aria-label="Attack roll total"]').fill("16");
+await p1.page.getByRole("button", { name: "Next" }).click();
+await p1.page.locator('input[aria-label="Damage roll total"]').fill("5");
+await p1.page.getByRole("button", { name: "Send to the DM" }).click();
+await p1.page.waitForTimeout(900);
 ok("taking it spends the reaction",
   await p1.page.locator('[aria-label="Reaction spent"]').count(), 1);
 ok("and it is not offered twice",
   await p1.page.getByRole("button", { name: "Opportunity attack" }).count(), 0);
-await p1.page.locator('input[aria-label="Damage dealt"]').fill("5");
-await p1.page.getByRole("button", { name: "It hits" }).click();
-await p1.page.waitForTimeout(900);
-ok("its damage lands too",
+
+await dm.page.waitForSelector(".claim", { timeout: 15000 });
+await dm.page.getByRole("button", { name: /Apply 5 to Goblin/ }).click();
+await dm.page.waitForTimeout(900);
+ok("its damage lands too, once confirmed",
   (await dm.page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "0/12");
 
 await go(dm.page, "log");

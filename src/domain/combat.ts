@@ -18,7 +18,7 @@ export type CombatantSource =
   /** A player character; hit points live in campaign state. */
   | { readonly kind: "character"; readonly characterId: CharacterId }
   /** Anything the DM is running; hit points live in the combat itself. */
-  | { readonly kind: "creature"; readonly maxHp: number };
+  | { readonly kind: "creature"; readonly maxHp: number; readonly ac?: number };
 
 export type Controller =
   | { readonly kind: "dm" }
