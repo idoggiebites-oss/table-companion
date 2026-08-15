@@ -42,7 +42,7 @@ import {
 } from "../domain/spells.js";
 import { indexItems, type Item, type Stack } from "../domain/items.js";
 import { formatCoins } from "../domain/money.js";
-import { averageWealth, describeWealth } from "../domain/non-srd.js";
+import { describeWealthFor, wealthFor } from "../domain/non-srd.js";
 import {
   parseChoice, parseFixed, toStack, type GearOption,
 } from "../domain/starting-gear.js";
@@ -171,6 +171,21 @@ export function CreateCharacter({
   // the preview's whole job is to be the number you will actually see.
   const prof = atLevel?.profBonus ?? proficiencyBonus(level);
 
+  const hasKit =
+    (klass?.equipment?.length ?? 0) > 0 || (klass?.equipmentChoices?.length ?? 0) > 0;
+
+  /*
+   * Follow the class, and only once a class exists. Keyed on the class rather
+   * than on hasKit: before one is chosen hasKit is false, and an effect
+   * watching it flipped every character to "buy your own" before they had
+   * picked anything — so nobody got their starting kit at all.
+   */
+  useEffect(() => {
+    if (!klass) return;
+    setGearMode(hasKit ? "kit" : "gold");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [klass?.id]);
+
   const catalogue = useMemo(() => indexItems(gear ?? []), [gear]);
   const fixedGear = useMemo(
     () => (klass ? parseFixed(klass.equipment ?? [], catalogue) : []),
@@ -184,7 +199,7 @@ export function CreateCharacter({
   /** What the character walks away carrying, and with what in their purse. */
   const starting = useMemo(() => {
     if (!klass) return { items: [] as Stack[], coins: 0 };
-    if (gearMode === "gold") return { items: [], coins: averageWealth(klass.id) };
+    if (gearMode === "gold") return { items: [], coins: wealthFor(klass.id, klass.wealth) };
     const items: Stack[] = [];
     for (const p of fixedGear) {
       const st = toStack(p);
@@ -684,7 +699,7 @@ export function CreateCharacter({
               character who arrives with nothing is one the first fight
               cannot use. The book writes the choices as prose, so they
               are taken apart rather than shown as a paragraph to obey. */}
-          {gear !== null && (klass.equipment?.length || klass.equipmentChoices?.length) ? (
+          {gear !== null && (hasKit || wealthFor(klass.id, klass.wealth) > 0) ? (
             <div className="gear-step">
               <span className="label cr-sub">Starting equipment</span>
               <div className="seg">
@@ -706,9 +721,10 @@ export function CreateCharacter({
 
               {gearMode === "gold" ? (
                 <p className="cr-note">
-                  {describeWealth(klass.id)} to spend — you start with{" "}
-                  <b>{formatCoins(averageWealth(klass.id))}</b> and nothing else.
-                  Buy it under Gear once you are in.
+                  {describeWealthFor(klass.id, klass.wealth)} to spend — you start
+                  with <b>{formatCoins(wealthFor(klass.id, klass.wealth))}</b> and
+                  nothing else. Buy it under Gear once you are in.
+                  {!hasKit && " This class has no kit written down, so this is the only route."}
                 </p>
               ) : (
                 <>

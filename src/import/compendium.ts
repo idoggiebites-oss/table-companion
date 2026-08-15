@@ -83,6 +83,11 @@ export interface CompendiumClass {
   /** "4d4x10" — what the book gives you instead of a kit. */
   readonly wealth: string;
   readonly spellAbility: string;
+  /**
+   * As the file writes it: saving throws first, then the skills you choose
+   * from. "Strength, Constitution, Acrobatics, Athletics, …"
+   */
+  readonly proficiency: string;
   /** Spell slots by character level; index 0 is level 1. */
   readonly slots: readonly (readonly number[])[];
   readonly features: readonly { level: number; name: string; text: string }[];
@@ -334,6 +339,7 @@ function parseClass(el: Element): CompendiumClass {
     tools: text(el, "tools"),
     wealth: text(el, "wealth"),
     spellAbility: text(el, "spellAbility"),
+    proficiency: text(el, "proficiency"),
     slots,
     features,
   };

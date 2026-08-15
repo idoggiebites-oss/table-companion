@@ -38,6 +38,39 @@ await page.goto(URL, { waitUntil: "networkidle" });
 // A brand new device, nothing imported.
 await page.getByRole("button", { name: "Build a character" }).click();
 await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
+await page.waitForTimeout(1200);
+
+// --- classes -------------------------------------------------------------
+// Both sources describe the same twelve, so the merge has to dedupe them —
+// and the SRD entry has to win, because only it carries a starting kit.
+const classNames = (await page.locator('select[aria-label="Class"] option').allInnerTexts()).slice(1);
+ok("compendium classes are offered", classNames.length > 50, true);
+ok("and none is listed twice",
+  new Set(classNames.map((n) => n.toLowerCase())).size, classNames.length);
+ok("the SRD twelve appear once each",
+  classNames.filter((n) => /^fighter$/i.test(n)).length, 1);
+
+// A class only the compendium knows must still be completable.
+await page.selectOption('select[aria-label="Class"]', { label: "Blood Hunter" });
+await page.waitForTimeout(800);
+ok("a compendium-only class derives its saves from the one proficiency line",
+  /saves in DEX and INT/i.test(await page.locator(".cr-note").first().innerText()), true);
+ok("and its skill choices", (await page.locator(".chips .chip").count()) > 5, true);
+
+await page.locator('input[aria-label="Filter races"]').fill("human");
+await page.waitForTimeout(500);
+const humanOpts = await page.locator('select[aria-label="Race"] option').allInnerTexts();
+await page.selectOption('select[aria-label="Race"]', { label: humanOpts[1] });
+await page.waitForTimeout(900);
+const gearText = (await page.locator(".gear-step").innerText()).replace(/\s+/g, " ");
+// The compendium carries no starting kit, only wealth. Saying so beats an
+// empty step or a silently equipmentless character.
+ok("with starting wealth read from the file", /4d4 × 10 gp/i.test(gearText), true);
+ok("worth the right amount", /100 gp/.test(gearText), true);
+ok("and it says why there is no kit", /no kit written down/i.test(gearText), true);
+await page.locator('input[aria-label="Filter races"]').fill("");
+await page.waitForTimeout(300);
+
 await page.selectOption('select[aria-label="Class"]', "wizard");
 await page.waitForTimeout(900);
 
@@ -49,7 +82,10 @@ ok("races arrive without importing anything", races > 200, true);
 // subraces as three separate ways to pick the same person.
 await page.locator('input[aria-label="Filter races"]').fill("halfling");
 await page.waitForTimeout(500);
-const halflings = (await page.locator('select[aria-label="Race"] option').allInnerTexts()).slice(1);
+// The filter deliberately keeps whatever is already selected visible, so
+// this looks only at what matched.
+const halflings = (await page.locator('select[aria-label="Race"] option').allInnerTexts())
+  .filter((t) => /halfling/i.test(t));
 ok("a race with variants appears exactly once", halflings, ["Halfling"]);
 await page.selectOption('select[aria-label="Race"]', { label: "Halfling" });
 await page.waitForTimeout(600);

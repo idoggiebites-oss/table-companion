@@ -33,6 +33,8 @@ export interface RaceEntry {
 
 import type { Item } from "../domain/items.js";
 import type { CompendiumSpell } from "../import/compendium.js";
+import { proficiencyBonus } from "../domain/abilities.js";
+import { deriveClass } from "../domain/classes-from-compendium.js";
 import { consolidateRaces } from "../domain/races.js";
 import { loadBundled } from "./bundled.js";
 import { mergeById, readContent } from "./content.js";
@@ -57,6 +59,8 @@ export interface ClassEntry {
   readonly proficiencies: readonly string[];
   readonly equipment: readonly string[];
   readonly equipmentChoices: readonly string[];
+  /** Compendium classes only: starting wealth, where there is no kit. */
+  readonly wealth?: string;
   readonly spellcasting?: {
     readonly ability?: string;
     readonly cantrips: number;
@@ -141,15 +145,53 @@ export function loadBackgrounds(): Promise<BackgroundEntry[]> {
   return backgrounds;
 }
 
+/**
+ * SRD first and SRD wins. Both sources describe the same twelve, but only the
+ * shipped data carries starting equipment — a compendium fighter cannot be
+ * handed their chain mail. The classes only a compendium knows are added
+ * after, with wealth instead of a kit.
+ */
 export function loadClasses(): Promise<ClassEntry[]> {
-  classes ??= load<ClassEntry>("/srd/classes.json");
+  classes ??= Promise.all([
+    load<ClassEntry>("/srd/classes.json"),
+    Promise.all([loadBundled("class"), readContent("class")]).then(([a, b]) =>
+      mergeById(a, b),
+    ),
+  ]).then(([srd, extra]) => {
+    const have = new Set(srd.map((c) => c.id));
+    return [
+      ...srd,
+      ...extra.filter((c) => !have.has(c.id)).map((c) => deriveClass(c) as ClassEntry),
+    ].sort((a, b) => a.name.localeCompare(b.name));
+  });
   return classes;
 }
 
+/** The per-level table, extended with anything a compendium brought. */
 export function loadClassLevels(): Promise<ClassLevels> {
-  classLevels ??= fetch("/srd/class-levels.json").then((r) => {
-    if (!r.ok) throw new Error(`class-levels: HTTP ${r.status}`);
-    return r.json() as Promise<ClassLevels>;
+  classLevels ??= Promise.all([
+    fetch("/srd/class-levels.json").then((r) => {
+      if (!r.ok) throw new Error(`class-levels: HTTP ${r.status}`);
+      return r.json() as Promise<ClassLevels>;
+    }),
+    Promise.all([loadBundled("class"), readContent("class")]).then(([a, b]) =>
+      mergeById(a, b),
+    ),
+  ]).then(([srd, extra]) => {
+    const out: Record<string, readonly ClassLevel[]> = { ...srd };
+    for (const c of extra) {
+      if (out[c.id]) continue; // the shipped table is the better one
+      out[c.id] = Array.from({ length: 20 }, (_, i) => ({
+        level: i + 1,
+        profBonus: proficiencyBonus(i + 1),
+        slots: (c.slots[i] ?? []).filter((_, j) => j < 9),
+        cantrips: 0,
+        known: 0,
+        features: c.features.filter((f) => f.level === i + 1).map((f) => f.name),
+        asi: [4, 8, 12, 16, 19].includes(i + 1),
+      }));
+    }
+    return out;
   });
   return classLevels;
 }
@@ -172,6 +214,8 @@ export function forgetLoaded(): void {
   monsters = null;
   races = null;
   backgrounds = null;
+  classes = null;
+  classLevels = null;
   spells = null;
 }
 

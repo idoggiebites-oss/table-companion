@@ -178,6 +178,33 @@ export function rollWealth(
   return total * w.times * 100;
 }
 
+/**
+ * A compendium writes starting wealth as "4d4x10" or "5d4". Parsed rather
+ * than looked up, because the table above only knows the twelve SRD classes
+ * and a Blood Hunter has to start with something.
+ */
+export function parseWealth(notation: string): { dice: number; times: number } | null {
+  const m = /^\s*(\d+)d4\s*(?:x\s*(\d+))?\s*$/i.exec(notation);
+  if (!m) return null;
+  return { dice: Number(m[1]), times: m[2] ? Number(m[2]) : 1 };
+}
+
+/** Copper, from either source: the SRD table first, then the notation. */
+export function wealthFor(classId: string, notation?: string): number {
+  const known = averageWealth(classId);
+  if (known > 0) return known;
+  const parsed = notation ? parseWealth(notation) : null;
+  return parsed ? parsed.dice * 250 * parsed.times : 0;
+}
+
+export function describeWealthFor(classId: string, notation?: string): string {
+  const known = describeWealth(classId);
+  if (known) return known;
+  const parsed = notation ? parseWealth(notation) : null;
+  if (!parsed) return "";
+  return parsed.times === 1 ? `${parsed.dice}d4 gp` : `${parsed.dice}d4 × ${parsed.times} gp`;
+}
+
 export function describeWealth(classId: string): string {
   const w = STARTING_WEALTH[classId];
   if (!w) return "";
