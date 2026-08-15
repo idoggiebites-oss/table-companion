@@ -18,6 +18,7 @@ import type { RollMode } from "../domain/roll.js";
 import { RollPad, type RollTarget } from "./RollPad.js";
 import type { CampaignState } from "../domain/project.js";
 import { HpBar, healthStep, VAGUE_LABEL } from "./HpBar.js";
+import { Features } from "./Features.js";
 import { useCatalogue } from "./Inventory.js";
 import { acBoons, boonsFor, describeBoon } from "../domain/boons.js";
 import { armourClass, attacksFromEquipment } from "../domain/equipment.js";
@@ -245,13 +246,27 @@ export function Sheet({
           </div>
 
           {state.currentHp === 0 && !state.dead && (
-            <div className="controls">
-              {(["success", "failure", "critical", "fumble"] as const).map((r) => (
-                <button key={r} onClick={() => append({ type: "deathSaveRecorded", who, result: r })}>
-                  {r === "critical" ? "Nat 20" : r === "fumble" ? "Nat 1" : r}
-                </button>
-              ))}
-            </div>
+            <>
+              {/* Nobody reads the death save rules before they need them, and
+                  by then they are on the floor and everyone is talking. */}
+              <p className="down-help">
+                {state.stable
+                  ? "Stable: no more saves. You wake with 1 hit point after a while, or the moment anyone heals you."
+                  : `On your turn, roll a d20. Ten or more is a success. Three successes and you are stable; three failures and you die. You have ${state.deathSaves.successes} and ${state.deathSaves.failures}.`}
+              </p>
+              <div className="controls">
+                {(["success", "failure", "critical", "fumble"] as const).map((r) => (
+                  <button key={r} onClick={() => append({ type: "deathSaveRecorded", who, result: r })}>
+                    {r === "critical" ? "Nat 20" : r === "fumble" ? "Nat 1" : r}
+                  </button>
+                ))}
+              </div>
+              <p className="faint down-note">
+                A natural 20 puts you back up with 1 hit point. A natural 1
+                counts as two failures. Any damage while you are down is a
+                failure on its own.
+              </p>
+            </>
           )}
 
           <div className="controls">
@@ -312,6 +327,8 @@ export function Sheet({
           })}
         </section>
       )}
+
+      <Features build={build} />
 
       {build.feats.length > 0 && (
         <section className="card">

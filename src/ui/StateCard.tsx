@@ -6,11 +6,12 @@
  * rest rules people most often forget they are under.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { EffectiveBuild } from "../domain/build.js";
 import { exhaustionAt, rulesFor, type ExhaustionEffect } from "../domain/edition.js";
 import type { EventBody } from "../domain/events.js";
 import type { CharacterState } from "../domain/project.js";
+import { loadConditions, type ConditionDescription } from "../store/srd.js";
 
 const titleCase = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 
@@ -44,6 +45,10 @@ export function StateCard({
   const who = build.id;
   const [spell, setSpell] = useState("");
   const conditions = rulesFor(build.edition).conditions;
+  const [descriptions, setDescriptions] = useState<ConditionDescription[]>([]);
+  useEffect(() => {
+    loadConditions().then(setDescriptions, () => setDescriptions([]));
+  }, []);
   const maxExhaustion = rulesFor(build.edition).maxExhaustion;
   const effect = exhaustionAt(build.edition, state.exhaustion);
 
@@ -84,6 +89,24 @@ export function StateCard({
 
       <div className="card-body" style={{ borderTop: "1px solid var(--rule)" }}>
         <span className="label" style={{ display: "block", marginBottom: 8 }}>Conditions</span>
+
+        {/* What the condition DOES, for the one you have. "What does
+            frightened mean again" is the most asked question at a table, and
+            the app has shipped the answer since the first week without ever
+            showing it. */}
+        {state.conditions.map((c) => {
+          const desc = descriptions.find((d) => d.id === c);
+          if (!desc) return null;
+          const lines = Array.isArray(desc.desc) ? desc.desc : [desc.desc];
+          return (
+            <div className="cond" key={c}>
+              <span className="nm">{titleCase(c)}</span>
+              {lines.map((line, i) => (
+                <p key={i}>{line.replace(/^\s*-\s*/, "")}</p>
+              ))}
+            </div>
+          );
+        })}
         <div className="chips">
           {conditions.map((c) => {
             const on = state.conditions.includes(c);

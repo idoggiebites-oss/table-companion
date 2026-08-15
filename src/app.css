@@ -901,3 +901,25 @@ html, body { overscroll-behavior-y: none; }
   color: var(--ink-dim);
 }
 .cr-srow:last-child { border-bottom: 0; }
+
+/* ---- guidance ---- */
+.cond { margin-bottom: 12px; }
+.cond .nm { color: var(--ink); font-size: 0.9rem; }
+.cond p { margin: 4px 0 0; font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+
+/* Being down is the one moment a beginner cannot go and read the rules. */
+.down-help {
+  margin: 12px 0 8px; padding: 10px 12px; font-size: 0.86rem; line-height: 1.5;
+  color: var(--ink-dim); background: var(--sunk); border-left: 2px solid var(--near);
+}
+.down-note { margin: 8px 0 0; font-size: 0.78rem; line-height: 1.5; }
+
+/* ---- class features ---- */
+.feat-row { border-top: 1px solid var(--rule); }
+.feat-hd {
+  display: flex; align-items: baseline; gap: 10px; width: 100%;
+  padding: 11px 16px; border: 0; background: none; text-align: left;
+}
+.feat-hd .nm { flex: 1 1 auto; color: var(--ink-dim); }
+.feat-hd .faint { flex: 0 0 auto; font-size: 0.76rem; }
+.feat-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
