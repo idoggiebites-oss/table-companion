@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ABILITIES } from "../abilities.js";
 import {
-  ABILITY_BLURB, abilityName, CLASS_BLURB, describePriority, mattersMost,
+  ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, describePriority,
+  featureOf, mattersMost, mechanicalTraits,
 } from "../guidance.js";
 
 describe("what a class is like to play", () => {
@@ -56,5 +57,41 @@ describe("advice, not enforcement", () => {
 
   it("spells the abilities out, because STR is jargon", () => {
     expect(abilityName("cha")).toBe("Charisma");
+  });
+});
+
+describe("races and backgrounds, where there are hundreds", () => {
+  const traits = [
+    { name: "Description", desc: "To be greeted with stares. And whispers besides." },
+    { name: "Infernal Legacy", desc: "You know the thaumaturgy cantrip." },
+    { name: "Suggested Characteristics", desc: "Tieflings are shaped by…" },
+  ];
+
+  it("prefers a line written for the ones we ship", () => {
+    expect(blurbFor("halfling", traits)).toMatch(/lucky and brave/i);
+  });
+
+  it("falls back to the file's own first sentence for the rest", () => {
+    // Two hundred and sixty imported races cannot be hand-written, and their
+    // own description beats an invented one.
+    expect(blurbFor("aasimar-fallen-hb", traits)).toBe("To be greeted with stares.");
+  });
+
+  it("says nothing when there is nothing to say", () => {
+    expect(blurbFor("unknown", [])).toBe(null);
+    expect(blurbFor("unknown", undefined)).toBe(null);
+  });
+
+  it("separates what it GIVES you from the prose about it", () => {
+    expect(mechanicalTraits(traits).map((t) => t.name)).toEqual(["Infernal Legacy"]);
+  });
+
+  it("finds a background's one mechanical line", () => {
+    const bg = [
+      { name: "Description", desc: "You served a temple." },
+      { name: "Feature: Shelter of the Faithful", desc: "You command respect." },
+    ];
+    expect(featureOf(bg)?.name).toBe("Feature: Shelter of the Faithful");
+    expect(featureOf([{ name: "Description", desc: "x" }])).toBe(null);
   });
 });

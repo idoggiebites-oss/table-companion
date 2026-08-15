@@ -41,7 +41,8 @@ import {
   castableBy, isClassFeature, levelLabel, toKnown, type KnownSpell,
 } from "../domain/spells.js";
 import {
-  ABILITY_BLURB, abilityName, CLASS_BLURB, describePriority,
+  ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, describePriority,
+  featureOf, mechanicalTraits,
 } from "../domain/guidance.js";
 import {
   indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
@@ -108,6 +109,7 @@ export function CreateCharacter({
   const [raceId, setRaceId] = useState<string>("");
   const [raceFilter, setRaceFilter] = useState("");
   const [whatDo, setWhatDo] = useState(false);
+  const [raceWhat, setRaceWhat] = useState(false);
   const [subraceId, setSubraceId] = useState<string>("");
   const [method, setMethod] = useState<ScoreMethod>("array");
   const [assigned, setAssigned] = useState<Partial<Record<Ability, number>>>({});
@@ -502,6 +504,29 @@ export function CreateCharacter({
             {races.length > 20 && shownRaces.length === 0 && (
               <p className="cr-note">Nothing matches that.</p>
             )}
+            {race && blurbFor(race.id, race.traits) && (
+              <p className="cr-blurb">{blurbFor(race.id, race.traits)}</p>
+            )}
+            {race && mechanicalTraits(race.traits).length > 0 && (
+              <>
+                <button
+                  className="cr-what"
+                  aria-expanded={raceWhat}
+                  onClick={() => setRaceWhat((v) => !v)}
+                >
+                  {raceWhat ? "Hide what this gives you" : "What does this give me?"}
+                </button>
+                {raceWhat && (
+                  <div className="cr-abils-help">
+                    {mechanicalTraits(race.traits).map((t) => (
+                      <p key={t.name}>
+                        <b>{t.name}</b> {t.desc}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
             {race && race.subraces.length > 0 && (
               <select
                 aria-label="Subrace"
@@ -743,6 +768,24 @@ export function CreateCharacter({
                 </select>
               </>
             )}
+            {(() => {
+              const chosen = backgrounds.find((x) => x.id === bgId);
+              const feature = featureOf(chosen?.traits);
+              if (!chosen) return null;
+              return (
+                <>
+                  {blurbFor(chosen.id, chosen.traits, {}) && (
+                    <p className="cr-blurb">{blurbFor(chosen.id, chosen.traits, {})}</p>
+                  )}
+                  {feature && (
+                    <p className="cr-note">
+                      <b>{feature.name}</b> {feature.desc.slice(0, 220)}
+                      {feature.desc.length > 220 ? "…" : ""}
+                    </p>
+                  )}
+                </>
+              );
+            })()}
             <p className="cr-note" style={{ marginTop: backgrounds.length > 0 ? 12 : 0 }}>
               {backgrounds.length > 0
                 ? "Or make one up — two skills and a name is all a background mechanically is."

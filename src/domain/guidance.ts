@@ -29,6 +29,55 @@ export const CLASS_BLURB: Readonly<Record<string, string>> = {
   wizard: "The longest spell list in the game, prepared from a book you carry.",
 };
 
+/** One line on what the race is, for the nine this app ships. */
+export const RACE_BLURB: Readonly<Record<string, string>> = {
+  dragonborn: "Draconic blood, a breath weapon, and everybody notices you walk in.",
+  dwarf: "Tough and steady, hard to poison, and sees in the dark.",
+  elf: "Keen senses, no need to sleep, and hard to charm.",
+  gnome: "Small, clever, and unusually hard to fool with magic.",
+  "half-elf": "At home nowhere and everywhere. Charming, and picks its own strengths.",
+  "half-orc": "Strong, and stays standing when it should not.",
+  halfling: "Small, lucky and brave — hard to frighten, harder to hit.",
+  human: "A little of everything. The easiest to build and the hardest to get wrong.",
+  tiefling: "Infernal blood, resistance to fire, and a little magic of your own.",
+};
+
+/** Flavour the data carries but a builder should not lead with. */
+const NOT_MECHANICAL = /^(description|suggested characteristics|personality|ideal|bond|flaw)/i;
+
+export interface Trait {
+  readonly name: string;
+  readonly desc: string;
+}
+
+/**
+ * One sentence, preferring what is written here and falling back to what the
+ * file says. Two hundred and sixty imported races cannot be hand-written, and
+ * their own description is better than an invented one.
+ */
+export function blurbFor(
+  id: string,
+  traits: readonly Trait[] | undefined,
+  authored: Readonly<Record<string, string>> = RACE_BLURB,
+): string | null {
+  const own = authored[id];
+  if (own) return own;
+  const described = (traits ?? []).find((t) => /^description/i.test(t.name));
+  if (!described) return null;
+  const first = described.desc.split(/(?<=[.!?])\s/)[0]?.trim();
+  return first && first.length > 0 ? first : null;
+}
+
+/** What it actually GIVES you, with the prose left out. */
+export function mechanicalTraits(traits: readonly Trait[] | undefined): Trait[] {
+  return (traits ?? []).filter((t) => t.name && !NOT_MECHANICAL.test(t.name));
+}
+
+/** A background's one mechanical line, which the books mark as "Feature:". */
+export function featureOf(traits: readonly Trait[] | undefined): Trait | null {
+  return (traits ?? []).find((t) => /^feature\b/i.test(t.name)) ?? null;
+}
+
 /** What the score actually changes, in the order it comes up in play. */
 export const ABILITY_BLURB: Readonly<Record<Ability, string>> = {
   str: "Melee attacks and damage, Athletics, shoving and carrying.",

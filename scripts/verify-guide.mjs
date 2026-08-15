@@ -165,6 +165,53 @@ const help = (await b.page.locator(".cr-abils-help").innerText()).toLowerCase();
 ok("asking explains all six", (help.match(/strength|dexterity|constitution|intelligence|wisdom|charisma/g) ?? []).length >= 6, true);
 ok("leading with what they change",
   /hit points/.test(help) && /armour class/.test(help), true);
+// --- races and backgrounds, where there are hundreds ---------------------
+const raceBlurbs = await b.page.locator(".cr-blurb").allInnerTexts();
+ok("a shipped race says what it is",
+  raceBlurbs.some((t) => /little of everything/i.test(t)), true);
+// The SRD human has no traits at all, so there is nothing to offer and the
+// button correctly does not appear. A halfling has three.
+ok("a race with nothing to list offers no list",
+  await b.page.getByRole("button", { name: "What does this give me?" }).count(), 0);
+
+await b.page.locator('input[aria-label="Filter races"]').fill("halfling");
+await b.page.waitForTimeout(500);
+const hf = await b.page.locator('select[aria-label="Race"] option').allInnerTexts();
+await b.page.selectOption('select[aria-label="Race"]', { label: hf[1] });
+await b.page.waitForTimeout(700);
+ok("one with traits offers them, unopened",
+  await b.page.getByRole("button", { name: "What does this give me?" }).count(), 1);
+await b.page.getByRole("button", { name: "What does this give me?" }).click();
+await b.page.waitForTimeout(300);
+const traitText = (await b.page.locator(".cr-abils-help").allInnerTexts()).join(" ");
+ok("listing what the data says, not something invented",
+  /Lucky/.test(traitText) && /Brave/.test(traitText), true);
+
+// An imported race has no hand-written line, and uses its own description.
+await b.page.locator('input[aria-label="Filter races"]').fill("aasimar");
+await b.page.waitForTimeout(500);
+const opts = await b.page.locator('select[aria-label="Race"] option').allInnerTexts();
+if (opts.length > 1) {
+  await b.page.selectOption('select[aria-label="Race"]', { label: opts[1] });
+  await b.page.waitForTimeout(700);
+  const after = (await b.page.locator(".cr-blurb").allInnerTexts()).join(" ");
+  ok("an imported race falls back to its own description",
+    after.length > 0 && !/little of everything/i.test(after), true);
+}
+await b.page.locator('input[aria-label="Filter races"]').fill("human");
+await b.page.waitForTimeout(400);
+const back = await b.page.locator('select[aria-label="Race"] option').allInnerTexts();
+await b.page.selectOption('select[aria-label="Race"]', { label: back[1] });
+await b.page.waitForTimeout(600);
+
+// A background's one mechanical line is the one worth showing.
+await b.page.locator('input[aria-label="Filter backgrounds"]').fill("Acolyte");
+await b.page.waitForTimeout(400);
+await b.page.selectOption('select[aria-label="Background"]', { label: "Acolyte" });
+await b.page.waitForTimeout(700);
+const bgText = (await b.page.locator(".card", { hasText: "Background" }).innerText()).replace(/\s+/g, " ");
+ok("a background shows the feature it grants", /Feature: Shelter of the Faithful/i.test(bgText), true);
+
 await b.page.screenshot({ path: `${OUT}/68-builder-guidance.png`, fullPage: true });
 
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
