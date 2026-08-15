@@ -975,3 +975,6 @@ html, body { overscroll-behavior-y: none; }
   margin: 0 0 7px; font-size: 0.82rem; line-height: 1.5; color: var(--muted);
 }
 .cr-abils-help b { color: var(--ink-dim); font-weight: 500; }
+
+/* ---- picking a spell ---- */
+.sp-meta { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); line-height: 1.5; }

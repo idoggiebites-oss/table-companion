@@ -156,7 +156,7 @@ const closed = await cardHeight();
 await page.getByRole("button", { name: /^Cantrips/ }).click();
 await page.waitForTimeout(500);
 ok("opening one shows only its own kind",
-  (await page.locator(".chooser-list .inv-add .num").allInnerTexts())
+  (await page.locator(".chooser-list .menu-hd .cost").allInnerTexts())
     .every((t) => /cantrip/i.test(t)), true);
 ok("and the card does not grow without limit",
   (await cardHeight()) - closed < 900, true);
@@ -164,7 +164,12 @@ await page.screenshot({ path: `${OUT}/63-choosers.png`, fullPage: true });
 
 await page.locator('input[aria-label="Filter cantrips"]').fill("Fire Bolt");
 await page.waitForTimeout(500);
-await page.locator(".chooser-list .inv-add", { hasText: /^Fire Bolt/i }).first().click();
+// A name is not a choice — open it, read it, then take it.
+await page.locator(".chooser-list .menu-hd", { hasText: /^Fire Bolt/i }).first().click();
+await page.waitForTimeout(300);
+ok("the builder describes a spell before you take it",
+  /Takes 1 action/i.test(await page.locator(".chooser-list .menu-more").innerText()), true);
+await page.getByRole("button", { name: "Take it" }).click();
 await page.waitForTimeout(300);
 
 await page.getByRole("button", { name: /^Spells/ }).click();
@@ -172,11 +177,13 @@ await page.waitForTimeout(500);
 ok("opening the other closes the first",
   await page.locator(".chooser-list").count(), 1);
 ok("and offers no cantrips",
-  (await page.locator(".chooser-list .inv-add .num").allInnerTexts())
+  (await page.locator(".chooser-list .menu-hd .cost").allInnerTexts())
     .some((t) => /cantrip/i.test(t)), false);
 await page.locator('input[aria-label="Filter spells"]').fill("Magic Missile");
 await page.waitForTimeout(500);
-await page.locator(".chooser-list .inv-add", { hasText: /^Magic Missile/i }).first().click();
+await page.locator(".chooser-list .menu-hd", { hasText: /^Magic Missile/i }).first().click();
+await page.waitForTimeout(300);
+await page.getByRole("button", { name: "Take it" }).click();
 await page.waitForTimeout(400);
 ok("choices count against the budget",
   /1 of 3 cantrips · 1 spells/i.test(
@@ -187,7 +194,7 @@ ok("choices count against the budget",
 await page.locator('input[aria-label="Filter spells"]').fill("Fireball");
 await page.waitForTimeout(500);
 ok("nothing above the best slot you have — a tease, not a choice",
-  await page.locator(".chooser-list .inv-add", { hasText: /^Fireball/i }).count(), 0);
+  await page.locator(".chooser-list .menu-hd", { hasText: /^Fireball/i }).count(), 0);
 await page.locator('input[aria-label="Filter spells"]').fill("");
 await page.waitForTimeout(400);
 

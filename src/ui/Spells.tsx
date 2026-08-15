@@ -30,6 +30,7 @@ import type { Combat, Combatant } from "../domain/combat.js";
 import { costOf } from "../domain/spellcast.js";
 import { loadSpells } from "../store/srd.js";
 import { AimSpell } from "./AimSpell.js";
+import { SpellPick } from "./SpellPick.js";
 
 function useSpellbook(when: boolean): CompendiumSpell[] | null {
   const [all, setAll] = useState<CompendiumSpell[] | null>(null);
@@ -214,26 +215,14 @@ export function Spells({
                   </button>
                 )}
                 <div className="inv-find">
-                  {results.map((s) => (
-                    <button
-                      className="inv-add"
-                      key={s.id}
-                      onClick={() => append({ type: "spellLearned", who: build.id, spell: toKnown(s) })}
-                    >
-                      <span className="nm">{s.name}</span>
-                      <span className="num">{s.level === 0 ? "cantrip" : s.level}</span>
-                      <span className="faint">
-                        {[s.school, s.concentration ? "concentration" : "", s.ritual ? "ritual" : ""]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
-                    </button>
-                  ))}
-                  {results.length === 0 && (
-                    <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
-                      Nothing matches.
-                    </p>
-                  )}
+                  {/* Same as the builder: a name is not a choice. */}
+                  <SpellPick
+                    spells={results}
+                    actionLabel="Learn it"
+                    onPick={(sp) =>
+                      append({ type: "spellLearned", who: build.id, spell: toKnown(sp) })
+                    }
+                  />
                 </div>
               </>
             )}

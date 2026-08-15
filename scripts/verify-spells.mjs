@@ -80,7 +80,7 @@ await page.waitForSelector('input[aria-label="Search spells"]', { timeout: 20000
 // Exact: a complete compendium really does give "Mass Cure Wounds" to a UA
 // wizard subclass, so a substring match would be testing the file's contents
 // rather than the filter.
-const exactly = (n) => page.locator(".inv-add .nm").filter({ hasText: new RegExp(`^${n}$`, "i") });
+const exactly = (n) => page.locator(".menu-hd .nm").filter({ hasText: new RegExp(`^${n}$`, "i") });
 await page.locator('input[aria-label="Search spells"]').fill("Cure Wounds");
 await page.waitForTimeout(500);
 ok("a wizard is not offered a cleric's spell", await exactly("Cure Wounds").count(), 0);
@@ -97,14 +97,14 @@ await page.waitForTimeout(500);
 const featureChip = page.locator(".chip", { hasText: /class features filed as spells/i });
 const hasFeatures = (await featureChip.count()) > 0;
 if (hasFeatures) {
-  const shown = (await page.locator(".inv-add .nm").allInnerTexts()).map((t) => t.toLowerCase());
+  const shown = (await page.locator(".menu-hd .nm").allInnerTexts()).map((t) => t.toLowerCase());
   ok("class features are kept out of the spell list",
     shown.some((n) => /^[^:]{1,40}:\s/.test(n)), false);
   ok("but the app says how many it is hiding",
     /\d{3,}/.test(await featureChip.innerText()), true);
   await featureChip.click();
   await page.waitForTimeout(500);
-  const withThem = (await page.locator(".inv-add .nm").allInnerTexts()).map((t) => t.toLowerCase());
+  const withThem = (await page.locator(".menu-hd .nm").allInnerTexts()).map((t) => t.toLowerCase());
   ok("and will show them if asked — they are hidden, not discarded",
     withThem.some((n) => /^[^:]{1,40}:\s/.test(n)), true);
   await featureChip.click();
@@ -115,10 +115,26 @@ if (hasFeatures) {
 
 await page.getByRole("button", { name: "Everything" }).click();
 await page.waitForTimeout(300);
-for (const name of ["Magic Missile", "Fireball", "Fire Bolt", "Haste"]) {
+// A name is not a choice: opening one shows what it does before you take it.
+await page.locator('input[aria-label="Search spells"]').fill("Fire Bolt");
+await page.waitForTimeout(500);
+ok("nothing is described until you point at it",
+  await page.locator(".menu-more").count(), 0);
+await page.locator(".menu-hd", { hasText: /^Fire Bolt/i }).first().click();
+await page.waitForTimeout(300);
+const detail = (await page.locator(".menu-more").innerText()).replace(/\s+/g, " ");
+ok("opening one says what it costs and how far it reaches",
+  /Takes 1 action/i.test(detail) && /Reaches 120 feet/i.test(detail), true);
+ok("and what it actually does", /streak|fire/i.test(detail), true);
+await page.getByRole("button", { name: "Learn it" }).click();
+await page.waitForTimeout(400);
+
+for (const name of ["Magic Missile", "Fireball", "Haste"]) {
   await page.locator('input[aria-label="Search spells"]').fill(name);
   await page.waitForTimeout(400);
-  await page.locator(".inv-add", { hasText: new RegExp(`^${name}`, "i") }).first().click();
+  await page.locator(".menu-hd", { hasText: new RegExp(`^${name}`, "i") }).first().click();
+  await page.waitForTimeout(300);
+  await page.getByRole("button", { name: "Learn it" }).click();
   await page.waitForTimeout(300);
 }
 await page.getByRole("button", { name: "Done" }).click();

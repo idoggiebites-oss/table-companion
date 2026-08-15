@@ -44,6 +44,7 @@ import {
   ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, describePriority,
   featureOf, mechanicalTraits,
 } from "../domain/guidance.js";
+import { SpellPick } from "./SpellPick.js";
 import {
   indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
 } from "../domain/items.js";
@@ -1016,25 +1017,16 @@ export function CreateCharacter({
                             onChange={(e) => setSpellFilter(e.target.value)}
                           />
                           <div className="chooser-list">
-                            {rows.map((sp) => (
-                              <button
-                                className="inv-add"
-                                key={sp.id}
-                                disabled={full}
-                                onClick={() => setChosenSpells([...chosenSpells, toKnown(sp)])}
-                              >
-                                <span className="nm">{sp.name}</span>
-                                <span className="num">
-                                  {sp.level === 0 ? "cantrip" : levelLabel(sp.level).toLowerCase()}
-                                </span>
-                                <span className="faint">{sp.school}</span>
-                              </button>
-                            ))}
-                            {rows.length === 0 && (
-                              <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
-                                Nothing matches.
-                              </p>
-                            )}
+                            {/* Names alone are not a choice: "Faerie Fire"
+                                means nothing to somebody picking their first
+                                cantrips, and the file has carried the
+                                description all along. */}
+                            <SpellPick
+                              spells={rows}
+                              actionLabel="Take it"
+                              {...(full ? { disabled: () => `That is all ${limit}.` } : {})}
+                              onPick={(sp) => setChosenSpells([...chosenSpells, toKnown(sp)])}
+                            />
                           </div>
                           {full && (
                             <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
