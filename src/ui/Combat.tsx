@@ -374,11 +374,13 @@ function InitiativeRow({
 }
 
 export function Combat({
-  state, seat, append,
+  state, seat, append, onCast,
 }: {
   state: CampaignState;
   seat: Seat;
   append: (body: EventBody) => void;
+  /** Sends a player to their spells, where casting lives. */
+  onCast?: () => void;
 }) {
   const [hit, setHit] = useState(5);
   const [area, setArea] = useState(false);
@@ -448,6 +450,8 @@ export function Combat({
           character={state.characters[seat.characterId]!}
           append={append}
           attacks={playerAttacks}
+          canCast={(seatedState?.spells.length ?? 0) > 0}
+          {...(onCast ? { onCast } : {})}
           onSwing={(swing) => {
             // Claimed, not applied: the DM says whether it lands.
             append({

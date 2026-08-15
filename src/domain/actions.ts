@@ -27,6 +27,8 @@ export interface StandardAction {
   readonly then?: string;
   /** Shown only when it is likely to be relevant. */
   readonly whenArmed?: boolean;
+  /** Only for someone who has spells; the rest should not be taught them. */
+  readonly whenCaster?: boolean;
 }
 
 export const STANDARD_ACTIONS: readonly StandardAction[] = [
@@ -36,6 +38,14 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
     cost: "action",
     what: "Swing at something, or shoot it.",
     whenArmed: true,
+  },
+  {
+    id: "cast",
+    name: "Cast a spell",
+    cost: "action",
+    what: "Most spells cost your action. A few are a bonus action, and the list says which.",
+    then: "Opens your spells.",
+    whenCaster: true,
   },
   {
     id: "dodge",
@@ -115,8 +125,10 @@ export function blockedBecause(
   action: StandardAction,
   spent: Readonly<Record<EconomyKind, boolean>>,
   armed: boolean,
+  caster = false,
 ): string | null {
   if (action.whenArmed && !armed) return "Nothing in your hands — equip a weapon under Gear.";
+  if (action.whenCaster && !caster) return "You have no spells.";
   if (spent[action.cost]) {
     return action.cost === "action"
       ? "Your action is gone this turn."

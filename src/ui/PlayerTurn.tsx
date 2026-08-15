@@ -99,7 +99,7 @@ function Movement({
 }
 
 export function PlayerTurn({
-  combat, seat, character, append, attacks = [], onSwing,
+  combat, seat, character, append, attacks = [], onSwing, canCast = false, onCast,
 }: {
   combat: Combat;
   seat: Extract<Seat, { kind: "player" }>;
@@ -113,6 +113,10 @@ export function PlayerTurn({
     toHit: number;
     damage: number;
   }) => void;
+  /** Whether they have any spells at all. */
+  canCast?: boolean;
+  /** Takes them to the spell list, which is where casting lives. */
+  onCast?: () => void;
 }) {
   const [picking, setPicking] = useState<null | "attack" | "opportunity" | "menu">(null);
   const [took, setTook] = useState<string | null>(null);
@@ -155,7 +159,7 @@ export function PlayerTurn({
                   * to fit on the screen for the menu to be the teaching.
                   */}
                 {STANDARD_ACTIONS.map((a) => {
-                  const why = blockedBecause(a, character.economy, attacks.length > 0);
+                  const why = blockedBecause(a, character.economy, attacks.length > 0, canCast);
                   const shown = looking === a.id;
                   return (
                     <div className={`menu-row${why ? " off" : ""}`} key={a.id}>
@@ -177,6 +181,12 @@ export function PlayerTurn({
                               className="menu-take"
                               onClick={() => {
                                 if (a.id === "attack") return setPicking("attack");
+                                // Casting has its own screen; the menu's job
+                                // is to say it exists and take you there.
+                                if (a.id === "cast") {
+                                  setPicking(null);
+                                  return onCast?.();
+                                }
                                 append({ type: "economySpent", who, kind: a.cost });
                                 if (a.id === "dash" && self?.speed) {
                                   append({

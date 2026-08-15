@@ -351,7 +351,12 @@ export function App() {
         <>
           {/* The fight is always the first tab, on both sides. */}
           {current === "fight" && (
-            <Combat state={state} seat={seat} append={append} />
+            <Combat
+              state={state}
+              seat={seat}
+              append={append}
+              onCast={() => setTab("spells")}
+            />
           )}
 
           {dmView ? (

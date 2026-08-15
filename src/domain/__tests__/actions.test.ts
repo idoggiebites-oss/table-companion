@@ -28,9 +28,30 @@ describe("the menu", () => {
   });
 });
 
+describe("casting", () => {
+  const cast = STANDARD_ACTIONS.find((a) => a.id === "cast")!;
+
+  it("is on the menu, because it is the option a caster cannot otherwise see", () => {
+    // Spells live on their own tab; a new caster had no signal from their turn
+    // that casting was even a thing they could do.
+    expect(cast).toBeDefined();
+    expect(cast.cost).toBe("action");
+  });
+
+  it("says that the cost varies rather than pretending it does not", () => {
+    expect(cast.what).toMatch(/bonus action/i);
+  });
+
+  it("is not offered to somebody with no spells", () => {
+    expect(blockedBecause(cast, spent(), true, false)).toBe("You have no spells.");
+    expect(blockedBecause(cast, spent(), true, true)).toBe(null);
+  });
+});
+
 describe("why something cannot be taken", () => {
   it("says so rather than just greying out", () => {
-    expect(blockedBecause(STANDARD_ACTIONS[1]!, spent({ action: true }), true))
+    const dodge = STANDARD_ACTIONS.find((a) => a.id === "dodge")!;
+    expect(blockedBecause(dodge, spent({ action: true }), true))
       .toBe("Your action is gone this turn.");
   });
 
@@ -45,7 +66,8 @@ describe("why something cannot be taken", () => {
   });
 
   it("allows what is allowed", () => {
-    expect(blockedBecause(STANDARD_ACTIONS[1]!, spent(), true)).toBe(null);
+    expect(blockedBecause(STANDARD_ACTIONS.find((a) => a.id === "dodge")!, spent(), true))
+      .toBe(null);
   });
 
   it("does not require a weapon for the ones that need none", () => {

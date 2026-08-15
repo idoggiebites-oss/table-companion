@@ -202,7 +202,21 @@ await page.waitForTimeout(900);
 await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
 await page.waitForTimeout(700);
 
-await go(page, "spells");
+// Casting lives on its own tab, so the turn menu has to say it exists —
+// otherwise a new caster's turn offers them only a weapon they may not have.
+await go(page, "fight");
+await page.getByRole("button", { name: "What else can I do?" }).click();
+await page.waitForSelector(".menu-row");
+ok("the turn menu offers casting",
+  (await page.locator(".menu-hd .nm").allInnerTexts()).some((t) => /cast a spell/i.test(t)), true);
+await page.locator(".menu-hd", { hasText: /Cast a spell/i }).click();
+await page.waitForTimeout(300);
+ok("and says the cost varies rather than pretending it does not",
+  /bonus action/i.test(await page.locator(".menu-more .what").innerText()), true);
+await page.getByRole("button", { name: "Do it" }).click();
+await page.waitForTimeout(600);
+ok("taking it goes to the spells", await page.locator('[data-tab="spells"].on').count(), 1);
+
 await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
 await page.waitForTimeout(600);
 ok("casting in a fight asks what to aim at",
