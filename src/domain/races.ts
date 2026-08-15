@@ -30,6 +30,8 @@ export interface RaceLike {
     readonly name: string;
     readonly abilityBonuses: Readonly<Record<string, number>>;
   }[];
+  /** Set on anything that did not ship with the app. */
+  readonly extra?: true;
 }
 
 const slug = (s: string): string =>
@@ -136,9 +138,11 @@ export function consolidateRaces(
     return cut.length > 0 ? cut : label;
   };
 
-  // Merge with what was already shaped, by base id.
+  // Merge with what was already shaped, by base id. Anything only the
+  // compendium knows is marked, so the builder can lead with the familiar
+  // nine instead of burying Human under six hundred alternatives.
   const out = new Map<string, RaceLike>();
-  for (const race of folded) out.set(race.id, race);
+  for (const race of folded) out.set(race.id, { ...race, extra: true });
   for (const race of shaped) {
     const existing = out.get(race.id);
     if (!existing) {
@@ -157,5 +161,11 @@ export function consolidateRaces(
       ],
     });
   }
-  return [...out.values()].sort((a, b) => a.name.localeCompare(b.name));
+  // Shipped first, each half alphabetical within itself.
+  const byName = (a: RaceLike, b: RaceLike) => a.name.localeCompare(b.name);
+  const all = [...out.values()];
+  return [
+    ...all.filter((r) => !r.extra).sort(byName),
+    ...all.filter((r) => r.extra).sort(byName),
+  ];
 }

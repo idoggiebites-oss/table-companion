@@ -29,6 +29,8 @@ export interface RaceEntry {
     readonly name: string;
     readonly abilityBonuses: Readonly<Record<string, number>>;
   }[];
+  /** Set on anything that did not ship with the app. */
+  readonly extra?: true;
 }
 
 import type { Item } from "../domain/items.js";
@@ -61,6 +63,12 @@ export interface ClassEntry {
   readonly equipmentChoices: readonly string[];
   /** Compendium classes only: starting wealth, where there is no kit. */
   readonly wealth?: string;
+  /**
+   * Set on anything that did not ship with the app. The builder puts the
+   * twelve familiar classes first — alphabetical order buried Fighter under
+   * a wall of "Auxiliary Level: …" entries nobody was looking for.
+   */
+  readonly extra?: true;
   readonly spellcasting?: {
     readonly ability?: string;
     readonly cantrips: number;
@@ -159,10 +167,15 @@ export function loadClasses(): Promise<ClassEntry[]> {
     ),
   ]).then(([srd, extra]) => {
     const have = new Set(srd.map((c) => c.id));
+    const byName = (a: ClassEntry, b: ClassEntry) => a.name.localeCompare(b.name);
+    // Shipped first, each half alphabetical within itself.
     return [
-      ...srd,
-      ...extra.filter((c) => !have.has(c.id)).map((c) => deriveClass(c) as ClassEntry),
-    ].sort((a, b) => a.name.localeCompare(b.name));
+      ...[...srd].sort(byName),
+      ...extra
+        .filter((c) => !have.has(c.id))
+        .map((c) => ({ ...deriveClass(c), extra: true }) as ClassEntry)
+        .sort(byName),
+    ];
   });
   return classes;
 }

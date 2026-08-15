@@ -45,6 +45,18 @@ await page.waitForTimeout(1200);
 // and the SRD entry has to win, because only it carries a starting kit.
 const classNames = (await page.locator('select[aria-label="Class"] option').allInnerTexts()).slice(1);
 ok("compendium classes are offered", classNames.length > 50, true);
+
+// Alphabetical order buried Fighter under a wall of "Auxiliary Level: …".
+const classGroups = await page
+  .locator('select[aria-label="Class"] optgroup')
+  .evaluateAll((g) => g.map((x) => x.label));
+ok("the familiar classes are grouped first", classGroups[0], "Core");
+const core = await page
+  .locator('select[aria-label="Class"] optgroup')
+  .first().locator("option").allInnerTexts();
+ok("and it is the twelve of them", core.length, 12);
+ok("in alphabetical order", core[0], "Barbarian");
+ok("with the rest below", classGroups[1], "From your compendium");
 ok("and none is listed twice",
   new Set(classNames.map((n) => n.toLowerCase())).size, classNames.length);
 ok("the SRD twelve appear once each",
@@ -97,6 +109,23 @@ await page.locator('input[aria-label="Filter races"]').fill("");
 await page.waitForTimeout(400);
 ok("and the list is filterable, being long",
   await page.locator('input[aria-label="Filter races"]').count(), 1);
+
+const raceCore = await page
+  .locator('select[aria-label="Race"] optgroup')
+  .first().locator("option").allInnerTexts();
+ok("races lead with the familiar nine", raceCore.length, 9);
+ok("starting where the book does", raceCore[0], "Dragonborn");
+
+// Filtering has to keep the split, or narrowing throws you back into one
+// long list at the moment you were trying to narrow it.
+await page.locator('input[aria-label="Filter races"]').fill("elf");
+await page.waitForTimeout(500);
+const split = await page
+  .locator('select[aria-label="Race"] optgroup')
+  .evaluateAll((g) => g.map((x) => x.label));
+ok("and the grouping survives a filter", split, ["Core", "From your compendium"]);
+await page.locator('input[aria-label="Filter races"]').fill("");
+await page.waitForTimeout(300);
 
 await page.locator('input[aria-label="Filter races"]').fill("tiefling");
 await page.waitForTimeout(400);

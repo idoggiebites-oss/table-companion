@@ -353,9 +353,26 @@ export function CreateCharacter({
               onChange={(e) => { setClassId(e.target.value); setClassSkills([]); }}
             >
               <option value="">choose a class…</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {/* Grouped rather than merely ordered: with sixty-odd classes a
+                  flat list gives no sign of where the familiar ones end. */}
+              {classes.some((c) => c.extra) ? (
+                <>
+                  <optgroup label="Core">
+                    {classes.filter((c) => !c.extra).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="From your compendium">
+                    {classes.filter((c) => c.extra).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </optgroup>
+                </>
+              ) : (
+                classes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))
+              )}
             </select>
 
             {klass && (
@@ -430,9 +447,24 @@ export function CreateCharacter({
               }}
             >
               <option value="">choose a race…</option>
-              {shownRaces.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
+              {shownRaces.some((r) => r.extra) && shownRaces.some((r) => !r.extra) ? (
+                <>
+                  <optgroup label="Core">
+                    {shownRaces.filter((r) => !r.extra).map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="From your compendium">
+                    {shownRaces.filter((r) => r.extra).map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </optgroup>
+                </>
+              ) : (
+                shownRaces.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))
+              )}
             </select>
             {races.length > 20 && shownRaces.length === 0 && (
               <p className="cr-note">Nothing matches that.</p>
