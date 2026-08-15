@@ -42,7 +42,23 @@ await page.selectOption('select[aria-label="Class"]', "wizard");
 await page.waitForTimeout(900);
 
 const races = (await page.locator('select[aria-label="Race"] option').count()) - 1;
-ok("races arrive without importing anything", races > 500, true);
+ok("races arrive without importing anything", races > 200, true);
+
+// A compendium lists "Halfling, Lightfoot" as its own race where the SRD
+// nests it. Both lists together used to offer Halfling AND both of its
+// subraces as three separate ways to pick the same person.
+await page.locator('input[aria-label="Filter races"]').fill("halfling");
+await page.waitForTimeout(500);
+const halflings = (await page.locator('select[aria-label="Race"] option').allInnerTexts()).slice(1);
+ok("a race with variants appears exactly once", halflings, ["Halfling"]);
+await page.selectOption('select[aria-label="Race"]', { label: "Halfling" });
+await page.waitForTimeout(600);
+const subs = await page.locator('select[aria-label="Subrace"] option').allInnerTexts();
+ok("its variants became subraces", subs.length > 5, true);
+ok("named without repeating the race", subs.some((t) => /halfling/i.test(t)), false);
+ok("and listed once each", new Set(subs.map((t) => t.toLowerCase())).size, subs.length);
+await page.locator('input[aria-label="Filter races"]').fill("");
+await page.waitForTimeout(400);
 ok("and the list is filterable, being long",
   await page.locator('input[aria-label="Filter races"]').count(), 1);
 

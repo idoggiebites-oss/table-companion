@@ -42,8 +42,10 @@ const raceCount = async () => (await page.locator('select[aria-label="Race"] opt
 // rather than a number that depends on how the deployment was made.
 const before = await raceCount();
 const shipped = (await (await fetch(new global.URL("/content/index.json", URL))).status) === 200;
+// Consolidated, so 605 flat compendium entries become ~269 races with
+// subraces rather than 605 top-level ones.
 ok(shipped ? "a shipped compendium is already in the list" : "the SRD list is nine long",
-  shipped ? before > 500 : before === 9, true);
+  shipped ? before > 200 : before === 9, true);
 await page.getByRole("button", { name: "Cancel" }).click();
 await page.waitForTimeout(400);
 
@@ -63,7 +65,7 @@ await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
 await page.selectOption('select[aria-label="Class"]', "fighter");
 await page.waitForTimeout(500);
 
-ok("imported races reach the builder", (await raceCount()) > 500, true);
+ok("imported races reach the builder", (await raceCount()) > 200, true);
 ok("and a list that long gets a filter",
   await page.locator('input[aria-label="Filter races"]').count(), 1);
 await page.locator('input[aria-label="Filter races"]').fill("aasimar");

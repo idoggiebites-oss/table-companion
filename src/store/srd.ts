@@ -33,6 +33,7 @@ export interface RaceEntry {
 
 import type { Item } from "../domain/items.js";
 import type { CompendiumSpell } from "../import/compendium.js";
+import { consolidateRaces } from "../domain/races.js";
 import { loadBundled } from "./bundled.js";
 import { mergeById, readContent } from "./content.js";
 
@@ -96,23 +97,20 @@ export function loadRaces(): Promise<RaceEntry[]> {
       ([shipped, mine]) => [...shipped, ...mine],
     ),
   ]).then(([srd, imported]) =>
-    // A compendium race has traits and no subraces — it lists "Elf, Wood" as
-    // its own entry rather than nesting. Mapped into the shipped shape so the
-    // builder does not need to know which list a race came from.
-    mergeById(
+    // A compendium lists "Halfling, Lightfoot" as its own race, where the SRD
+    // nests it as a subrace. Folded together so the same person appears once,
+    // with the second dropdown the builder already has.
+    consolidateRaces(
       srd,
-      imported.map(
-        (r): RaceEntry => ({
-          id: r.id,
-          name: r.name,
-          size: r.size,
-          speed: r.speed,
-          abilityBonuses: r.abilityBonuses,
-          traits: r.traits.map((t) => ({ name: t.name, desc: t.text })),
-          subraces: [],
-        }),
-      ),
-    ),
+      imported.map((r) => ({
+        id: r.id,
+        name: r.name,
+        size: r.size,
+        speed: r.speed,
+        abilityBonuses: r.abilityBonuses,
+        traits: r.traits.map((t) => ({ name: t.name, desc: t.text })),
+      })),
+    ) as RaceEntry[],
   );
   return races;
 }
