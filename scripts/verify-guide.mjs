@@ -129,6 +129,44 @@ ok("and the rest now say why they cannot be taken",
   /your action is gone/i.test(await p1.page.locator(".menu-more .what").innerText()), true);
 ok("with no way to take them", await p1.page.getByRole("button", { name: "Do it" }).count(), 0);
 
+// --- the building half ----------------------------------------------------
+// "d10 hit die · saves in STR and DEX" tells a returning player what they
+// need and a new one nothing at all.
+const b = await device("builder");
+await b.page.getByRole("button", { name: "Build a character" }).click();
+await b.page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
+ok("nothing is explained before a class is chosen",
+  await b.page.locator(".cr-blurb").count(), 0);
+
+await b.page.selectOption('select[aria-label="Class"]', "fighter");
+await b.page.waitForTimeout(700);
+const blurb = await b.page.locator(".cr-blurb").first().innerText();
+ok("choosing one says what it is LIKE to play",
+  /hit things|simplest place to start/i.test(blurb), true);
+ok("and keeps the mechanical line underneath",
+  /d10 hit die/i.test(await b.page.locator(".cr-note").first().innerText()), true);
+
+await b.page.locator('input[aria-label="Filter races"]').fill("human");
+await b.page.waitForTimeout(400);
+const ro = await b.page.locator('select[aria-label="Race"] option').allInnerTexts();
+await b.page.selectOption('select[aria-label="Race"]', { label: ro[1] });
+await b.page.waitForTimeout(800);
+
+const advice = (await b.page.locator(".cr-blurb").allInnerTexts()).join(" ");
+ok("and which scores matter for it", /Strength and Constitution matter most/i.test(advice), true);
+
+// Concise by default: six explanations at once is the wall of text the turn
+// menu had to be rescued from.
+ok("the abilities are not explained until asked",
+  await b.page.locator(".cr-abils-help").count(), 0);
+await b.page.getByRole("button", { name: "What do these do?" }).click();
+await b.page.waitForTimeout(300);
+const help = (await b.page.locator(".cr-abils-help").innerText()).toLowerCase();
+ok("asking explains all six", (help.match(/strength|dexterity|constitution|intelligence|wisdom|charisma/g) ?? []).length >= 6, true);
+ok("leading with what they change",
+  /hit points/.test(help) && /armour class/.test(help), true);
+await b.page.screenshot({ path: `${OUT}/68-builder-guidance.png`, fullPage: true });
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

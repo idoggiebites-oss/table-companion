@@ -41,6 +41,9 @@ import {
   castableBy, isClassFeature, levelLabel, toKnown, type KnownSpell,
 } from "../domain/spells.js";
 import {
+  ABILITY_BLURB, abilityName, CLASS_BLURB, describePriority,
+} from "../domain/guidance.js";
+import {
   indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
 } from "../domain/items.js";
 import { formatCoins } from "../domain/money.js";
@@ -104,6 +107,7 @@ export function CreateCharacter({
   const [classSkills, setClassSkills] = useState<SkillId[]>([]);
   const [raceId, setRaceId] = useState<string>("");
   const [raceFilter, setRaceFilter] = useState("");
+  const [whatDo, setWhatDo] = useState(false);
   const [subraceId, setSubraceId] = useState<string>("");
   const [method, setMethod] = useState<ScoreMethod>("array");
   const [assigned, setAssigned] = useState<Partial<Record<Ability, number>>>({});
@@ -417,6 +421,9 @@ export function CreateCharacter({
                     </span>
                   )}
                 </div>
+                {CLASS_BLURB[klass.id] && (
+                  <p className="cr-blurb">{CLASS_BLURB[klass.id]}</p>
+                )}
                 <p className="cr-note">
                   d{klass.hitDie} hit die · saves in{" "}
                   {klass.saves.map((s) => s.toUpperCase()).join(" and ")}
@@ -527,6 +534,32 @@ export function CreateCharacter({
                 </button>
               ))}
             </span>
+          </div>
+
+          {klass && describePriority(klass.name, PRIORITY[klass.id as ClassId]) && (
+            <p className="cr-blurb" style={{ padding: "0 16px" }}>
+              {describePriority(klass.name, PRIORITY[klass.id as ClassId])}
+            </p>
+          )}
+          {/* On request, not by default: six explanations at once is the wall
+              of text the turn menu already had to be rescued from. */}
+          <div style={{ padding: "0 16px" }}>
+            <button
+              className="cr-what"
+              aria-expanded={whatDo}
+              onClick={() => setWhatDo((v) => !v)}
+            >
+              {whatDo ? "Hide what these do" : "What do these do?"}
+            </button>
+            {whatDo && (
+              <div className="cr-abils-help">
+                {ABILITIES.map((a) => (
+                  <p key={a}>
+                    <b>{abilityName(a)}</b> {ABILITY_BLURB[a]}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="cr-scores">

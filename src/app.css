@@ -961,3 +961,17 @@ html, body { overscroll-behavior-y: none; }
 /* Owed now, so it is edged like the concentration alarm rather than filed. */
 .ask-mine { border-color: var(--edge); }
 .ask-mine.done { opacity: 0.7; }
+
+/* ---- builder guidance ---- */
+/* What it is LIKE to play, above what die it uses. */
+.cr-blurb {
+  margin: 8px 0 0; font-size: 0.88rem; line-height: 1.5; color: var(--ink-dim);
+}
+.cr-what {
+  margin-top: 10px; padding: 7px 11px; font-size: 0.62rem;
+}
+.cr-abils-help { margin-top: 10px; }
+.cr-abils-help p {
+  margin: 0 0 7px; font-size: 0.82rem; line-height: 1.5; color: var(--muted);
+}
+.cr-abils-help b { color: var(--ink-dim); font-weight: 500; }
