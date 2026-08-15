@@ -478,7 +478,13 @@ export function App() {
             <span className="label faint">{log.length} events</span>
           </div>
           <div className="card-body">
-            <Feed log={log} builds={state.builds} reverted={reverted} onRevert={revert} />
+            <Feed
+              log={log}
+              builds={state.builds}
+              reverted={reverted}
+              onRevert={revert}
+              seat={seat}
+            />
           </div>
         </section>
       )}

@@ -116,6 +116,31 @@ ok("undo cleared the save on the player", await player.page.locator(".alarm").co
 ok("undo restored the hit points",
   (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "44 / 52");
 
+// --- what the player's log may say ---------------------------------------
+// The log is the same on every device, which was quietly taken to mean
+// everyone READS the same events — and a player's screen was printing the
+// DM's prep, which undoes the disclosure ladder from behind.
+await go(dm.page, "prep");
+await dm.page.getByRole("button", { name: "Add someone" }).click();
+await dm.page.locator('input[aria-label="NPC name"]').fill("Halbrek the Traitor");
+await dm.page.getByRole("button", { name: "Save", exact: true }).click();
+await dm.page.waitForTimeout(1400);
+
+await go(player.page, "log");
+const playerLog = (await player.page.locator(".feed").innerText()).replace(/\s+/g, " ");
+ok("a player does not read the DM's prep", /Halbrek/i.test(playerLog), false);
+await go(dm.page, "log");
+ok("but the DM does",
+  /Halbrek/i.test((await dm.page.locator(".feed").innerText())), true);
+
+// And cannot take back what they did not do.
+const dmRow = player.page.locator(".fr", { hasText: /took 12/i }).first();
+ok("a player cannot undo the DM's action",
+  await dmRow.getByRole("button", { name: /Undo/i }).count(), 0);
+const own = player.page.locator(".fr", { hasText: /healed 4/i }).first();
+ok("but can undo their own",
+  await own.getByRole("button", { name: /Undo/i }).count(), 1);
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

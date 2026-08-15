@@ -15,6 +15,8 @@ import { describeBoon } from "../domain/boons.js";
 import { formatCoins } from "../domain/money.js";
 import { levelLabel } from "../domain/spells.js";
 import { describeRoll, resolveRoll } from "../domain/roll.js";
+import type { Seat } from "../domain/combat.js";
+import { mayRevert, visibleInLog } from "../domain/visibility.js";
 
 const time = (at: number) =>
   new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -175,12 +177,14 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
 }
 
 export function Feed({
-  log, builds, reverted, onRevert,
+  log, builds, reverted, onRevert, seat,
 }: {
   log: readonly DomainEvent[];
   builds: Readonly<Record<string, EffectiveBuild>>;
   reverted: ReadonlySet<string>;
   onRevert: (id: string) => void;
+  /** Decides what this screen may say, and what it may take back. */
+  seat: Seat;
 }) {
   const nameOf = (id: string) => builds[id]?.name ?? "Someone";
   /**
@@ -193,7 +197,14 @@ export function Feed({
     if (subject !== null && subject === e.by) return null;
     return e.by === DM_ACTOR ? "DM" : (builds[e.by]?.name ?? null);
   };
-  const rows = [...log].reverse().filter((e) => e.type !== "reverted");
+  /*
+   * The log is the same on every device — that is what makes undo work — but
+   * that was quietly taken to mean everyone READS the same events, and a
+   * player's screen was printing the DM's prep. See visibility.ts.
+   */
+  const rows = [...log]
+    .reverse()
+    .filter((e) => e.type !== "reverted" && visibleInLog(e, seat));
 
   if (rows.length === 0) {
     return <p className="faint">Nothing has happened yet.</p>;
@@ -212,7 +223,7 @@ export function Feed({
               {text}
               {signedBy(e) && <> <span className="by">{signedBy(e)}</span></>}
             </span>
-            {isRevertible(e) && (
+            {isRevertible(e) && mayRevert(e, seat) && (
               <button onClick={() => onRevert(e.id)} disabled={undone}>
                 {undone ? "Undone" : "Undo"}
               </button>
