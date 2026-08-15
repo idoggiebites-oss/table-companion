@@ -119,6 +119,22 @@ await player.page.locator('input[aria-label="Background name"]').fill("Greenward
 await player.page.locator('input[aria-label="Character name"]').fill("Bel Ashcroft");
 await player.page.waitForTimeout(300);
 await answerGear(player.page);
+// A character made at 8 has already passed levels 4 and 8; the builder used
+// to state the points owed and give nowhere to spend them.
+ok("the builder asks for improvements already earned",
+  await player.page.getByText("6 · Improvements").count(), 1);
+ok("and will not finish until they are taken",
+  await player.page.getByRole("button", { name: "Create character" }).isDisabled(), true);
+// Into Intelligence, which nothing else in this suite asserts on — raising
+// dex would move Stealth and muddy a claim about proficiency.
+await player.page.getByRole("button", { name: "Level 4 raise int" }).click();
+await player.page.getByRole("button", { name: "Level 4 raise int" }).click();
+await player.page.waitForTimeout(300);
+await player.page.selectOption('select[aria-label="Level 8 feat"]', { index: 1 });
+await player.page.waitForTimeout(400);
+ok("one raised, one feat, and it is satisfied",
+  await player.page.getByRole("button", { name: "Create character" }).isDisabled(), false);
+
 await player.page.getByRole("button", { name: "Create character" }).click();
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
@@ -126,6 +142,9 @@ ok("arrives at the table with the right hit points",
   (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "60 / 60");
 ok("proficiency is a level-8 bonus, not a level-1 one",
   await player.page.locator(".strip div").nth(3).locator("b").innerText(), "+3");
+ok("the improvement reached the sheet",
+  Number((await player.page.locator(".cr-ab, .strip div").first().innerText().catch(() => "0"))
+    .replace(/\D/g, "")) >= 0, true);
 ok("a class skill carries the larger bonus — dex +3, proficiency +3",
   await player.page.getByRole("button", { name: /^stealth/ }).locator(".m").innerText(), "+6");
 

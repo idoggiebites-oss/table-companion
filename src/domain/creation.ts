@@ -13,7 +13,9 @@
  * outright, which is both legally clean and what experienced players want.
  */
 
-import { ABILITIES, abilityModifier, type Ability, type SkillId } from "./abilities.js";
+import {
+  ABILITIES, abilityModifier, type Ability, type AbilityScores, type SkillId,
+} from "./abilities.js";
 import type { BuildBase } from "./build.js";
 import type { ClassId, DieSize } from "./resources.js";
 
@@ -51,6 +53,15 @@ export interface CreationChoices {
   readonly hpRolls?: readonly number[];
   /** Spell slots at this level, from the class table. */
   readonly spellSlots?: readonly number[];
+  /**
+   * Improvements already earned by starting above level 1. A character made
+   * at 8 has passed 4 and 8 and should arrive with both spent — the builder
+   * was stating the points owed and giving nowhere to spend them.
+   */
+  readonly improvements?: readonly {
+    readonly abilities?: Partial<Record<Ability, number>>;
+    readonly feat?: { readonly id: string; readonly name: string };
+  }[];
   readonly race: RaceChoice;
   readonly klass: ClassChoice;
   readonly background: BackgroundChoice;
@@ -114,8 +125,26 @@ export function asiPoints(asiLevels: readonly number[], level: number): number {
   return asiLevels.filter((l) => l <= level).length * 2;
 }
 
+/** Racial bonuses first, then anything earned on the way up, capped at 20. */
+export function withImprovements(
+  scores: AbilityScores,
+  improvements: CreationChoices["improvements"],
+): AbilityScores {
+  let out = scores;
+  for (const step of improvements ?? []) {
+    if (!step.abilities) continue;
+    out = Object.fromEntries(
+      ABILITIES.map((a) => [a, Math.min(20, out[a] + (step.abilities?.[a] ?? 0))]),
+    ) as AbilityScores;
+  }
+  return out;
+}
+
 export function assemble(choices: CreationChoices, id = `c${Date.now().toString(36)}`): BuildBase {
-  const abilities = finalScores(choices.baseScores, choices.race);
+  const abilities = withImprovements(
+    finalScores(choices.baseScores, choices.race),
+    choices.improvements,
+  );
   const conMod = abilityModifier(abilities.con);
   const dexMod = abilityModifier(abilities.dex);
 
@@ -139,6 +168,12 @@ export function assemble(choices: CreationChoices, id = `c${Date.now().toString(
     hitDie: choices.klass.hitDie,
     armourClass: choices.armourClass ?? 10 + dexMod,
     speed: choices.race.speed,
+    ...(( choices.improvements ?? []).some((i) => i.feat)
+      ? {
+          feats: (choices.improvements ?? [])
+            .flatMap((i) => (i.feat ? [i.feat] : [])),
+        }
+      : {}),
     saveProficiencies: choices.klass.saves,
     skillProficiencies: skills,
     spellSlots: choices.spellSlots ?? choices.klass.spellSlots,

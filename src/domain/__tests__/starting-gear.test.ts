@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { indexItems, type Item } from "../items.js";
+import { assemble } from "../creation.js";
 import { formatCoins } from "../money.js";
 import { averageWealth, describeWealth, rollWealth } from "../non-srd.js";
 import { findItem, parseChoice, parseFixed, resolvePhrase, toStack } from "../starting-gear.js";
@@ -145,5 +146,54 @@ describe("starting wealth, for the buy-your-own route", () => {
 
   it("gives nothing for a class it does not know", () => {
     expect(averageWealth("bard-of-the-void")).toBe(0);
+  });
+});
+
+describe("improvements earned before the first session", () => {
+  const base = {
+    name: "Bel",
+    race: { id: "human", name: "Human", speed: 30, abilityBonuses: {} },
+    klass: { id: "fighter" as const, name: "Fighter", hitDie: 10 as const, saves: [], spellSlots: [] },
+    background: { name: "Soldier", skills: [], tools: [] },
+    baseScores: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 },
+    classSkills: [],
+  };
+
+  it("applies what a character made above level 1 has already earned", () => {
+    // A fighter built at 8 has passed 4, 6 and 8 — the builder was stating
+    // the points owed and giving nowhere to spend them.
+    const b = assemble({ ...base, level: 8, improvements: [{ abilities: { str: 2 } }] });
+    expect(b.abilities.str).toBe(17);
+  });
+
+  it("stacks several", () => {
+    const b = assemble({
+      ...base, level: 8,
+      improvements: [{ abilities: { str: 2 } }, { abilities: { con: 1, dex: 1 } }],
+    });
+    expect([b.abilities.str, b.abilities.con, b.abilities.dex]).toEqual([17, 14, 15]);
+  });
+
+  it("stops at 20", () => {
+    const b = assemble({
+      ...base, level: 12, baseScores: { ...base.baseScores, str: 19 },
+      improvements: [{ abilities: { str: 2 } }, { abilities: { str: 2 } }],
+    });
+    expect(b.abilities.str).toBe(20);
+  });
+
+  it("records a feat taken instead", () => {
+    const b = assemble({
+      ...base, level: 8,
+      improvements: [{ feat: { id: "alert", name: "Alert" } }],
+    });
+    expect(b.feats).toEqual([{ id: "alert", name: "Alert" }]);
+    expect(b.abilities.str).toBe(15);
+  });
+
+  it("adds nothing when the character starts at 1", () => {
+    const b = assemble({ ...base, level: 1 });
+    expect(b.abilities.str).toBe(15);
+    expect(b.feats).toBeUndefined();
   });
 });

@@ -32,8 +32,8 @@ import {
 } from "../domain/non-srd.js";
 import type { ClassId, DieSize } from "../domain/resources.js";
 import {
-  loadBackgrounds, loadClasses, loadClassLevels, loadEquipment, loadRaces,
-  loadSpells,
+  loadBackgrounds, loadClasses, loadClassLevels, loadEquipment, loadFeats,
+  loadRaces, loadSpells,
   type BackgroundEntry, type ClassEntry, type ClassLevels, type RaceEntry,
 } from "../store/srd.js";
 import type { CompendiumSpell } from "../import/compendium.js";
@@ -45,6 +45,7 @@ import {
   featureOf, mechanicalTraits,
 } from "../domain/guidance.js";
 import { SpellPick } from "./SpellPick.js";
+import type { CompendiumFeat } from "../import/compendium.js";
 import {
   indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
 } from "../domain/items.js";
@@ -111,6 +112,11 @@ export function CreateCharacter({
   const [raceFilter, setRaceFilter] = useState("");
   const [whatDo, setWhatDo] = useState(false);
   const [raceWhat, setRaceWhat] = useState(false);
+  const [improvements, setImprovements] = useState<
+    Record<number, { abilities?: Partial<Record<Ability, number>>; feat?: { id: string; name: string } }>
+  >({});
+  const [featList, setFeatList] = useState<CompendiumFeat[]>([]);
+  const [featFilter, setFeatFilter] = useState("");
   const [subraceId, setSubraceId] = useState<string>("");
   const [method, setMethod] = useState<ScoreMethod>("array");
   const [assigned, setAssigned] = useState<Partial<Record<Ability, number>>>({});
@@ -131,6 +137,7 @@ export function CreateCharacter({
     loadEquipment().then(setGear, () => setGear([]));
     loadBackgrounds().then(setBackgrounds, () => setBackgrounds([]));
     loadSpells().then(setBook, () => setBook([]));
+    loadFeats().then(setFeatList, () => setFeatList([]));
   }, []);
 
   /** Keeps the chosen race listed even when it falls out of the filter. */
@@ -296,6 +303,16 @@ export function CreateCharacter({
       .slice(0, 80);
   }, [book, klass, castsAtAll, spellFilter, chosenSpells, atLevel]);
 
+  /** Improvement levels this character has already passed. */
+  const earnedLevels = asiLevels.filter((l) => l <= level);
+  const spentAt = (lvl: number) => {
+    const at = improvements[lvl];
+    if (!at) return false;
+    if (at.feat) return true;
+    return Object.values(at.abilities ?? {}).reduce((n, v) => n + (v ?? 0), 0) === 2;
+  };
+  const improvementsDone = earnedLevels.every(spentAt);
+
   const allAssigned = method === "pointBuy" || ABILITIES.every((a) => assigned[a] !== undefined);
   const skillsNeeded = klass?.skillChoices?.choose ?? 0;
 
@@ -317,6 +334,7 @@ export function CreateCharacter({
           baseScores,
           classSkills,
           level,
+          improvements: earnedLevels.map((l) => improvements[l] ?? {}),
           ...(atLevel?.slots.length ? { spellSlots: atLevel.slots } : {}),
         }
       : undefined;
@@ -332,6 +350,7 @@ export function CreateCharacter({
   const gaps = [
     ...missing(choices ?? {}),
     ...(gearMode === "kit" ? unpicked : []),
+    ...(improvementsDone ? [] : ["your improvements"]),
     ...(allAssigned ? [] : ["every score assigned"]),
     ...(classSkills.length === skillsNeeded ? [] : [`${skillsNeeded} class skills`]),
   ];
@@ -923,6 +942,111 @@ export function CreateCharacter({
               )}
             </div>
           ) : null}
+          </div>
+        </section>
+      )}
+
+      {/*
+        * Improvements a character has already passed. The builder was stating
+        * "4 ability points to spend in your builder" and giving nowhere to
+        * spend them — a promise the screen made and did not keep.
+        */}
+      {klass && race && earnedLevels.length > 0 && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label cr-step">6 · Improvements</span>
+            <span className="faint" style={{ fontSize: ".78rem" }}>
+              {earnedLevels.filter((l) => spentAt(l)).length} of {earnedLevels.length} taken
+            </span>
+          </div>
+          <div className="card-body">
+            <p className="cr-blurb" style={{ marginTop: 0 }}>
+              Starting at {level} means you have already passed{" "}
+              {earnedLevels.length === 1 ? "an improvement" : `${earnedLevels.length} improvements`}.
+              Two points each, or a feat instead.
+            </p>
+            {earnedLevels.map((lvl) => {
+              const at = improvements[lvl] ?? {};
+              const used = Object.values(at.abilities ?? {}).reduce((n, v) => n + (v ?? 0), 0);
+              return (
+                <div className="chooser" key={lvl}>
+                  <div className="chooser-hd" style={{ cursor: "default" }}>
+                    <span className="nm">Level {lvl}</span>
+                    <span className="faint num">
+                      {at.feat ? at.feat.name : `${used} of 2`}
+                    </span>
+                  </div>
+                  <div className="chooser-body">
+                    <div className="lv-abils">
+                      {ABILITIES.map((a) => {
+                        const added = at.abilities?.[a] ?? 0;
+                        const total = scores[a] + added;
+                        return (
+                          <button
+                            key={a}
+                            className={`chip${added > 0 ? " on" : ""}`}
+                            disabled={at.feat !== undefined || (used >= 2 && added === 0) || total >= 20}
+                            aria-label={`Level ${lvl} raise ${a}`}
+                            onClick={() =>
+                              setImprovements((cur) => ({
+                                ...cur,
+                                [lvl]: {
+                                  abilities: { ...(cur[lvl]?.abilities ?? {}), [a]: added + 1 },
+                                },
+                              }))
+                            }
+                          >
+                            {a} {total}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="row" style={{ marginTop: 8 }}>
+                      <select
+                        aria-label={`Level ${lvl} feat`}
+                        value={at.feat?.id ?? ""}
+                        style={{ width: "auto", flex: "1 1 160px" }}
+                        onChange={(e) => {
+                          const f = featList.find((x) => x.id === e.target.value);
+                          setImprovements((cur) => ({
+                            ...cur,
+                            [lvl]: f ? { feat: { id: f.id, name: f.name } } : {},
+                          }));
+                        }}
+                      >
+                        <option value="">or take a feat…</option>
+                        {featList
+                          .filter((f) => {
+                            const q = featFilter.trim().toLowerCase();
+                            return !q || f.name.toLowerCase().includes(q);
+                          })
+                          .slice(0, 60)
+                          .map((f) => (
+                            <option key={f.id} value={f.id}>{f.name}</option>
+                          ))}
+                      </select>
+                      {(used > 0 || at.feat) && (
+                        <button
+                          aria-label={`Clear level ${lvl}`}
+                          onClick={() => setImprovements((cur) => ({ ...cur, [lvl]: {} }))}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {featList.length > 20 && (
+              <input
+                value={featFilter}
+                aria-label="Filter feats"
+                placeholder={`filter ${featList.length} feats…`}
+                style={{ marginTop: 10 }}
+                onChange={(e) => setFeatFilter(e.target.value)}
+              />
+            )}
           </div>
         </section>
       )}
