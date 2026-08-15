@@ -422,6 +422,22 @@ html, body { overscroll-behavior-y: none; }
 .rb-second .rb-input { width: 128px; }
 .rb-hint { color: var(--faint); font-size: 0.76rem; }
 
+/* ---- collapsible choosers ----
+   NOT ".pick": that name already belongs to the rest preview further down,
+   and the later rule won — which laid the header and its filter side by side
+   in a 153px column. */
+.chooser { border-top: 1px solid var(--rule); }
+.chooser:first-of-type { border-top: 0; }
+.chooser-hd {
+  display: flex; align-items: baseline; gap: 10px; width: 100%;
+  padding: 12px 0; border: 0; background: none; text-align: left;
+}
+.chooser-hd .nm { flex: 1 1 auto; color: var(--ink); }
+.chooser-mark { flex: 0 0 auto; color: var(--muted); font-size: 1rem; line-height: 1; }
+.chooser-body { padding-bottom: 12px; }
+/* The whole point: a class with hundreds of spells must not stretch the card. */
+.chooser-list { max-height: 46vh; overflow-y: auto; margin-top: 10px; }
+
 /* ---- spells ---- */
 .slots { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 14px; }
 .slot {

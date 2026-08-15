@@ -83,6 +83,7 @@ export function CreateCharacter({
   const [gear, setGear] = useState<Item[] | null>(null);
   const [book, setBook] = useState<CompendiumSpell[]>([]);
   const [spellFilter, setSpellFilter] = useState("");
+  const [openPicker, setOpenPicker] = useState<null | "cantrip" | "spell">(null);
   const [chosenSpells, setChosenSpells] = useState<KnownSpell[]>([]);
   const [gearMode, setGearMode] = useState<"kit" | "gold">("kit");
   /** Which lettered option is taken, per choice. */
@@ -816,40 +817,87 @@ export function CreateCharacter({
                     ))}
                   </div>
                 )}
-                <input
-                  value={spellFilter}
-                  aria-label="Filter spells"
-                  placeholder={`filter ${klass.name.toLowerCase()} spells…`}
-                  onChange={(e) => setSpellFilter(e.target.value)}
-                />
-                <div className="inv-find">
-                  {spellChoices.map((sp) => {
-                    const full =
-                      sp.level === 0
-                        ? pickedCantrips >= cantripsKnown
-                        : spellsKnown > 0 && pickedSpells >= spellsKnown;
-                    return (
+
+                {/*
+                  * Two pickers rather than one list. A sorcerer can cast
+                  * hundreds of things, and a single flat list ran off the
+                  * bottom of the card — you cannot choose three cantrips from
+                  * a page you are still scrolling. Each opens on its own,
+                  * carries its own search, and scrolls inside a fixed height
+                  * so the step stays the same size whatever the class.
+                  */}
+                {([["cantrip", "Cantrips"], ["spell", "Spells"]] as const).map(([kind, label]) => {
+                  const isCantrip = kind === "cantrip";
+                  if (isCantrip && cantripsKnown === 0) return null;
+                  if (!isCantrip && !hasSlots && spellsKnown === 0) return null;
+
+                  const open = openPicker === kind;
+                  const taken = isCantrip ? pickedCantrips : pickedSpells;
+                  const limit = isCantrip ? cantripsKnown : spellsKnown;
+                  const full = limit > 0 && taken >= limit;
+                  const rows = spellChoices.filter((sp) =>
+                    isCantrip ? sp.level === 0 : sp.level > 0,
+                  );
+
+                  return (
+                    <div className="chooser" key={kind}>
                       <button
-                        className="inv-add"
-                        key={sp.id}
-                        disabled={full}
-                        onClick={() => setChosenSpells([...chosenSpells, toKnown(sp)])}
+                        className={`chooser-hd${open ? " open" : ""}`}
+                        aria-expanded={open}
+                        aria-label={`${label}, ${taken}${limit > 0 ? ` of ${limit}` : ""} chosen`}
+                        onClick={() => {
+                          setOpenPicker(open ? null : kind);
+                          setSpellFilter("");
+                        }}
                       >
-                        <span className="nm">{sp.name}</span>
-                        <span className="num">
-                          {sp.level === 0 ? "cantrip" : levelLabel(sp.level).toLowerCase()}
+                        <span className="nm">{label}</span>
+                        <span className="faint num">
+                          {limit > 0 ? `${taken} of ${limit}` : `${taken} chosen`}
                         </span>
-                        <span className="faint">{sp.school}</span>
+                        <span className="chooser-mark">{open ? "−" : "+"}</span>
                       </button>
-                    );
-                  })}
-                  {spellChoices.length === 0 && (
-                    <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
-                      Nothing matches.
-                    </p>
-                  )}
-                </div>
-                <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
+
+                      {open && (
+                        <div className="chooser-body">
+                          <input
+                            value={spellFilter}
+                            aria-label={`Filter ${label.toLowerCase()}`}
+                            placeholder={`filter ${rows.length} ${label.toLowerCase()}…`}
+                            onChange={(e) => setSpellFilter(e.target.value)}
+                          />
+                          <div className="chooser-list">
+                            {rows.map((sp) => (
+                              <button
+                                className="inv-add"
+                                key={sp.id}
+                                disabled={full}
+                                onClick={() => setChosenSpells([...chosenSpells, toKnown(sp)])}
+                              >
+                                <span className="nm">{sp.name}</span>
+                                <span className="num">
+                                  {sp.level === 0 ? "cantrip" : levelLabel(sp.level).toLowerCase()}
+                                </span>
+                                <span className="faint">{sp.school}</span>
+                              </button>
+                            ))}
+                            {rows.length === 0 && (
+                              <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
+                                Nothing matches.
+                              </p>
+                            )}
+                          </div>
+                          {full && (
+                            <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
+                              That is all {limit}. Remove one above to swap.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <p className="faint" style={{ fontSize: ".8rem", margin: "12px 0 0" }}>
                   {spellsKnown === 0 && hasSlots
                     ? `A ${klass.name.toLowerCase()} prepares from a book rather than knowing a fixed few, so there is no number to hit here. Take what you like, or leave it — the Spells tab does the same job afterwards.`
                     : "Take what you like now or leave it — the Spells tab does the same job afterwards."}
