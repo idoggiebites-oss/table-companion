@@ -73,7 +73,14 @@ function StartCombat({
   const [sittingOut, setSittingOut] = useState<string[]>([]);
   const inFight = characters.filter((b) => !sittingOut.includes(b.id)).map((b) => b.id);
   const [surprise, setSurprise] = useState<Surprise>("none");
-  const [creatures, setCreatures] = useState<{ name: string; maxHp: number; ac?: number }[]>([]);
+  const [creatures, setCreatures] = useState<
+    {
+      name: string;
+      maxHp: number;
+      ac?: number;
+      attacks?: readonly { name: string; toHit?: number; dice?: string; type?: string }[];
+    }[]
+  >([]);
   /**
    * Loaded whenever prep exists, not when a panel is opened. Dropping an
    * encounter in without the statblocks is how six goblins once arrived with
@@ -102,6 +109,20 @@ function StartCombat({
           // than plausible — the same choice the encounter builder makes.
           maxHp: sb ? (entry.hpMode === "rolled" ? rollHp(sb.hitDice) : sb.hp) : 1,
           ...(sb ? { ac: sb.ac } : {}),
+          // Its actions come with it, so the DM taps rather than reads a
+          // statblock aloud and types the numbers off it.
+          ...(sb
+            ? {
+                attacks: sb.actions
+                  .filter((a) => a.attackBonus !== undefined || a.damage?.length)
+                  .map((a) => ({
+                    name: a.name,
+                    ...(a.attackBonus !== undefined ? { toHit: a.attackBonus } : {}),
+                    ...(a.damage?.[0]?.dice ? { dice: a.damage[0].dice } : {}),
+                    ...(a.damage?.[0]?.type ? { type: a.damage[0].type.toLowerCase() } : {}),
+                  })),
+              }
+            : {}),
         });
       }
     }
@@ -126,7 +147,12 @@ function StartCombat({
         id: `cr-${Date.now().toString(36)}-${i}`,
         name: c.name || `Creature ${i + 1}`,
         initiative: null,
-        source: { kind: "creature" as const, maxHp: c.maxHp, ...(c.ac ? { ac: c.ac } : {}) },
+        source: {
+          kind: "creature" as const,
+          maxHp: c.maxHp,
+          ...(c.ac ? { ac: c.ac } : {}),
+          ...(c.attacks?.length ? { attacks: c.attacks } : {}),
+        },
         controller: { kind: "dm" as const },
         disclosure: "vague" as const,
         surprised: surprise === "monsters",
@@ -449,6 +475,24 @@ export function Combat({
       {target && (
         <div className="swing">
           <span className="label">Attacking {target.name}</span>
+          {/* What the attacker can do, with the numbers already read off its
+              statblock — the DM's turn should not be slower than a player's. */}
+          {(reactor ?? active)?.source.kind === "creature" &&
+            ((reactor ?? active)?.source as { attacks?: readonly { name: string; toHit?: number; dice?: string; type?: string }[] })
+              .attacks?.map((a) => (
+                <button
+                  className="swing-act"
+                  key={a.name}
+                  aria-label={`Use ${a.name}`}
+                  onClick={() => setDealt(0)}
+                >
+                  {a.name}
+                  <span className="faint">
+                    {a.toHit !== undefined ? ` ${a.toHit >= 0 ? "+" : ""}${a.toHit} to hit` : ""}
+                    {a.dice ? ` · ${a.dice}${a.type ? ` ${a.type}` : ""}` : ""}
+                  </span>
+                </button>
+              ))}
           <input
             type="number" min={0} value={dealt} aria-label="Damage dealt"
             style={{ width: 76 }}

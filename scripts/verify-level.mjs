@@ -149,6 +149,80 @@ ok("the DM sees one class at level 8", (await prow.locator(".cls").innerText()).
 ok("and nothing is owed", (await prow.locator(".owe").innerText()).trim().toLowerCase(), "level 8");
 await dm.page.screenshot({ path: `${OUT}/42-level-8-dm.png`, fullPage: true });
 
+// --- the choice half of levelling ----------------------------------------
+// Which levels grant an improvement is per class, so it comes from the table
+// rather than a remembered 4/8/12/16/19.
+await go(dm.page, "party");
+await dm.page.getByRole("button", { name: "Milestone" }).click();
+await dm.page.waitForTimeout(400);
+await dm.page.getByRole("button", { name: "Level the party" }).click();
+await player.page.waitForTimeout(1800);
+
+await go(player.page, "sheet");
+await player.page.waitForSelector(".lv", { timeout: 20000 });
+await player.page.getByRole("button", { name: "Resolve it" }).click();
+await player.page.waitForTimeout(700);
+// A ranger's next improvement is at 12, not 9 — the levels that grant one are
+// per class and come from the table rather than a remembered 4/8/12/16/19.
+ok("a level that grants no choice offers none",
+  await player.page.getByRole("button", { name: "Raise abilities" }).count(), 0);
+await player.page.getByRole("button", { name: /^Take the average/ }).click();
+await player.page.waitForTimeout(800);
+
+// Up to 12, where a ranger's improvement is granted. One level at a time, so
+// the count owed is never in doubt.
+const awardOne = async () => {
+  await go(dm.page, "party");
+  await dm.page.getByRole("button", { name: "Level the party" }).click();
+  await dm.page.waitForTimeout(600);
+  await player.page.waitForTimeout(1200);
+};
+const resolveOne = async () => {
+  await go(player.page, "sheet");
+  await player.page.locator(".lv button", { hasText: /Resolve/i }).first()
+    .click({ timeout: 20000 });
+  await player.page.waitForSelector(".lv-pad", { timeout: 20000 });
+  await player.page.getByRole("button", { name: /^Take the average/ }).click();
+  await player.page.waitForTimeout(900);
+};
+
+for (let i = 0; i < 2; i++) {
+  await awardOne();
+  await resolveOne();
+}
+await awardOne();
+await go(player.page, "sheet");
+await player.page.locator(".lv button", { hasText: /Resolve/i }).first()
+  .click({ timeout: 20000 });
+await player.page.waitForTimeout(700);
+
+ok("a level that grants a choice offers one",
+  await player.page.getByRole("button", { name: "Raise abilities" }).count(), 1);
+ok("and a feat instead of it",
+  await player.page.getByRole("button", { name: "Take a feat" }).count(), 1);
+ok("the roll waits until the choice is made",
+  await player.page.locator(".lv-pad button").first().isDisabled(), true);
+
+const before = await player.page.locator(".lv-abils .chip").first().innerText();
+await player.page.getByRole("button", { name: "Raise str" }).click();
+await player.page.waitForTimeout(200);
+await player.page.getByRole("button", { name: "Raise str" }).click();
+await player.page.waitForTimeout(300);
+ok("spending both points unblocks it",
+  await player.page.locator(".lv-pad button").first().isDisabled(), false);
+ok("and the score moves as they are spent",
+  (await player.page.locator(".lv-abils .chip").first().innerText()) !== before, true);
+
+const athleticsBefore = await player.page
+  .getByRole("button", { name: /^athletics/ }).locator(".m").innerText();
+await player.page.locator(".lv-pad button").nth(5).click();
+await player.page.waitForTimeout(1000);
+const athleticsAfter = await player.page
+  .getByRole("button", { name: /^athletics/ }).locator(".m").innerText();
+// Two points of Strength is one modifier, and everything derived moves with it.
+ok("the improvement reached everything derived from it",
+  Number(athleticsAfter.replace("+", "")) - Number(athleticsBefore.replace("+", "")), 1);
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

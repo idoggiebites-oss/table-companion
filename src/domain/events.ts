@@ -17,6 +17,7 @@ import type { Combatant, Disclosure, EconomyKind, TargetRef } from "./combat.js"
 import type { Encounter } from "./encounter.js";
 import type { Progression } from "./progression.js";
 import type { AttackClaim } from "./attackflow.js";
+import type { Ability } from "./abilities.js";
 import type { Boon } from "./boons.js";
 import type { Stack } from "./items.js";
 import type { KnownSpell } from "./spells.js";
@@ -146,6 +147,10 @@ export type DomainEvent = Meta &
         readonly who: CharacterId;
         readonly classId: ClassId;
         readonly hpGain: number;
+        /** +2 to one ability or +1 to two, where the level grants it. */
+        readonly abilities?: Partial<Record<Ability, number>>;
+        /** Taken instead of the improvement. */
+        readonly feat?: { readonly id: string; readonly name: string };
       }
     /** Prep that survives contact: built on a laptop, opened at the table. */
     | { readonly type: "encounterSaved"; readonly encounter: Encounter }

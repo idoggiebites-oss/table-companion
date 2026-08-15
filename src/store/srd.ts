@@ -34,7 +34,7 @@ export interface RaceEntry {
 }
 
 import type { Item } from "../domain/items.js";
-import type { CompendiumSpell } from "../import/compendium.js";
+import type { CompendiumFeat, CompendiumSpell } from "../import/compendium.js";
 import { proficiencyBonus } from "../domain/abilities.js";
 import { deriveClass } from "../domain/classes-from-compendium.js";
 import { consolidateRaces } from "../domain/races.js";
@@ -85,6 +85,7 @@ let classLevels: Promise<ClassLevels> | null = null;
 let equipment: Promise<Item[]> | null = null;
 let backgrounds: Promise<BackgroundEntry[]> | null = null;
 let spells: Promise<CompendiumSpell[]> | null = null;
+let featsList: Promise<CompendiumFeat[]> | null = null;
 let conditions: Promise<ConditionDescription[]> | null = null;
 
 async function load<T>(path: string): Promise<T[]> {
@@ -230,6 +231,7 @@ export function forgetLoaded(): void {
   classes = null;
   classLevels = null;
   spells = null;
+  featsList = null;
 }
 
 export function loadSpells(): Promise<CompendiumSpell[]> {
@@ -237,6 +239,13 @@ export function loadSpells(): Promise<CompendiumSpell[]> {
     ([shipped, mine]) => mergeById(shipped, mine),
   );
   return spells;
+}
+
+export function loadFeats(): Promise<CompendiumFeat[]> {
+  featsList ??= Promise.all([loadBundled("feat"), readContent("feat")]).then(
+    ([shipped, mine]) => mergeById(shipped, mine),
+  );
+  return featsList;
 }
 
 export function loadConditions(): Promise<ConditionDescription[]> {

@@ -200,8 +200,35 @@ function traits(el: Element): { name: string; text: string }[] {
   }));
 }
 
+/**
+ * A creature's actions, with the numbers pulled out of the prose.
+ *
+ * Statblock text is boilerplate — "Melee Weapon Attack: +4 to hit … Hit: 5
+ * (1d6 + 2) slashing damage" — and the DM should not have to read that off a
+ * screen and type it. The shipped SRD data already carries these fields
+ * structurally; this puts imported creatures on the same footing.
+ */
 function actions(el: Element, tag: string): StatblockAction[] {
-  return all(el, tag).map((a) => ({ name: text(a, "name"), desc: joined(a, "text") }));
+  return all(el, tag).map((a) => {
+    const desc = joined(a, "text");
+    const hit = /([+-]\d+)\s+to hit/i.exec(desc);
+    const dmg = /\((\d+d\d+(?:\s*[+-]\s*\d+)?)\)\s*(\w+)?\s*damage/i.exec(desc);
+    return {
+      name: text(a, "name"),
+      desc,
+      ...(hit ? { attackBonus: Number(hit[1]) } : {}),
+      ...(dmg
+        ? {
+            damage: [
+              {
+                dice: dmg[1]!.replace(/\s+/g, ""),
+                ...(dmg[2] ? { type: dmg[2] } : {}),
+              },
+            ],
+          }
+        : {}),
+    };
+  });
 }
 
 /** "Prof Bonus +2, Insight +5" style lists → {insight: 5} */

@@ -529,6 +529,11 @@ html, body { overscroll-behavior-y: none; }
 .pt-atk, .pt-opp { width: 100%; margin-top: 10px; padding: 11px; }
 .pt-atk:disabled { opacity: 0.4; }
 .pt-why { margin: 8px 0 0; font-size: 0.78rem; color: var(--muted); }
+.swing-act {
+  flex-basis: 100%; display: flex; gap: 8px; align-items: baseline;
+  padding: 8px 10px; text-align: left;
+}
+.swing-act .faint { font-size: 0.76rem; }
 .swing-step { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; }
 .swing-ask { margin: 0; font-size: 0.95rem; color: var(--ink); }
 .swing-ask b { color: var(--ink); }

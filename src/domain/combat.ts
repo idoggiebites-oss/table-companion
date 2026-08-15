@@ -18,7 +18,18 @@ export type CombatantSource =
   /** A player character; hit points live in campaign state. */
   | { readonly kind: "character"; readonly characterId: CharacterId }
   /** Anything the DM is running; hit points live in the combat itself. */
-  | { readonly kind: "creature"; readonly maxHp: number; readonly ac?: number };
+  | {
+      readonly kind: "creature";
+      readonly maxHp: number;
+      readonly ac?: number;
+      /** What it can do, so the DM taps rather than reads and types. */
+      readonly attacks?: readonly {
+        readonly name: string;
+        readonly toHit?: number;
+        readonly dice?: string;
+        readonly type?: string;
+      }[];
+    };
 
 export type Controller =
   | { readonly kind: "dm" }

@@ -313,6 +313,19 @@ export function Sheet({
         </section>
       )}
 
+      {build.feats.length > 0 && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label">Feats</span>
+          </div>
+          <div className="card-body chips">
+            {build.feats.map((f) => (
+              <span className="chip" key={f.id}>{f.name}</span>
+            ))}
+          </div>
+        </section>
+      )}
+
       {state.boons.length > 0 && (
         <section className="card">
           <div className="card-hd">

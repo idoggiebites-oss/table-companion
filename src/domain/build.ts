@@ -53,6 +53,8 @@ export interface BuildBase {
   readonly hitDie: DieSize;
   readonly armourClass: number;
   readonly speed: number;
+  /** Taken at an improvement level. Shown on the sheet, never applied. */
+  readonly feats?: readonly { readonly id: string; readonly name: string }[];
   readonly saveProficiencies: readonly Ability[];
   readonly skillProficiencies: readonly SkillId[];
   /** Max slots by spell level; index 0 is 1st level. Empty for non-casters. */
@@ -72,6 +74,14 @@ export interface BuildDelta {
   /** Total character level AFTER this delta, so replay order is checkable. */
   readonly toTotalLevel: number;
   readonly hpGain: number;
+  /**
+   * An ability score improvement, as points per ability: +2 to one or +1 to
+   * two. Applied here rather than stored as a new total, so the base a
+   * re-import brings stays authoritative and the improvement replays on top.
+   */
+  readonly abilities?: Partial<Record<Ability, number>>;
+  /** A feat taken instead of the improvement. Named, never mechanised. */
+  readonly feat?: { readonly id: string; readonly name: string };
   readonly at: string;
 }
 
@@ -108,6 +118,7 @@ export interface EffectiveBuild {
   readonly spellSlots: readonly number[];
   readonly resources: readonly ResolvedResource[];
   readonly attacks: readonly ResolvedAttack[];
+  readonly feats: readonly { readonly id: string; readonly name: string }[];
 }
 
 function totalLevelOf(classes: readonly ClassEntry[]): number {
@@ -123,7 +134,22 @@ function applyDeltas(base: BuildBase, deltas: readonly BuildDelta[]): BuildBase 
           c.classId === d.classId ? { ...c, level: c.level + 1 } : c,
         )
       : [...out.classes, { classId: d.classId, level: 1 }];
-    out = { ...out, classes, maxHp: out.maxHp + d.hpGain };
+    // An improvement raises the score, and 20 is the ceiling for everything
+    // this app models — a delta that would exceed it is capped rather than
+    // dropped, so the log still shows what was taken.
+    const abilities = d.abilities
+      ? (Object.fromEntries(
+          ABILITIES.map((a) => [a, Math.min(20, out.abilities[a] + (d.abilities?.[a] ?? 0))]),
+        ) as AbilityScores)
+      : out.abilities;
+    const feats = d.feat ? [...(out.feats ?? []), d.feat] : out.feats;
+    out = {
+      ...out,
+      classes,
+      maxHp: out.maxHp + d.hpGain,
+      abilities,
+      ...(feats ? { feats } : {}),
+    };
   }
   return out;
 }
@@ -210,6 +236,7 @@ export function effectiveBuild(character: Character): EffectiveBuild {
     maxHp: b.maxHp,
     hitDie: b.hitDie,
     armourClass: b.armourClass,
+    feats: b.feats ?? [],
     speed: b.speed,
     saveMods,
     skillMods,
@@ -249,13 +276,25 @@ export function appendLevel(
   classId: ClassId,
   hpGain: number,
   at: string,
+  choice?: {
+    readonly abilities?: Partial<Record<Ability, number>>;
+    readonly feat?: { readonly id: string; readonly name: string };
+  },
 ): Character {
   const current = effectiveBuild(character).totalLevel;
   return {
     ...character,
     deltas: [
       ...character.deltas,
-      { kind: "levelGained", classId, toTotalLevel: current + 1, hpGain, at },
+      {
+        kind: "levelGained",
+        classId,
+        toTotalLevel: current + 1,
+        hpGain,
+        at,
+        ...(choice?.abilities ? { abilities: choice.abilities } : {}),
+        ...(choice?.feat ? { feat: choice.feat } : {}),
+      },
     ],
   };
 }

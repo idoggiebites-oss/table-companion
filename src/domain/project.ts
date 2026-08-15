@@ -416,7 +416,10 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     case "levelGained": {
       const source = state.sources[e.who];
       if (!source) return state;
-      const next = appendLevel(source, e.classId, e.hpGain, new Date(e.at).toISOString());
+      const next = appendLevel(source, e.classId, e.hpGain, new Date(e.at).toISOString(), {
+        ...(e.abilities ? { abilities: e.abilities } : {}),
+        ...(e.feat ? { feat: e.feat } : {}),
+      });
       const build = effectiveBuild(next);
       const before = state.characters[e.who];
       return {
