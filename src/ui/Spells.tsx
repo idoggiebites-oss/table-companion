@@ -26,7 +26,10 @@ import {
   type KnownSpell, type SlotState,
 } from "../domain/spells.js";
 import type { CompendiumSpell } from "../import/compendium.js";
+import type { Combat, Combatant } from "../domain/combat.js";
+import { costOf } from "../domain/spellcast.js";
 import { loadSpells } from "../store/srd.js";
+import { AimSpell } from "./AimSpell.js";
 
 function useSpellbook(when: boolean): CompendiumSpell[] | null {
   const [all, setAll] = useState<CompendiumSpell[] | null>(null);
@@ -38,20 +41,37 @@ function useSpellbook(when: boolean): CompendiumSpell[] | null {
 }
 
 export function Spells({
-  build, state, append,
+  build, state, append, combat, onCast,
 }: {
   build: EffectiveBuild;
   state: CharacterState;
   append: (body: EventBody) => void;
+  /** Present during a fight: casting then aims at something. */
+  combat?: Combat | null;
+  onCast?: (c: {
+    spell: KnownSpell;
+    atLevel: number;
+    target: Combatant;
+    toHit: number | null;
+    damage: number;
+    damageType: string;
+  }) => void;
 }) {
   const [browsing, setBrowsing] = useState(false);
   const [text, setText] = useState("");
   const [onlyMine, setOnlyMine] = useState(true);
   const [showFeatures, setShowFeatures] = useState(false);
   const [casting, setCasting] = useState<KnownSpell | null>(null);
+  const [aiming, setAiming] = useState<{ spell: KnownSpell; atLevel: number } | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
-  const book = useSpellbook(browsing);
+  /*
+   * Always, not only while browsing. Casting needs the file too — what the
+   * spell costs, whether the caster rolls or the target saves, and the dice
+   * at this level. Loaded lazily it was absent at exactly the moment a spell
+   * was pointed at something, and every spell became "nothing to roll".
+   */
+  const book = useSpellbook(true);
 
   /** Slots, as the sheet already knows them. */
   const slots: SlotState[] = useMemo(
@@ -92,6 +112,17 @@ export function Spells({
       .slice(0, 60);
   }, [book, text, onlyMine, showFeatures, known, classIds]);
 
+  /** What the file says this one costs, and whether it can be paid. */
+  const costFor = (spell: KnownSpell) => {
+    const full = book?.find((s) => s.id === spell.id);
+    return full ? costOf(full.time) : "action";
+  };
+  const canAfford = (spell: KnownSpell) => {
+    const cost = costFor(spell);
+    if (cost === "long") return combat ? false : true;
+    return !state.economy[cost];
+  };
+
   function cast(spell: KnownSpell, atLevel: number, ritual = false) {
     append({
       type: "spellCast",
@@ -102,6 +133,12 @@ export function Spells({
       concentration: spell.concentration,
       ...(ritual ? { ritual: true } : {}),
     });
+    // In a fight it costs what the file says, and the pips have to show it.
+    const cost = costFor(spell);
+    if (combat && cost !== "long" && !state.economy[cost]) {
+      append({ type: "economySpent", who: build.id, kind: cost });
+    }
+    setAiming(combat ? { spell, atLevel } : null);
     setCasting(null);
   }
 
@@ -241,7 +278,7 @@ export function Spells({
                   </button>
                 )}
                 <button
-                  disabled={!able}
+                  disabled={!able || !canAfford(s)}
                   aria-label={`Cast ${s.name}`}
                   onClick={() => {
                     const options = slotsFor(s, slots);
@@ -260,9 +297,13 @@ export function Spells({
                         ? "Not prepared."
                         : !able
                           ? "No slot left for this."
-                          : s.level === 0
-                            ? "Costs nothing."
-                            : `Needs a ${levelLabel(s.level).toLowerCase()} slot or better.`}
+                          : !canAfford(s)
+                            ? costFor(s) === "long"
+                              ? "Takes longer than a turn — not in a fight."
+                              : `Your ${costFor(s)} is gone this turn.`
+                            : s.level === 0
+                              ? `Costs nothing but your ${costFor(s)}.`
+                              : `A ${levelLabel(s.level).toLowerCase()} slot and your ${costFor(s)}.`}
                     </span>
                   </div>
                 )}
@@ -281,6 +322,21 @@ export function Spells({
             </p>
           </div>
         </section>
+      )}
+
+      {aiming && combat && (
+        <AimSpell
+          spell={aiming.spell}
+          atLevel={aiming.atLevel}
+          build={build}
+          book={book ?? []}
+          combat={combat}
+          onCancel={() => setAiming(null)}
+          onSend={(c) => {
+            onCast?.({ ...c, spell: aiming.spell, atLevel: aiming.atLevel });
+            setAiming(null);
+          }}
+        />
       )}
 
       {casting && (

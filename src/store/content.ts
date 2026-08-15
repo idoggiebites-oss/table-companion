@@ -93,11 +93,26 @@ export async function saveCompendium(c: Compendium): Promise<ContentMeta> {
   return meta;
 }
 
+/** Nothing to say, as opposed to saying nothing. */
+function absent(v: unknown): boolean {
+  return (
+    v === undefined ||
+    v === null ||
+    v === "" ||
+    (Array.isArray(v) && v.length === 0)
+  );
+}
+
 /**
- * Imported wins on a name collision, and that is deliberate: somebody who has
- * loaded a compendium meant it to be authoritative, and the SRD entry is the
- * one they were trying to replace. Ids are compared, not names, so an SRD
- * longsword and an imported longsword are the same item rather than two.
+ * Imported wins FIELD BY FIELD, not wholesale.
+ *
+ * Replacing the whole record was wrong in a way that only showed up with two
+ * real files: the SRD compendium carries no <roll> elements at all, so
+ * importing it over a shipped complete one stripped the damage dice off every
+ * spell. A thinner file should not be able to delete what a richer one knew.
+ *
+ * A field the import genuinely states wins, including a different value. A
+ * field it leaves empty is not an opinion.
  */
 export function mergeById<T extends { id: string }>(
   base: readonly T[],
@@ -105,6 +120,17 @@ export function mergeById<T extends { id: string }>(
 ): T[] {
   if (imported.length === 0) return [...base];
   const out = new Map(base.map((x) => [x.id, x]));
-  for (const x of imported) out.set(x.id, x);
+  for (const x of imported) {
+    const existing = out.get(x.id);
+    if (!existing) {
+      out.set(x.id, x);
+      continue;
+    }
+    const merged = { ...existing } as Record<string, unknown>;
+    for (const [key, value] of Object.entries(x)) {
+      if (!absent(value)) merged[key] = value;
+    }
+    out.set(x.id, merged as T);
+  }
   return [...out.values()];
 }

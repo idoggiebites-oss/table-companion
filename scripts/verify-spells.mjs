@@ -179,6 +179,72 @@ ok("undoing a cast gives back the slot",
 ok("and the concentration with it, in one go",
   await page.locator(".src-note").count(), 0);
 
+// --- casting in a fight ---------------------------------------------------
+// The same walkthrough a weapon gets, because a beginner should not meet two
+// different ways of making an attack.
+// One device, both chairs: staging a fight is the DM's, casting is the
+// player's, and a solo device may be either.
+await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForTimeout(600);
+await go(page, "fight");
+await page.getByRole("button", { name: "Add creature" }).click();
+await page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
+await page.locator('input[aria-label="Creature 1 hp"]').fill("20");
+await page.locator('input[aria-label="Creature 1 armour class"]').fill("13");
+await page.getByRole("button", { name: "Roll for initiative" }).click();
+await page.waitForSelector('input[aria-label="Bel Ashcroft initiative"]', { timeout: 20000 });
+for (const [n, v] of [["Bel Ashcroft", 20], ["Goblin", 2]]) {
+  await page.locator(`input[aria-label="${n} initiative"]`).fill(String(v));
+  await page.getByRole("button", { name: `Set ${n} initiative` }).click();
+}
+await page.getByRole("button", { name: "Begin", exact: true }).click();
+await page.waitForTimeout(900);
+await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await page.waitForTimeout(700);
+
+await go(page, "spells");
+await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
+await page.waitForTimeout(600);
+ok("casting in a fight asks what to aim at",
+  (await page.locator(".tgt-row").allInnerTexts()).map((t) => t.toLowerCase()), ["goblin"]);
+await page.locator(".tgt-row").first().click();
+await page.waitForTimeout(400);
+
+const asks = (await page.locator(".swing-step").innerText()).replace(/\s+/g, " ");
+// A wizard at 5 casts Fire Bolt for 2d10 — the cantrip scales with the CASTER.
+ok("it names the spell attack bonus", /Roll a d20 and add \+\d/.test(asks), true);
+ok("and the damage at the caster's level, not the slot's", /Roll 2d10 fire/i.test(asks), true);
+
+await page.locator('input[aria-label="Spell attack roll"]').fill("19");
+await page.locator('input[aria-label="Spell damage roll"]').fill("9");
+await page.getByRole("button", { name: "Send to the DM" }).click();
+await page.waitForTimeout(700);
+
+await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForTimeout(600);
+await go(page, "fight");
+ok("nothing lands until the DM says so",
+  (await page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "20/20");
+const claim = (await page.locator(".claim").innerText()).replace(/\s+/g, " ");
+ok("the claim names the spell", /Fire Bolt/.test(claim), true);
+ok("and works out the verdict", /19 against 13 — hits/i.test(claim), true);
+await page.getByRole("button", { name: /Apply 9 to Goblin/ }).click();
+await page.waitForTimeout(700);
+ok("confirming applies it",
+  (await page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "11/20");
+
+// The economy is the point of the second half: a cantrip still costs the
+// action, and the app has to stop the next one.
+await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await page.waitForTimeout(700);
+await go(page, "spells");
+ok("the action is gone", await page.getByRole("button", { name: "Cast Fire Bolt" }).isDisabled(), true);
+// The reason lives on the spell's own row, opened by tapping it.
+await page.locator(".sp-main", { hasText: "Fire Bolt" }).click();
+await page.waitForTimeout(300);
+ok("and it says why",
+  /action is gone/i.test(await page.locator(".sp-detail").first().innerText()), true);
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

@@ -47,6 +47,21 @@ export interface CompendiumSpell {
   readonly text: string;
   readonly ritual: boolean;
   readonly concentration: boolean;
+  /**
+   * Dice the file states per level — "Fire Damage" 1d10 at 0, 2d10 at 5 for a
+   * cantrip; "Fire Damage" 8d6 at 3, 9d6 at 4 for a levelled spell. A cantrip
+   * scales with the CASTER's level and a spell with the SLOT, which is the
+   * one rule everybody gets wrong by hand.
+   */
+  readonly rolls: readonly SpellRoll[];
+}
+
+export interface SpellRoll {
+  readonly description: string;
+  /** Absent means it never scales. */
+  readonly level?: number;
+  /** "8d6", "1d8+%0" — %0 is where the ability modifier goes. */
+  readonly dice: string;
 }
 
 export interface CompendiumRace {
@@ -362,6 +377,14 @@ function parseSpell(el: Element): CompendiumSpell {
     text: joined(el, "text"),
     ritual: text(el, "ritual") === "YES" || /ritual/i.test(time),
     concentration: /concentration/i.test(duration),
+    rolls: all(el, "roll").map((r) => {
+      const lvl = r.getAttribute("level");
+      return {
+        description: r.getAttribute("description") ?? "",
+        ...(lvl !== null && lvl !== "" ? { level: Number(lvl) } : {}),
+        dice: r.textContent?.trim() ?? "",
+      };
+    }),
   };
 }
 

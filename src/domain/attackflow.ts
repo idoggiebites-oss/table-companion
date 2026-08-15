@@ -30,7 +30,8 @@ export interface AttackClaim {
   readonly targetName: string;
   readonly weapon: string;
   /** What the player rolled, with their modifier already in it. */
-  readonly toHit: number;
+  /** Null when the target rolls a save instead of the caster rolling to hit. */
+  readonly toHit: number | null;
   readonly damage: number;
   readonly damageType: string;
   readonly at: number;
@@ -43,12 +44,14 @@ export type Verdict = "hits" | "misses" | "unknown";
  * the target — an ad-hoc creature typed in mid-fight has none, and guessing
  * would be worse than asking.
  */
-export function verdictFor(toHit: number, ac: number | undefined): Verdict {
-  if (ac === undefined) return "unknown";
+export function verdictFor(toHit: number | null, ac: number | undefined): Verdict {
+  // A save spell has no attack roll at all; the DM decides on the save.
+  if (toHit === null || ac === undefined) return "unknown";
   return toHit >= ac ? "hits" : "misses";
 }
 
-export function describeVerdict(toHit: number, ac: number | undefined): string {
+export function describeVerdict(toHit: number | null, ac: number | undefined): string {
+  if (toHit === null) return "they save or they do not";
   const verdict = verdictFor(toHit, ac);
   if (verdict === "unknown") return `${toHit} to hit`;
   return `${toHit} against ${ac} — ${verdict}`;

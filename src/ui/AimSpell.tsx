@@ -1,0 +1,166 @@
+/**
+ * Pointing a spell at something.
+ *
+ * The same walkthrough a weapon gets, because a beginner should not meet two
+ * different ways of making an attack. What changes is who rolls: an attack
+ * spell asks the caster for a d20, a save spell tells them the DC and asks
+ * only for damage, and a spell that does neither has nothing to aim.
+ *
+ * The dice come from the file, at the right level — a cantrip scales with the
+ * caster and a levelled spell with the slot it went into, which is the rule
+ * most often got wrong at a table.
+ */
+
+import { useState } from "react";
+import { formatModifier } from "../domain/abilities.js";
+import type { EffectiveBuild } from "../domain/build.js";
+import { visibleTo, type Combat, type Combatant } from "../domain/combat.js";
+import type { CompendiumSpell } from "../import/compendium.js";
+import type { KnownSpell } from "../domain/spells.js";
+import {
+  castingAbility, damageFor, damageTypeFrom, kindOf, resolveDice,
+  spellAttackBonus, spellSaveDc,
+} from "../domain/spellcast.js";
+
+export function AimSpell({
+  spell, atLevel, build, book, combat, onSend, onCancel,
+}: {
+  spell: KnownSpell;
+  atLevel: number;
+  build: EffectiveBuild;
+  book: readonly CompendiumSpell[];
+  combat: Combat;
+  onSend: (c: {
+    target: Combatant;
+    toHit: number | null;
+    damage: number;
+    damageType: string;
+  }) => void;
+  onCancel: () => void;
+}) {
+  const [target, setTarget] = useState<Combatant | null>(null);
+  const [toHit, setToHit] = useState("");
+  const [damage, setDamage] = useState("");
+
+  const full = book.find((s) => s.id === spell.id);
+  const kind = full ? kindOf(full) : { kind: "none" as const };
+  const ability = castingAbility(build.classes.map((c) => c.classId));
+  const mod = build.abilityMods[ability];
+  const attackBonus = spellAttackBonus(build.proficiencyBonus, mod);
+  const dc = spellSaveDc(build.proficiencyBonus, mod);
+
+  const roll = full
+    ? damageFor(full, { slotLevel: atLevel, characterLevel: build.totalLevel })
+    : null;
+  const dice = roll ? resolveDice(roll.dice, mod) : null;
+  const damageType = roll ? damageTypeFrom(roll.description) : "damage";
+
+  // A spell that neither attacks nor damages has nothing to point at.
+  if (kind.kind === "none" && !dice) {
+    return (
+      <div className="swing-step">
+        <span className="label">{spell.name} is cast</span>
+        <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+          Nothing to roll. Tell the table what it does.
+        </p>
+        <button onClick={onCancel}>Done</button>
+      </div>
+    );
+  }
+
+  const targets = combat.order.filter(
+    (c) =>
+      visibleTo({ kind: "player", characterId: build.id }, c) &&
+      c.source.kind === "creature" &&
+      (combat.creatureHp[c.id] ?? 1) > 0,
+  );
+  const num = (s: string) => {
+    const n = Number(s);
+    return Number.isFinite(n) && s.trim() !== "" ? n : null;
+  };
+
+  if (!target) {
+    return (
+      <div className="swing-step">
+        <span className="label">Who are you aiming {spell.name} at?</span>
+        {targets.map((c) => (
+          <button className="tgt-row" key={c.id} onClick={() => setTarget(c)}>
+            {c.name}
+          </button>
+        ))}
+        {targets.length === 0 && (
+          <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+            Nothing you can see.
+          </p>
+        )}
+        <button onClick={onCancel}>Not at anything</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="swing-step">
+      <span className="label">{spell.name} at {target.name}</span>
+
+      {kind.kind === "attack" && (
+        <>
+          <p className="swing-ask">
+            Roll a <b>d20</b> and add <b>{formatModifier(attackBonus)}</b>.
+          </p>
+          <input
+            type="number"
+            aria-label="Spell attack roll"
+            placeholder="total"
+            value={toHit}
+            onChange={(e) => setToHit(e.target.value)}
+          />
+        </>
+      )}
+
+      {kind.kind === "save" && (
+        <p className="swing-ask">
+          They roll a <b>{kind.ability.toUpperCase()}</b> save against your
+          {" "}<b>DC {dc}</b>. The DM will tell you.
+        </p>
+      )}
+
+      {dice && (
+        <>
+          <p className="swing-ask">
+            Roll <b>{dice}</b> {damageType}.
+          </p>
+          <input
+            type="number"
+            aria-label="Spell damage roll"
+            placeholder="total"
+            value={damage}
+            onChange={(e) => setDamage(e.target.value)}
+          />
+        </>
+      )}
+
+      <div className="row">
+        <button
+          disabled={
+            (kind.kind === "attack" && num(toHit) === null) ||
+            (dice !== null && num(damage) === null)
+          }
+          onClick={() =>
+            onSend({
+              target,
+              toHit: kind.kind === "attack" ? num(toHit) : null,
+              damage: num(damage) ?? 0,
+              damageType,
+            })
+          }
+        >
+          Send to the DM
+        </button>
+        <button onClick={() => setTarget(null)}>Back</button>
+      </div>
+      <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
+        The slot is already spent. The DM says whether it lands.
+      </p>
+    </div>
+  );
+}

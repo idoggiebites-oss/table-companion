@@ -156,10 +156,23 @@ export function PlayerTurn({
                 }}
               />
             ) : (
-              <button className="pt-atk" onClick={() => setPicking("attack")}>
-                {attacks.length > 0 ? `Attack with ${attacks[0]!.name}` : "Attack"}
-                {attacks.length > 1 && <small> or something else</small>}
-              </button>
+              <>
+                <button
+                  className="pt-atk"
+                  disabled={character.economy.action}
+                  onClick={() => setPicking("attack")}
+                >
+                  {attacks.length > 0 ? `Attack with ${attacks[0]!.name}` : "Attack"}
+                  {attacks.length > 1 && <small> or something else</small>}
+                </button>
+                {/* Beginners do not know an attack IS the action, so the
+                    button that stops working has to say what it spent. */}
+                <p className="pt-why">
+                  {character.economy.action
+                    ? "Your action is gone — attacking costs it. You can still move, and you keep your reaction for somebody else's turn."
+                    : "Attacking costs your action. You get one a turn."}
+                </p>
+              </>
             )}
           </>
         )}

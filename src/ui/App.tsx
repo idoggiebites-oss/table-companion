@@ -400,7 +400,29 @@ export function App() {
               )}
 
               {current === "spells" && (
-                <Spells build={mine} state={mineState} append={append} />
+                <Spells
+                  build={mine}
+                  state={mineState}
+                  append={append}
+                  combat={state.combat}
+                  onCast={(c) =>
+                    append({
+                      type: "attackClaimed",
+                      claim: {
+                        id: `sp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+                        who: mine.id,
+                        whoName: mine.name,
+                        targetId: c.target.id,
+                        targetName: c.target.name,
+                        weapon: c.spell.name,
+                        toHit: c.toHit,
+                        damage: c.damage,
+                        damageType: c.damageType,
+                        at: Date.now(),
+                      },
+                    })
+                  }
+                />
               )}
 
               {current === "gear" && (
