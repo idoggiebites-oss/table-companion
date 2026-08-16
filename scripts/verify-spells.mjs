@@ -64,6 +64,23 @@ for (let i = 0; i < (await rows.count()); i++) {
   await chips.first().click();
   await chips.first().click();
 }
+
+/* Both pickers offer something.
+
+   Capping the shared list before splitting it was silently fatal with a
+   complete compendium: sorted by level, the first eighty entries are all
+   cantrips, so the Spells picker was empty and said nothing about why. */
+for (const [which, label] of [["Cantrips", /^Cantrips,/], ["Spells", /^Spells,/]]) {
+  const hd = page.getByRole("button", { name: label }).first();
+  await hd.scrollIntoViewIfNeeded();
+  await hd.click();
+  await page.waitForTimeout(1200);
+  const offered = await page.locator(".chooser-list .menu-hd").count();
+  ok(`the ${which.toLowerCase()} picker offers something to choose`, offered > 0, true);
+  await hd.click();
+  await page.waitForTimeout(200);
+}
+
 await page.waitForTimeout(400);
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".tabs", { timeout: 20000 });

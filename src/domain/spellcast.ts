@@ -10,6 +10,11 @@
  *   - Do I roll to hit, or do they roll to save? The text says "make a ranged
  *     spell attack" or "must make a Dexterity saving throw" in almost exactly
  *     those words.
+ * Every reader here tolerates an absent field. Content is device-local and
+ * never migrated, so a spell saved by an older import can be missing what
+ * today's code reads — and a missing string must not be able to take the
+ * whole screen down. See Boundary.tsx for what happens when one does.
+ *
  *   - How much damage? <roll> states the dice per level — and per level of
  *     WHAT differs: a cantrip scales with the caster and a levelled spell
  *     with the slot it was cast from. That is the rule people get wrong by
@@ -31,7 +36,7 @@ export interface CastableSpell {
 export type CastCost = EconomyKind | "long";
 
 export function costOf(time: string): CastCost {
-  const t = time.toLowerCase();
+  const t = (time ?? "").toLowerCase();
   if (t.includes("bonus")) return "bonus";
   if (t.includes("reaction")) return "reaction";
   if (/^\s*1\s*action/.test(t) || t === "action") return "action";
@@ -56,7 +61,7 @@ const ABILITY_WORDS: Record<string, Ability> = {
  * and gets out of the way.
  */
 export function kindOf(spell: CastableSpell): SpellKind {
-  const text = spell.text.toLowerCase();
+  const text = (spell.text ?? "").toLowerCase();
   if (/\b(ranged|melee) spell attack\b/.test(text)) return { kind: "attack" };
   const save = /\b(strength|dexterity|constitution|intelligence|wisdom|charisma) saving throw\b/
     .exec(text);
@@ -84,8 +89,9 @@ export function damageFor(
   spell: CastableSpell,
   { slotLevel, characterLevel }: { slotLevel: number; characterLevel: number },
 ): { dice: string; description: string } | null {
-  const scaling = spell.rolls.filter((r) => r.level !== undefined);
-  const flat = spell.rolls.find((r) => r.level === undefined);
+  const rolls = spell.rolls ?? [];
+  const scaling = rolls.filter((r) => r.level !== undefined);
+  const flat = rolls.find((r) => r.level === undefined);
 
   if (scaling.length === 0) {
     return flat ? { dice: flat.dice, description: flat.description } : null;
@@ -104,13 +110,13 @@ export function damageFor(
  * and left unresolved it would be handed to a player as literal text.
  */
 export function resolveDice(dice: string, abilityMod: number): string {
-  return dice.replace(/%0/g, abilityMod >= 0 ? `${abilityMod}` : `${abilityMod}`)
+  return (dice ?? "").replace(/%0/g, abilityMod >= 0 ? `${abilityMod}` : `${abilityMod}`)
     .replace(/\+\s*-/, "−");
 }
 
 /** "Fire Damage" → "fire". What the DM's queue shows beside the number. */
 export function damageTypeFrom(description: string): string {
-  return description.replace(/\s*damage\s*$/i, "").trim().toLowerCase() || "damage";
+  return (description ?? "").replace(/\s*damage\s*$/i, "").trim().toLowerCase() || "damage";
 }
 
 /**

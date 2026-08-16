@@ -24,11 +24,18 @@ import { AnswerCheck } from "./AnswerCheck.js";
 import { AskCheck } from "./AskCheck.js";
 import { Sources } from "./Sources.js";
 import { Spells } from "./Spells.js";
+import { Boundary } from "./Boundary.js";
 import { Tabs, type TabDef } from "./Tabs.js";
 import { Gear } from "./Gear.js";
 
 /** Device-local, like the seat — never in the log. */
 type TabId = "fight" | "party" | "prep" | "book" | "log" | "sheet" | "gear" | "spells";
+
+/** What a crash on this tab calls itself. */
+const TAB_NAME: Record<TabId, string> = {
+  fight: "The fight", party: "The party", prep: "Prep", book: "The book",
+  log: "The log", sheet: "Your sheet", gear: "Your gear", spells: "Your spells",
+};
 import { Shop } from "./Shop.js";
 import { UpdateBar } from "./UpdateBar.js";
 
@@ -327,6 +334,12 @@ export function App() {
         </>
       )}
 
+      {/*
+        * Keyed on the tab, so a crash is contained to the screen that caused
+        * it and switching away clears it. Everything above this line — the
+        * seat, the tabs, a check you owe right now — keeps working.
+        */}
+      <Boundary key={current} what={TAB_NAME[current]}>
       {needsCharacter ? (
         building ? (
           <CreateCharacter onCreate={create} onCancel={() => setBuilding(false)} />
@@ -488,6 +501,7 @@ export function App() {
           </div>
         </section>
       )}
+      </Boundary>
     </div>
   );
 }

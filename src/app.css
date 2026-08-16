@@ -978,3 +978,14 @@ html, body { overscroll-behavior-y: none; }
 
 /* ---- picking a spell ---- */
 .sp-meta { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+/* ---- a crash, shown rather than left as a black screen ---- */
+.crash { border-color: var(--damage); }
+.crash-say { margin: 0 0 10px; font-size: 0.9rem; color: var(--ink); }
+.crash-msg {
+  margin: 0 0 12px; padding: 10px 12px; border-radius: 8px;
+  background: var(--ground); border: 1px solid var(--rule);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem; color: var(--muted);
+  overflow-wrap: anywhere;
+}

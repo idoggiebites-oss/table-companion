@@ -80,7 +80,9 @@ export function toKnown(s: SpellSource, prepared = true): KnownSpell {
  */
 export function castableBy(spell: SpellSource, classId: string): boolean {
   const want = classId.toLowerCase();
-  return spell.classes.some((c) => c === want || c.startsWith(`${want} `));
+  // Tolerates an absent list: device-local content is never migrated, and a
+  // record saved by an older import must not be able to blank the screen.
+  return (spell.classes ?? []).some((c) => c === want || c.startsWith(`${want} `));
 }
 
 /**
@@ -98,7 +100,7 @@ export function castableBy(spell: SpellSource, classId: string): boolean {
  * tracks, just not from a spell list.
  */
 export function isClassFeature(s: { name: string; school: string }): boolean {
-  return s.school.trim() === "" || /^[^:]{1,40}:\s/.test(s.name);
+  return (s.school ?? "").trim() === "" || /^[^:]{1,40}:\s/.test(s.name ?? "");
 }
 
 export interface SlotState {

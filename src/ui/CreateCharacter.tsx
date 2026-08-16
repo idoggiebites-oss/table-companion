@@ -302,8 +302,7 @@ export function CreateCharacter({
         if (q && !s.name.toLowerCase().includes(q)) return false;
         return true;
       })
-      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
-      .slice(0, 80);
+      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
   }, [book, klass, castsAtAll, spellFilter, chosenSpells, atLevel]);
 
   /**
@@ -1183,9 +1182,16 @@ export function CreateCharacter({
                   const taken = isCantrip ? pickedCantrips : pickedSpells;
                   const limit = isCantrip ? cantripsKnown : spellsKnown;
                   const full = limit > 0 && taken >= limit;
-                  const rows = spellChoices.filter((sp) =>
-                    isCantrip ? sp.level === 0 : sp.level > 0,
-                  );
+                  /*
+                   * Capped per picker, not across both. Capping the shared
+                   * list first was silently fatal with a complete compendium:
+                   * sorted by level, the first eighty entries are ALL
+                   * cantrips, so a wizard choosing their first spells was
+                   * offered an empty list and no reason for it.
+                   */
+                  const rows = spellChoices
+                    .filter((sp) => (isCantrip ? sp.level === 0 : sp.level > 0))
+                    .slice(0, 80);
 
                   return (
                     <div className="chooser" key={kind}>
