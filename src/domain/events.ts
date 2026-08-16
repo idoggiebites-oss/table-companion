@@ -13,7 +13,7 @@
 
 import type { CharacterId, Character } from "./build.js";
 import type { ClassId } from "./resources.js";
-import type { Combatant, Disclosure, EconomyKind, TargetRef } from "./combat.js";
+import type { Combatant, Disclosure, EconomyKind, StanceTag, TargetRef } from "./combat.js";
 import type { Encounter } from "./encounter.js";
 import type { Progression } from "./progression.js";
 import type { AttackClaim } from "./attackflow.js";
@@ -303,6 +303,77 @@ export type DomainEvent = Meta &
         readonly combatantId: string;
         readonly level: Disclosure;
       }
+    /*
+     * A creature's conditions live in the fight, not on a sheet — same split
+     * as its hit points, and for the same reason: it has no life outside this
+     * fight. Prone on a goblin is what turns "roll a d20" into "roll two and
+     * take the higher", so it has to be somewhere both sides can read it.
+     */
+    | {
+        readonly type: "creatureConditionAdded";
+        readonly combatantId: string;
+        readonly condition: ConditionId;
+      }
+    | {
+        readonly type: "creatureConditionRemoved";
+        readonly combatantId: string;
+        readonly condition: ConditionId;
+      }
+    /*
+     * What somebody did that changes somebody else's dice: dodging, helped,
+     * hidden. Not conditions — they expire with the turn rather than when
+     * anyone remembers, so they are kept apart from the rulebook's fourteen.
+     */
+    | {
+        readonly type: "stanceTagAdded";
+        readonly combatantId: string;
+        readonly tag: StanceTag;
+        /** Who did it, for the log: "Kira helped Bel". */
+        readonly source?: string;
+      }
+    | {
+        readonly type: "stanceTagRemoved";
+        readonly combatantId: string;
+        readonly tag: StanceTag;
+      }
+    /*
+     * A reaction, offered. The app cannot see reach or line of sight, so it
+     * cannot know when the moment arrives — the DM does, and this is them
+     * saying so to exactly the people it concerns.
+     */
+    | {
+        readonly type: "reactionOffered";
+        readonly to: readonly string[];
+        readonly because: string;
+        readonly from: string;
+      }
+    | { readonly type: "reactionDeclined"; readonly combatantId: string }
+    | { readonly type: "reactionOfferClosed" }
+    /*
+     * Ready: a trigger named now, fired later. Held on the fight so the DM can
+     * see what everyone is waiting for — the single most-forgotten thing at a
+     * table is somebody's readied action.
+     */
+    | {
+        readonly type: "actionReadied";
+        readonly combatantId: string;
+        readonly trigger: string;
+      }
+    | { readonly type: "readiedActionCleared"; readonly combatantId: string }
+    /*
+     * A shove is a contest, and the app only ever holds half of it: the
+     * player's Athletics total. It carries that across and the DM says
+     * whether the thing went over.
+     */
+    | {
+        readonly type: "shoveClaimed";
+        readonly combatantId: string;
+        readonly byName: string;
+        readonly targetId: string;
+        readonly targetName: string;
+        readonly total: number;
+      }
+    | { readonly type: "shoveResolved"; readonly prone: boolean }
     /**
      * One blast, one event, one undo. A fireball on four goblins is four
      * saving throws and two different damage totals, and doing that as four

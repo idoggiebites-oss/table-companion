@@ -21,19 +21,22 @@ import type { EffectiveBuild } from "../domain/build.js";
 import { visibleTo, type Combat, type Combatant } from "../domain/combat.js";
 import type { CompendiumSpell } from "../import/compendium.js";
 import type { KnownSpell } from "../domain/spells.js";
+import { describeReasons, describeStance, type Stance, type StanceReason } from "../domain/stance.js";
 import {
   castingAbility, damageFor, damageTypeFrom, kindOf, resolveDice,
   spellAttackBonus, spellSaveDc,
 } from "../domain/spellcast.js";
 
 export function AimSpell({
-  spell, atLevel, build, book, combat, onDone, onCancel,
+  spell, atLevel, build, book, combat, stanceAt, onDone, onCancel,
 }: {
   spell: KnownSpell;
   atLevel: number;
   build: EffectiveBuild;
   book: readonly CompendiumSpell[];
   combat: Combat;
+  /** How the dice fall against this target, and why. A spell is ranged. */
+  stanceAt: (target: Combatant) => { stance: Stance; reasons: readonly StanceReason[] };
   /**
    * The spell was cast. `null` means there is nothing for the DM to rule on —
    * no target, or nothing to roll — which is still a cast.
@@ -122,9 +125,18 @@ export function AimSpell({
 
       {kind.kind === "attack" && (
         <>
-          <p className="swing-ask">
-            Roll a <b>d20</b> and add <b>{formatModifier(attackBonus)}</b>.
-          </p>
+          {(() => {
+            const { stance, reasons } = stanceAt(target);
+            const why = describeReasons(stance, reasons);
+            return (
+              <>
+                <p className="swing-ask">
+                  {describeStance(stance)} and add <b>{formatModifier(attackBonus)}</b>.
+                </p>
+                {why && <p className={`stance ${stance}`}>{why}</p>}
+              </>
+            );
+          })()}
           <input
             type="number"
             aria-label="Spell attack roll"

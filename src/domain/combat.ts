@@ -11,6 +11,7 @@
  * can see everything about, or one they cannot see at all.
  */
 
+import type { ConditionId } from "./edition.js";
 import type { CharacterId } from "./build.js";
 
 /** Where a combatant's numbers live, which is also what kind of thing it is. */
@@ -85,6 +86,63 @@ export interface Combat {
    * its reaction lives here. Same split as hit points.
    */
   readonly reactions: Readonly<Record<string, boolean>>;
+  /**
+   * Conditions on CREATURES, by combatant id. A character's conditions live
+   * on their sheet, where they outlast the fight; a creature has no life
+   * outside this one. Same split as hit points and reactions.
+   */
+  readonly creatureConditions: Readonly<Record<string, readonly ConditionId[]>>;
+  /**
+   * What somebody did that changes how the dice fall for somebody ELSE, by
+   * combatant id — dodging, helped, hidden.
+   *
+   * These are not conditions. They belong to this fight and this round: Dodge
+   * lasts until your next turn, Help until you swing. Keeping them out of the
+   * condition list means the DM's condition menu stays the fourteen names in
+   * the rulebook rather than a mix of those and our bookkeeping.
+   */
+  readonly tags: Readonly<Record<string, readonly StanceTag[]>>;
+  /**
+   * A reaction the DM has offered and nobody has answered yet. One at a time:
+   * the table is waiting on it, so a queue would mean the table is waiting on
+   * several things and cannot see which.
+   */
+  readonly offer: ReactionOffer | null;
+  /**
+   * Triggers people are holding, by combatant id. The most-forgotten thing at
+   * a table is somebody's readied action — held here so it is on the DM's
+   * screen rather than in one player's memory.
+   */
+  readonly readied: Readonly<Record<string, string>>;
+  /**
+   * A shove, waiting on the DM. Contested rolls are the one thing in a fight
+   * the app cannot settle on its own — it knows the player's total and not
+   * the creature's — so it carries the number across and lets the DM say.
+   */
+  readonly shove: ShoveClaim | null;
+}
+
+export interface ShoveClaim {
+  readonly by: string;
+  readonly byName: string;
+  readonly targetId: string;
+  readonly targetName: string;
+  /** Their Athletics total, rolled on the table. */
+  readonly total: number;
+}
+
+/** Not a condition — bookkeeping this fight needs and the rulebook does not. */
+export type StanceTag = "dodging" | "helped" | "hidden";
+
+export interface ReactionOffer {
+  /** Combatant ids who may answer. */
+  readonly to: readonly string[];
+  /** Why, in the DM's words: "the goblin is leaving your reach". */
+  readonly because: string;
+  /** Who or what triggered it, for the prompt to name. */
+  readonly from: string;
+  /** Answered already, so the prompt clears on their screen only. */
+  readonly declined: readonly string[];
 }
 
 /**
@@ -126,6 +184,11 @@ export function stageCombat(order: readonly Combatant[]): Combat {
     creatureHp: seedHp(order),
     moved: {},
     reactions: {},
+    creatureConditions: {},
+    tags: {},
+    offer: null,
+    readied: {},
+    shove: null,
   };
 }
 
@@ -139,6 +202,11 @@ export function startCombat(order: readonly Combatant[]): Combat {
     creatureHp: seedHp(sorted),
     moved: {},
     reactions: {},
+    creatureConditions: {},
+    tags: {},
+    offer: null,
+    readied: {},
+    shove: null,
   };
 }
 
@@ -169,6 +237,11 @@ export function beginCombat(combat: Combat): Combat {
     order: sortOrder(rolled),
     moved: {},
     reactions: {},
+    creatureConditions: {},
+    tags: {},
+    offer: null,
+    readied: {},
+    shove: null,
   };
 }
 
@@ -202,16 +275,32 @@ export function advance(combat: Combat, from: number): Combat {
   const next = combat.turn + 1;
   const moved = { ...combat.moved };
   const reactions = { ...combat.reactions };
+  const tags = { ...combat.tags };
   // Movement and the reaction both come back when your turn opens, exactly
   // like a character's economy does.
   const opening = combat.order[next >= combat.order.length ? 0 : next];
   if (opening) {
     delete moved[opening.id];
     delete reactions[opening.id];
+    // Dodge lasts "until your next turn", and this is that turn. Help is
+    // spent by then too — an ally who never swung has lost the moment.
+    delete tags[opening.id];
   }
+  // An offer nobody answered dies with the turn that raised it. Leaving it up
+  // would have a player answering a question about a moment that has passed.
+  const base = { ...combat, moved, reactions, tags, offer: null };
   return next >= combat.order.length
-    ? { ...combat, turn: 0, round: combat.round + 1, moved, reactions }
-    : { ...combat, turn: next, moved, reactions };
+    ? { ...base, turn: 0, round: combat.round + 1 }
+    : { ...base, turn: next };
+}
+
+/** A character's seat in the fight, by their id. Null if they are not in it. */
+export function combatantIdOf(combat: Combat, characterId: CharacterId): string | null {
+  return (
+    combat.order.find(
+      (c) => c.source.kind === "character" && c.source.characterId === characterId,
+    )?.id ?? null
+  );
 }
 
 export function activeCombatant(combat: Combat): Combatant | null {

@@ -3,7 +3,8 @@ import type { Character } from "../domain/build.js";
 import type { Stack } from "../domain/items.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { actorKey } from "../domain/permissions.js";
-import { turnsUntil } from "../domain/combat.js";
+import { combatantIdOf, turnsUntil, type Combatant } from "../domain/combat.js";
+import { stanceFor } from "../domain/stance.js";
 import { levelsOwed } from "../domain/project.js";
 import { useCampaign } from "../store/useCampaign.js";
 import { useSeat } from "../store/useSeat.js";
@@ -140,6 +141,9 @@ export function App() {
    * sheet; a DM's is the party they are looking after.
    */
   const home: TabId = state.combat !== null ? "fight" : dmView ? "party" : "sheet";
+  /** What this character did on their turn that changes their own dice. */
+  const mySeatId = state.combat && mine ? combatantIdOf(state.combat, mine.id) : null;
+  const myTags = (mySeatId && state.combat?.tags[mySeatId]) || [];
   // A seat change can also leave you on a tab the other side does not have.
   const current = tab !== null && tabs.some((t) => t.id === tab) ? tab : home;
 
@@ -435,6 +439,26 @@ export function App() {
                   state={mineState}
                   append={append}
                   combat={state.combat}
+                  {...(state.combat
+                    ? {
+                        stanceAt: (target: Combatant) =>
+                          stanceFor({
+                            attacker: {
+                              name: "you",
+                              conditions: mineState.conditions,
+                              tags: myTags,
+                            },
+                            target: {
+                              name: target.name,
+                              conditions: state.combat?.creatureConditions[target.id] ?? [],
+                              tags: state.combat?.tags[target.id] ?? [],
+                            },
+                            // A spell is thrown across the room, so a prone
+                            // target is harder to hit rather than easier.
+                            range: "ranged",
+                          }),
+                      }
+                    : {})}
                   onCast={(c) =>
                     append({
                       type: "attackClaimed",

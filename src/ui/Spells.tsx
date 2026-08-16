@@ -27,6 +27,7 @@ import {
 } from "../domain/spells.js";
 import type { CompendiumSpell } from "../import/compendium.js";
 import type { Combat, Combatant } from "../domain/combat.js";
+import type { Stance, StanceReason } from "../domain/stance.js";
 import { costOf } from "../domain/spellcast.js";
 import { loadSpells } from "../store/srd.js";
 import { AimSpell } from "./AimSpell.js";
@@ -42,13 +43,15 @@ function useSpellbook(when: boolean): CompendiumSpell[] | null {
 }
 
 export function Spells({
-  build, state, append, combat, onCast,
+  build, state, append, combat, stanceAt, onCast,
 }: {
   build: EffectiveBuild;
   state: CharacterState;
   append: (body: EventBody) => void;
   /** Present during a fight: casting then aims at something. */
   combat?: Combat | null;
+  /** How the dice fall against a target, and why. Absent outside a fight. */
+  stanceAt?: (target: Combatant) => { stance: Stance; reasons: readonly StanceReason[] };
   onCast?: (c: {
     spell: KnownSpell;
     atLevel: number;
@@ -348,6 +351,7 @@ export function Spells({
           build={build}
           book={book ?? []}
           combat={combat}
+          stanceAt={stanceAt ?? (() => ({ stance: "straight" as const, reasons: [] }))}
           onCancel={() => setAiming(null)}
           onDone={(aim) => {
             commit(aiming.spell, aiming.atLevel, aiming.ritual);

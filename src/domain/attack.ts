@@ -15,6 +15,7 @@
  *     damage carries a flag rather than assuming the modifier applies.
  */
 
+import type { AttackRange } from "./stance.js";
 import { formatModifier, type Ability } from "./abilities.js";
 import type { DieSize } from "./resources.js";
 
@@ -35,6 +36,14 @@ export interface Attack {
   };
   readonly damageType: string;
   readonly notes?: string;
+  /**
+   * Melee or ranged. The app needs it for exactly one question and it is a
+   * question people get wrong: a prone target is easy to hit up close and
+   * hard to hit from across the room. Absent means unknown, and unknown is
+   * treated as melee — the commoner case, and the one a hand-typed attack on
+   * a sheet almost always is.
+   */
+  readonly range?: AttackRange;
 }
 
 export interface ResolvedAttack {
@@ -45,6 +54,7 @@ export interface ResolvedAttack {
   readonly damageFormula: string;
   readonly damageType: string;
   readonly notes?: string;
+  readonly range?: AttackRange;
 }
 
 export function abilityFor(
@@ -78,6 +88,7 @@ export function resolveAttack(
     usedAbility: used,
     damageFormula: damageFormula(attack.damage.count, attack.damage.die, flat),
     damageType: attack.damageType,
+    ...(attack.range ? { range: attack.range } : {}),
   };
   return attack.notes === undefined ? base : { ...base, notes: attack.notes };
 }

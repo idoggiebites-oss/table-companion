@@ -484,6 +484,134 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       if (combat === state.combat) return state; // guard refused it
       return { ...state, combat, characters: refillActive(state.characters, combat) };
     }
+    case "creatureConditionAdded": {
+      if (state.combat === null) return state;
+      const had = state.combat.creatureConditions[e.combatantId] ?? [];
+      if (had.includes(e.condition)) return state;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          creatureConditions: {
+            ...state.combat.creatureConditions,
+            [e.combatantId]: [...had, e.condition],
+          },
+        },
+      };
+    }
+    case "creatureConditionRemoved": {
+      if (state.combat === null) return state;
+      const had = state.combat.creatureConditions[e.combatantId] ?? [];
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          creatureConditions: {
+            ...state.combat.creatureConditions,
+            [e.combatantId]: had.filter((c) => c !== e.condition),
+          },
+        },
+      };
+    }
+    case "stanceTagAdded": {
+      if (state.combat === null) return state;
+      const had = state.combat.tags[e.combatantId] ?? [];
+      if (had.includes(e.tag)) return state;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          tags: { ...state.combat.tags, [e.combatantId]: [...had, e.tag] },
+        },
+      };
+    }
+    case "stanceTagRemoved": {
+      if (state.combat === null) return state;
+      const had = state.combat.tags[e.combatantId] ?? [];
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          tags: { ...state.combat.tags, [e.combatantId]: had.filter((t) => t !== e.tag) },
+        },
+      };
+    }
+    case "reactionOffered": {
+      if (state.combat === null) return state;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          offer: { to: e.to, because: e.because, from: e.from, declined: [] },
+        },
+      };
+    }
+    case "reactionDeclined": {
+      if (state.combat === null || state.combat.offer === null) return state;
+      const offer = state.combat.offer;
+      const declined = offer.declined.includes(e.combatantId)
+        ? offer.declined
+        : [...offer.declined, e.combatantId];
+      // Everyone asked has answered, so the question is over.
+      const done = offer.to.every((id) => declined.includes(id));
+      return {
+        ...state,
+        combat: { ...state.combat, offer: done ? null : { ...offer, declined } },
+      };
+    }
+    case "reactionOfferClosed": {
+      if (state.combat === null) return state;
+      return { ...state, combat: { ...state.combat, offer: null } };
+    }
+    case "actionReadied": {
+      if (state.combat === null) return state;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          readied: { ...state.combat.readied, [e.combatantId]: e.trigger },
+        },
+      };
+    }
+    case "readiedActionCleared": {
+      if (state.combat === null) return state;
+      const readied = { ...state.combat.readied };
+      delete readied[e.combatantId];
+      return { ...state, combat: { ...state.combat, readied } };
+    }
+    case "shoveClaimed": {
+      if (state.combat === null) return state;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          shove: {
+            by: e.combatantId,
+            byName: e.byName,
+            targetId: e.targetId,
+            targetName: e.targetName,
+            total: e.total,
+          },
+        },
+      };
+    }
+    case "shoveResolved": {
+      if (state.combat === null) return state;
+      const shove = state.combat.shove;
+      if (!shove) return state;
+      const had = state.combat.creatureConditions[shove.targetId] ?? [];
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          shove: null,
+          creatureConditions:
+            e.prone && !had.includes("prone")
+              ? { ...state.combat.creatureConditions, [shove.targetId]: [...had, "prone"] }
+              : state.combat.creatureConditions,
+        },
+      };
+    }
     case "creatureDamaged": {
       if (state.combat === null) return state;
       const current = state.combat.creatureHp[e.combatantId];

@@ -989,3 +989,45 @@ html, body { overscroll-behavior-y: none; }
   font-size: 0.78rem; color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+/* ---- advantage, conditions, reactions: the fight, made legible ---- */
+.stance {
+  margin: 0; padding: 7px 10px; border-radius: 8px;
+  font-size: 0.82rem; line-height: 1.35;
+  background: var(--raised); border-left: 3px solid var(--faint); color: var(--ink-dim);
+}
+.stance.advantage { border-left-color: var(--unharmed); }
+.stance.disadvantage { border-left-color: var(--damage); }
+
+.conds { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.cnd {
+  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--rule);
+  background: transparent; color: var(--muted);
+  font-size: 0.7rem; letter-spacing: 0.02em;
+}
+.cnd.on { color: var(--ink-dim); border-color: var(--bloodied); }
+.cnd.add { color: var(--muted); min-width: 26px; }
+.cnd-pick {
+  flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 5px;
+  padding: 8px; margin-top: 4px;
+  background: var(--ground); border: 1px solid var(--rule); border-radius: 8px;
+}
+
+.offer, .shove-ask { display: flex; flex-direction: column; gap: 8px; }
+.offer-row { text-align: left; padding: 9px 11px; }
+.offer-row.on { border-color: var(--steel); color: var(--ink); }
+
+.readied { display: flex; flex-direction: column; gap: 6px; }
+.ready-row {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px; border-radius: 8px;
+  background: var(--raised); border-left: 3px solid var(--conc);
+  font-size: 0.84rem;
+}
+.ready-row .faint { flex: 1; font-size: 0.78rem; }
+
+.react-ask {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px; margin-top: 10px; border-radius: 10px;
+  background: var(--raised); border: 1px solid var(--steel);
+}

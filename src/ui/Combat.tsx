@@ -12,6 +12,7 @@
  * meant to have.
  */
 
+import { ConditionStrip } from "./Conditions.js";
 import { useEffect, useState } from "react";
 import {
   instanceLabel, mergeStatblocks, rollHp, type Statblock,
@@ -393,6 +394,9 @@ export function Combat({
    * is reacting has to be asked — attributing it to whoever happens to be
    * active would credit the player whose turn provoked it.
    */
+  const [offering, setOffering] = useState(false);
+  const [offerTo, setOfferTo] = useState<readonly string[]>([]);
+  const [offerWhy, setOfferWhy] = useState("");
   const [dmPicking, setDmPicking] = useState<null | "target" | "reactor">(null);
   const [reactor, setReactor] = useState<Combatant | null>(null);
   const combat = state.combat;
@@ -557,6 +561,98 @@ export function Combat({
         </div>
       )}
 
+      {seat.kind === "dm" && offering && (
+        <div className="card-body offer">
+          <span className="label">Whose reaction?</span>
+          <div className="tgt">
+            {combat.order
+              .filter((c) => c.source.kind === "character")
+              .map((c) => (
+                <button
+                  className={`offer-row${offerTo.includes(c.id) ? " on" : ""}`}
+                  key={c.id}
+                  aria-pressed={offerTo.includes(c.id)}
+                  onClick={() =>
+                    setOfferTo((ids) =>
+                      ids.includes(c.id) ? ids.filter((x) => x !== c.id) : [...ids, c.id],
+                    )
+                  }
+                >
+                  {c.name}
+                </button>
+              ))}
+          </div>
+          <input
+            aria-label="Reason for the reaction"
+            placeholder="the goblin is leaving your reach"
+            value={offerWhy}
+            onChange={(e) => setOfferWhy(e.target.value)}
+          />
+          <div className="row">
+            <button
+              disabled={offerTo.length === 0}
+              onClick={() => {
+                append({
+                  type: "reactionOffered",
+                  to: offerTo,
+                  because: offerWhy.trim() || "something is happening",
+                  from: active?.name ?? "someone",
+                });
+                setOffering(false);
+                setOfferTo([]);
+                setOfferWhy("");
+              }}
+            >
+              Ask them
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* A shove, waiting on the only person who can settle it. */}
+      {seat.kind === "dm" && combat.shove && (
+        <div className="card-body shove-ask">
+          <span className="label">
+            {combat.shove.byName} shoves {combat.shove.targetName}
+          </span>
+          <p className="swing-ask">
+            Athletics <b>{combat.shove.total}</b>. Roll theirs — Athletics or
+            Acrobatics, their choice.
+          </p>
+          <div className="row">
+            <button onClick={() => append({ type: "shoveResolved", prone: true })}>
+              Down it goes
+            </button>
+            <button onClick={() => append({ type: "shoveResolved", prone: false })}>
+              It holds
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* What people are holding, so it is not one player's memory. */}
+      {Object.keys(combat.readied).length > 0 && (
+        <div className="card-body readied">
+          {combat.order
+            .filter((c) => combat.readied[c.id])
+            .map((c) => (
+              <div className="ready-row" key={c.id}>
+                <span className="nm">{c.name} is waiting</span>
+                <span className="faint">{combat.readied[c.id]}</span>
+                {seat.kind === "dm" && (
+                  <button
+                    onClick={() =>
+                      append({ type: "readiedActionCleared", combatantId: c.id })
+                    }
+                  >
+                    It fired
+                  </button>
+                )}
+              </div>
+            ))}
+        </div>
+      )}
+
       <div className="track">
         {visible.map((c) => {
           const isActive = active?.id === c.id;
@@ -603,6 +699,23 @@ export function Combat({
                   −{hit}
                 </button>
               )}
+              {/* What is wrong with them, where both sides can read it. This
+                  is what turns "roll a d20" into "roll two and take the
+                  higher" one screen over. */}
+              <ConditionStrip
+                on={
+                  c.source.kind === "creature"
+                    ? (combat.creatureConditions[c.id] ?? [])
+                    : (state.characters[c.source.characterId]?.conditions ?? [])
+                }
+                editable={seat.kind === "dm" && c.source.kind === "creature"}
+                onAdd={(cond) =>
+                  append({ type: "creatureConditionAdded", combatantId: c.id, condition: cond })
+                }
+                onRemove={(cond) =>
+                  append({ type: "creatureConditionRemoved", combatantId: c.id, condition: cond })
+                }
+              />
             </div>
           );
         })}
@@ -636,6 +749,19 @@ export function Combat({
                   : active && active.controller.kind === "dm"
                     ? `Attack with ${active.name}`
                     : "Opportunity attack"}
+              </button>
+              {/*
+                * Reactions, offered rather than detected. The app cannot see
+                * reach or line of sight — the positions are on the table —
+                * so it can never know the moment arrived. The DM does, and
+                * this is them saying so to exactly the people it concerns,
+                * instead of asking the room and hoping.
+                */}
+              <button
+                onClick={() => setOffering((v) => !v)}
+                disabled={combat.offer !== null}
+              >
+                {offering ? "Cancel" : "Offer a reaction"}
               </button>
               <button
                 disabled={!canEnd}

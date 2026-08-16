@@ -139,6 +139,7 @@ export function attackFromWeapon(
     bonus,
     damage: { count, die, addAbility: !offHand },
     damageType: item.damageType ?? "bludgeoning",
+    range: item.weaponRange === "Ranged" ? "ranged" : "melee",
     ...(notes.length > 0 ? { notes: notes.join(" · ") } : {}),
   };
 }

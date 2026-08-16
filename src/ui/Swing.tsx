@@ -19,14 +19,20 @@ import { useState } from "react";
 import { formatModifier } from "../domain/abilities.js";
 import type { ResolvedAttack } from "../domain/attack.js";
 import type { Combatant } from "../domain/combat.js";
+import { describeReasons, describeStance, type Stance, type StanceReason } from "../domain/stance.js";
 
 export type Step = "weapon" | "target" | "hit" | "damage" | "sent";
 
 export function Swing({
-  attacks, targets, onSend, onCancel,
+  attacks, targets, stanceAt, onSend, onCancel,
 }: {
   attacks: readonly ResolvedAttack[];
   targets: readonly Combatant[];
+  /** How the dice fall against this target, and why. */
+  stanceAt: (
+    target: Combatant,
+    attack: ResolvedAttack,
+  ) => { stance: Stance; reasons: readonly StanceReason[] };
   onSend: (a: { attack: ResolvedAttack; target: Combatant; toHit: number; damage: number }) => void;
   onCancel: () => void;
 }) {
@@ -103,10 +109,20 @@ export function Swing({
       {step === "hit" && attack && target && (
         <>
           <span className="label">Did it hit {target.name}?</span>
-          {/* The whole instruction in one sentence, including the arithmetic. */}
-          <p className="swing-ask">
-            Roll a <b>d20</b> and add <b>{formatModifier(attack.toHit)}</b>.
-          </p>
+          {/* The whole instruction in one sentence, including the arithmetic
+              and — the part a beginner cannot work out — how many dice. */}
+          {(() => {
+            const { stance, reasons } = stanceAt(target, attack);
+            const why = describeReasons(stance, reasons);
+            return (
+              <>
+                <p className="swing-ask">
+                  {describeStance(stance)} and add <b>{formatModifier(attack.toHit)}</b>.
+                </p>
+                {why && <p className={`stance ${stance}`}>{why}</p>}
+              </>
+            );
+          })()}
           <div className="row">
             <input
               type="number"

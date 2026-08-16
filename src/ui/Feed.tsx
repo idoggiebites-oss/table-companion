@@ -167,6 +167,32 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `Creature took ${e.amount}`;
     case "disclosureSet":
       return `Disclosure set to ${e.level}`;
+    case "creatureConditionAdded":
+      return `A creature is ${e.condition}`;
+    case "creatureConditionRemoved":
+      return `A creature is no longer ${e.condition}`;
+    case "stanceTagAdded":
+      return e.tag === "helped"
+        ? `${e.source ? `${nameOf(e.source)} is helping` : "Helped"}`
+        : e.tag === "dodging"
+          ? "Dodging"
+          : "Hidden";
+    case "stanceTagRemoved":
+      return null;
+    case "reactionOffered":
+      return `Reaction offered — ${e.because}`;
+    case "reactionDeclined":
+      return "Let it go";
+    case "reactionOfferClosed":
+      return null;
+    case "shoveClaimed":
+      return `${e.byName} shoves ${e.targetName} — Athletics ${e.total}`;
+    case "shoveResolved":
+      return e.prone ? "Down it goes" : "It holds its ground";
+    case "actionReadied":
+      return `Readied: ${e.trigger}`;
+    case "readiedActionCleared":
+      return null;
     case "shortRestTaken":
       return `Short rest · ${e.who.map(nameOf).join(", ")}`;
     case "longRestTaken":

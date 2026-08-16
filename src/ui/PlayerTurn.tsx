@@ -14,6 +14,7 @@
 import { useState } from "react";
 import type { ResolvedAttack } from "../domain/attack.js";
 import { blockedBecause, STANDARD_ACTIONS } from "../domain/actions.js";
+import { stanceFor } from "../domain/stance.js";
 import { Swing } from "./Swing.js";
 import {
   activeCombatant, controls, ECONOMY, isSurprised, movementLeft, turnsUntil,
@@ -118,8 +119,13 @@ export function PlayerTurn({
   /** Takes them to the spell list, which is where casting lives. */
   onCast?: () => void;
 }) {
-  const [picking, setPicking] = useState<null | "attack" | "opportunity" | "menu">(null);
+  const [picking, setPicking] = useState<
+    null | "attack" | "opportunity" | "menu" | "help" | "shove" | "ready"
+  >(null);
   const [took, setTook] = useState<string | null>(null);
+  const [trigger, setTrigger] = useState("");
+  const [athletics, setAthletics] = useState("");
+  const [shoveAt, setShoveAt] = useState<Combatant | null>(null);
   const [looking, setLooking] = useState<string | null>(null);
   const who = seat.characterId;
   const active = activeCombatant(combat);
@@ -131,6 +137,45 @@ export function PlayerTurn({
   const self = combat.order.find(
     (c) => c.source.kind === "character" && c.source.characterId === who,
   );
+  /*
+   * Both sides of the roll, in one place — which is the whole reason this can
+   * be computed at all. The conditions on you are on your sheet, the ones on
+   * the goblin are in the fight, and until now the only place they met was in
+   * somebody's head while five people waited.
+   */
+  const rollerFor = (c: Combatant) => ({
+    name: c.name,
+    conditions: combat.creatureConditions[c.id] ?? [],
+    tags: combat.tags[c.id] ?? [],
+  });
+  const meAsRoller = {
+    name: "you",
+    conditions: character.conditions,
+    tags: self ? (combat.tags[self.id] ?? []) : [],
+  };
+  const stanceAt = (target: Combatant, attack?: ResolvedAttack) =>
+    stanceFor({
+      attacker: meAsRoller,
+      target: rollerFor(target),
+      // A hand-typed attack says nothing about reach, and most of those are
+      // melee. A spell aimed across the room is not.
+      range: attack?.range ?? "melee",
+    });
+
+  /** An offer the DM made that names me and that I have not answered. */
+  const offered =
+    combat.offer &&
+    self &&
+    combat.offer.to.includes(self.id) &&
+    !combat.offer.declined.includes(self.id)
+      ? combat.offer
+      : null;
+
+  /** Everyone else in the fight you could put a hand on the shoulder of. */
+  const allies = combat.order.filter(
+    (c) => c.source.kind === "character" && c.id !== self?.id,
+  );
+
   const visibleTargets = combat.order.filter(
     (c) =>
       visibleTo(seat, c) &&
@@ -187,12 +232,34 @@ export function PlayerTurn({
                                   setPicking(null);
                                   return onCast?.();
                                 }
+                                /*
+                                 * Actions that need somebody or something
+                                 * named get their own step. The rest used to
+                                 * all end here — the pip moved, a sentence
+                                 * appeared, and nothing in the app was any
+                                 * different afterwards, which is not what
+                                 * "you took the Dodge action" means.
+                                 */
+                                if (a.id === "help") return setPicking("help");
+                                if (a.id === "shove") return setPicking("shove");
+                                if (a.id === "ready") return setPicking("ready");
+
                                 append({ type: "economySpent", who, kind: a.cost });
                                 if (a.id === "dash" && self?.speed) {
                                   append({
                                     type: "movementSpent",
                                     combatantId: self.id,
                                     feet: -self.speed,
+                                  });
+                                }
+                                // Dodge and Hide change how the dice fall for
+                                // somebody — so they say so, rather than
+                                // leaving it to be remembered.
+                                if (self && (a.id === "dodge" || a.id === "hide")) {
+                                  append({
+                                    type: "stanceTagAdded",
+                                    combatantId: self.id,
+                                    tag: a.id === "dodge" ? "dodging" : "hidden",
                                   });
                                 }
                                 setTook(a.id);
@@ -210,10 +277,139 @@ export function PlayerTurn({
                 })}
                 <button onClick={() => setPicking(null)}>Back</button>
               </div>
+            ) : picking === "help" ? (
+              /* Help was a sentence saying it gives an ally advantage, and
+                 nothing gave anybody advantage. Now it names them, and their
+                 next attack says who is helping. */
+              <div className="swing-step">
+                <span className="label">Who are you helping?</span>
+                {allies.map((c) => (
+                  <button
+                    className="tgt-row"
+                    key={c.id}
+                    onClick={() => {
+                      append({ type: "economySpent", who, kind: "action" });
+                      append({
+                        type: "stanceTagAdded",
+                        combatantId: c.id,
+                        tag: "helped",
+                        ...(self ? { source: who } : {}),
+                      });
+                      setTook("help");
+                      setPicking(null);
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+                {allies.length === 0 && (
+                  <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+                    Nobody else is in this fight.
+                  </p>
+                )}
+                <button onClick={() => setPicking("menu")}>Back</button>
+              </div>
+            ) : picking === "ready" ? (
+              /* The most-forgotten thing at a table is somebody's readied
+                 action, so it goes somewhere the DM can see it rather than
+                 into one player's memory. */
+              <div className="swing-step">
+                <span className="label">What are you waiting for?</span>
+                <p className="swing-ask">
+                  Say the trigger out loud, then write it here.
+                </p>
+                <input
+                  aria-label="Trigger"
+                  placeholder="when the goblin comes through the door, I shoot it"
+                  value={trigger}
+                  onChange={(e) => setTrigger(e.target.value)}
+                />
+                <div className="row">
+                  <button
+                    disabled={trigger.trim() === "" || !self}
+                    onClick={() => {
+                      if (!self) return;
+                      append({ type: "economySpent", who, kind: "action" });
+                      append({
+                        type: "actionReadied",
+                        combatantId: self.id,
+                        trigger: trigger.trim(),
+                      });
+                      setTrigger("");
+                      setTook("ready");
+                      setPicking(null);
+                    }}
+                  >
+                    Hold it
+                  </button>
+                  <button onClick={() => setPicking("menu")}>Back</button>
+                </div>
+                <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
+                  It costs your reaction when it fires, not now.
+                </p>
+              </div>
+            ) : picking === "shove" ? (
+              <div className="swing-step">
+                <span className="label">
+                  {shoveAt ? `Shoving ${shoveAt.name}` : "Who are you shoving?"}
+                </span>
+                {!shoveAt &&
+                  visibleTargets.map((c) => (
+                    <button className="tgt-row" key={c.id} onClick={() => setShoveAt(c)}>
+                      {c.name}
+                    </button>
+                  ))}
+                {shoveAt && (
+                  <>
+                    {/* Only half the contest is knowable here: the app has
+                        your total and not theirs, so it carries yours across
+                        and the DM says whether it went over. */}
+                    <p className="swing-ask">
+                      Roll <b>Athletics</b> and type the total. They roll
+                      against it.
+                    </p>
+                    <input
+                      type="number"
+                      aria-label="Athletics total"
+                      placeholder="total"
+                      value={athletics}
+                      onChange={(e) => setAthletics(e.target.value)}
+                    />
+                    <div className="row">
+                      <button
+                        disabled={athletics.trim() === "" || !self}
+                        onClick={() => {
+                          if (!self) return;
+                          append({ type: "economySpent", who, kind: "action" });
+                          append({
+                            type: "shoveClaimed",
+                            combatantId: self.id,
+                            byName: self.name,
+                            targetId: shoveAt.id,
+                            targetName: shoveAt.name,
+                            total: Number(athletics),
+                          });
+                          setAthletics("");
+                          setShoveAt(null);
+                          setTook("shove");
+                          setPicking(null);
+                        }}
+                      >
+                        Send to the DM
+                      </button>
+                      <button onClick={() => setShoveAt(null)}>Back</button>
+                    </div>
+                  </>
+                )}
+                {!shoveAt && (
+                  <button onClick={() => setPicking("menu")}>Back</button>
+                )}
+              </div>
             ) : picking === "attack" ? (
               <Swing
                 attacks={attacks}
                 targets={visibleTargets}
+                stanceAt={stanceAt}
                 onCancel={() => setPicking(null)}
                 onSend={(swing) => {
                   if (!character.economy.action) {
@@ -285,12 +481,41 @@ export function PlayerTurn({
       {/* The one part of the economy that matters while you are doing nothing. */}
       <Pips who={who} character={character} kinds={["reaction"]} append={append} />
 
+      {/*
+        * The moment, brought to you.
+        *
+        * A reaction was always available here and nothing ever said when to
+        * use one — which is how a table plays fifteen sessions without anyone
+        * taking an opportunity attack. The app cannot see reach, so it cannot
+        * raise this itself; the DM does, and it arrives on the screens of the
+        * people it concerns rather than as a question to the room.
+        */}
+      {offered && !character.economy.reaction && (
+        <div className="react-ask">
+          <span className="label">{offered.because}</span>
+          <p className="swing-ask">
+            {offered.from} — this is your reaction, if you want it.
+          </p>
+          <div className="row">
+            <button onClick={() => setPicking("opportunity")}>Take a swing</button>
+            <button
+              onClick={() =>
+                self && append({ type: "reactionDeclined", combatantId: self.id })
+              }
+            >
+              Let it go
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* The reaction pip has always been here for this. An opportunity
           attack is the reason it stays on screen while you do nothing. */}
       {picking === "opportunity" ? (
         <Swing
           attacks={attacks}
           targets={visibleTargets}
+          stanceAt={stanceAt}
           onCancel={() => setPicking(null)}
           onSend={(swing) => {
             if (self) {
@@ -300,6 +525,9 @@ export function PlayerTurn({
                 attackerWho: who,
                 against: swing.target.id,
               });
+              // Answered. The question came from the DM and it is over now
+              // for everyone, not just for me.
+              if (offered) append({ type: "reactionOfferClosed" });
             }
             onSwing?.(swing);
           }}
