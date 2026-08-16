@@ -63,7 +63,9 @@ export function Spells({
   const [onlyMine, setOnlyMine] = useState(true);
   const [showFeatures, setShowFeatures] = useState(false);
   const [casting, setCasting] = useState<KnownSpell | null>(null);
-  const [aiming, setAiming] = useState<{ spell: KnownSpell; atLevel: number } | null>(null);
+  const [aiming, setAiming] = useState<
+    { spell: KnownSpell; atLevel: number; ritual: boolean } | null
+  >(null);
   const [open, setOpen] = useState<string | null>(null);
 
   /*
@@ -124,7 +126,12 @@ export function Spells({
     return !state.economy[cost];
   };
 
-  function cast(spell: KnownSpell, atLevel: number, ritual = false) {
+  /**
+   * The moment it is really cast: the slot goes, the pips move, the log says
+   * so. Out of a fight that is the instant you press Cast, because there is
+   * nothing left to decide.
+   */
+  function commit(spell: KnownSpell, atLevel: number, ritual = false) {
     append({
       type: "spellCast",
       who: build.id,
@@ -139,8 +146,29 @@ export function Spells({
     if (combat && cost !== "long" && !state.economy[cost]) {
       append({ type: "economySpent", who: build.id, kind: cost });
     }
-    setAiming(combat ? { spell, atLevel } : null);
+  }
+
+  /*
+   * In a fight, casting is not finished until it has been pointed at
+   * something — so nothing is spent until then.
+   *
+   * It used to spend the slot and the action here and ask who you were aiming
+   * at afterwards. The aim lived in this tab, and the app sends you to this
+   * tab from the fight, so switching back to see the goblin's health threw the
+   * aim away: no claim ever reached the DM, and the player was left with the
+   * slot gone, the action gone, and nothing cast. That is the worst trade in
+   * the app, and it was one tap away.
+   *
+   * A weapon attack already worked this way — Swing claims and spends at the
+   * same moment, when you send it.
+   */
+  function cast(spell: KnownSpell, atLevel: number, ritual = false) {
     setCasting(null);
+    if (combat) {
+      setAiming({ spell, atLevel, ritual });
+      return;
+    }
+    commit(spell, atLevel, ritual);
   }
 
   return (
@@ -321,8 +349,11 @@ export function Spells({
           book={book ?? []}
           combat={combat}
           onCancel={() => setAiming(null)}
-          onSend={(c) => {
-            onCast?.({ ...c, spell: aiming.spell, atLevel: aiming.atLevel });
+          onDone={(aim) => {
+            commit(aiming.spell, aiming.atLevel, aiming.ritual);
+            // A spell with nothing to roll is still cast; it just leaves the
+            // DM nothing to rule on.
+            if (aim) onCast?.({ ...aim, spell: aiming.spell, atLevel: aiming.atLevel });
             setAiming(null);
           }}
         />

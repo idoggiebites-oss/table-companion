@@ -6,6 +6,10 @@
  * spell asks the caster for a d20, a save spell tells them the DC and asks
  * only for damage, and a spell that does neither has nothing to aim.
  *
+ * Nothing is spent until this screen is finished. Casting used to take the
+ * slot up front and ask who you were aiming at afterwards, which meant
+ * walking away from this screen cost a slot and an action and cast nothing.
+ *
  * The dice come from the file, at the right level — a cantrip scales with the
  * caster and a levelled spell with the slot it went into, which is the rule
  * most often got wrong at a table.
@@ -23,19 +27,24 @@ import {
 } from "../domain/spellcast.js";
 
 export function AimSpell({
-  spell, atLevel, build, book, combat, onSend, onCancel,
+  spell, atLevel, build, book, combat, onDone, onCancel,
 }: {
   spell: KnownSpell;
   atLevel: number;
   build: EffectiveBuild;
   book: readonly CompendiumSpell[];
   combat: Combat;
-  onSend: (c: {
+  /**
+   * The spell was cast. `null` means there is nothing for the DM to rule on —
+   * no target, or nothing to roll — which is still a cast.
+   */
+  onDone: (aim: {
     target: Combatant;
     toHit: number | null;
     damage: number;
     damageType: string;
-  }) => void;
+  } | null) => void;
+  /** Never mind. Nothing is spent, because nothing was cast. */
   onCancel: () => void;
 }) {
   const [target, setTarget] = useState<Combatant | null>(null);
@@ -63,7 +72,10 @@ export function AimSpell({
         <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
           Nothing to roll. Tell the table what it does.
         </p>
-        <button onClick={onCancel}>Done</button>
+        <div className="row">
+          <button onClick={() => onDone(null)}>Cast it</button>
+          <button onClick={onCancel}>Never mind</button>
+        </div>
       </div>
     );
   }
@@ -93,7 +105,13 @@ export function AimSpell({
             Nothing you can see.
           </p>
         )}
-        <button onClick={onCancel}>Not at anything</button>
+        {/* Two ways out, because they mean opposite things. A spell aimed at
+            a spot on the floor is cast and costs a slot; a spell you thought
+            better of costs nothing. */}
+        <div className="row">
+          <button onClick={() => onDone(null)}>Cast it at no one</button>
+          <button onClick={onCancel}>Never mind</button>
+        </div>
       </div>
     );
   }
@@ -146,7 +164,7 @@ export function AimSpell({
             (dice !== null && num(damage) === null)
           }
           onClick={() =>
-            onSend({
+            onDone({
               target,
               toHit: kind.kind === "attack" ? num(toHit) : null,
               damage: num(damage) ?? 0,
@@ -159,7 +177,7 @@ export function AimSpell({
         <button onClick={() => setTarget(null)}>Back</button>
       </div>
       <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
-        The slot is already spent. The DM says whether it lands.
+        Nothing is spent until you send this. The DM says whether it lands.
       </p>
     </div>
   );

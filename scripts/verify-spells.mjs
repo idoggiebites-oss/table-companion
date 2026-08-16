@@ -267,6 +267,45 @@ await page.getByRole("button", { name: "Do it" }).click();
 await page.waitForTimeout(600);
 ok("taking it goes to the spells", await page.locator('[data-tab="spells"].on').count(), 1);
 
+/* Walking away from an aim costs nothing.
+
+   It used to cost everything: the slot and the action were spent the moment
+   you pressed Cast, and the aim lived in this tab — which the fight had just
+   sent you to. Switching back to look at the goblin threw the aim away, so no
+   claim ever reached the DM and the player was left with the slot gone, the
+   action gone, and nothing cast. */
+const slotsNow = () => page.locator(".slot .num").allInnerTexts();
+const actionUp = async () => {
+  await go(page, "fight");
+  const n = await page.locator('.econ .ec[aria-label="Action available"]').count();
+  await go(page, "spells");
+  return n === 1;
+};
+const castsOf = async (name) => {
+  await go(page, "log");
+  const n = await page.locator(".fr", { hasText: new RegExp(`cast ${name}`, "i") }).count();
+  await go(page, "spells");
+  return n;
+};
+const slotsBefore = await slotsNow();
+// Counted, not searched: this spell was cast earlier in the session, so its
+// presence in the log says nothing — only a change in the count does.
+const castsBefore = await castsOf("Fire Bolt");
+await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
+await page.waitForTimeout(500);
+ok("pressing Cast asks who first", await page.locator(".swing-step").count(), 1);
+ok("and spends nothing yet", await actionUp(), true);
+
+ok("nothing is cast until it is aimed", await castsOf("Fire Bolt"), castsBefore);
+ok("and the slots are where they were", await slotsNow(), slotsBefore);
+
+// Backing out on purpose says so, and still costs nothing.
+await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
+await page.waitForTimeout(400);
+await page.getByRole("button", { name: "Never mind" }).click();
+await page.waitForTimeout(400);
+ok("thinking better of it costs nothing", await actionUp(), true);
+
 await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
 await page.waitForTimeout(600);
 ok("casting in a fight asks what to aim at",
