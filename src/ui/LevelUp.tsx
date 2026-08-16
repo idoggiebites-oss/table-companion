@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { ABILITIES, formatModifier, type Ability } from "../domain/abilities.js";
 import type { CompendiumFeat } from "../import/compendium.js";
 import { loadClassLevels, loadFeats, type ClassLevels } from "../store/srd.js";
+import { FeatPick } from "./FeatPick.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
 import type { ClassId } from "../domain/resources.js";
@@ -64,6 +65,17 @@ export function LevelUp({
 
   const spent = ABILITIES.reduce((n, a) => n + (bumps[a] ?? 0), 0);
   const chosenFeat = feats.find((f) => f.id === featId);
+  /*
+   * Who the prerequisites are measured against. The scores are the ones they
+   * have now — a feat is taken at the same moment as the improvement it
+   * replaces, so there is no bump to count.
+   */
+  const aspirant = {
+    abilities: build.abilities,
+    spellSlots: build.spellSlots,
+    knowsSpells: build.spellSlots.some((n) => n > 0),
+    race: build.race,
+  };
   const choiceReady = !grantsChoice
     || (route === "asi" ? spent === 2 : chosenFeat !== undefined);
 
@@ -183,40 +195,12 @@ export function LevelUp({
                   )}
                 </>
               ) : (
-                <>
-                  <input
-                    value={featFilter}
-                    aria-label="Filter feats"
-                    placeholder={`filter ${feats.length} feats…`}
-                    style={{ marginTop: 8 }}
-                    onChange={(e) => setFeatFilter(e.target.value)}
-                  />
-                  <select
-                    aria-label="Feat"
-                    value={featId}
-                    style={{ marginTop: 8 }}
-                    onChange={(e) => setFeatId(e.target.value)}
-                  >
-                    <option value="">choose a feat…</option>
-                    {shownFeats.map((f) => (
-                      <option key={f.id} value={f.id}>{f.name}</option>
-                    ))}
-                  </select>
-                  {chosenFeat && (
-                    <p className="faint lv-feat">
-                      {chosenFeat.prerequisite && <b>Needs {chosenFeat.prerequisite}. </b>}
-                      {chosenFeat.text.slice(0, 320)}
-                      {chosenFeat.text.length > 320 ? "…" : ""}
-                    </p>
-                  )}
-                  {/* Named, never mechanised: the app cannot know what six
-                      hundred feats do, and half-applying them would be worse
-                      than being clear that it applies none. */}
-                  <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
-                    Recorded on your sheet. Nothing it grants is worked out for
-                    you — tell the table what it does.
-                  </p>
-                </>
+                <FeatPick
+                  feats={feats}
+                  who={aspirant}
+                  {...(featId ? { taken: featId } : {})}
+                  onPick={(f) => setFeatId(f?.id ?? "")}
+                />
               )}
             </div>
           )}

@@ -44,6 +44,7 @@ import {
   ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, describePriority,
   featureOf, mechanicalTraits,
 } from "../domain/guidance.js";
+import { FeatPick } from "./FeatPick.js";
 import { SpellPick } from "./SpellPick.js";
 import { choicesBy, findChoices } from "../domain/subclass.js";
 import type { CompendiumFeat } from "../import/compendium.js";
@@ -117,7 +118,6 @@ export function CreateCharacter({
     Record<number, { abilities?: Partial<Record<Ability, number>>; feat?: { id: string; name: string } }>
   >({});
   const [featList, setFeatList] = useState<CompendiumFeat[]>([]);
-  const [featFilter, setFeatFilter] = useState("");
   const [classPicks, setClassPicks] = useState<Record<string, string>>({});
   const [pickFilter, setPickFilter] = useState<Record<string, string>>({});
   const [subraceId, setSubraceId] = useState<string>("");
@@ -190,6 +190,18 @@ export function CreateCharacter({
   const table = klass && levels ? levels[klass.id] : undefined;
   const atLevel = table?.[level - 1];
   const asiLevels = (table ?? []).filter((l) => l.asi).map((l) => l.level);
+
+  /*
+   * Who a feat's prerequisites are measured against, as the build stands
+   * right now — so raising Strength to 13 makes Grappler available in front
+   * of you rather than after you commit to it.
+   */
+  const aspirant = {
+    abilities: scores,
+    spellSlots: atLevel?.slots ?? [],
+    knowsSpells: chosenSpells.length > 0,
+    race: race?.name ?? "",
+  };
   const asi = asiPoints(asiLevels, level);
   // Proficiency has to come from the chosen level, not the level-1 default —
   // the preview's whole job is to be the number you will actually see.
@@ -1073,52 +1085,24 @@ export function CreateCharacter({
                         );
                       })}
                     </div>
-                    <div className="row" style={{ marginTop: 8 }}>
-                      <select
-                        aria-label={`Level ${lvl} feat`}
-                        value={at.feat?.id ?? ""}
-                        style={{ width: "auto", flex: "1 1 160px" }}
-                        onChange={(e) => {
-                          const f = featList.find((x) => x.id === e.target.value);
-                          setImprovements((cur) => ({
-                            ...cur,
-                            [lvl]: f ? { feat: { id: f.id, name: f.name } } : {},
-                          }));
-                        }}
-                      >
-                        <option value="">or take a feat…</option>
-                        {featList
-                          .filter((f) => {
-                            const q = featFilter.trim().toLowerCase();
-                            return !q || f.name.toLowerCase().includes(q);
-                          })
-                          .slice(0, 60)
-                          .map((f) => (
-                            <option key={f.id} value={f.id}>{f.name}</option>
-                          ))}
-                      </select>
-                      {(used > 0 || at.feat) && (
-                        <button
-                          aria-label={`Clear level ${lvl}`}
-                          onClick={() => setImprovements((cur) => ({ ...cur, [lvl]: {} }))}
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
+                    {/* Names alone are not a choice — a feat IS its
+                        description, and this was eight hundred and fifty of
+                        them in a dropdown. */}
+                    <FeatPick
+                      feats={featList}
+                      who={aspirant}
+                      {...(at.feat ? { taken: at.feat.id } : {})}
+                      onPick={(f) =>
+                        setImprovements((cur) => ({
+                          ...cur,
+                          [lvl]: f ? { feat: { id: f.id, name: f.name } } : {},
+                        }))
+                      }
+                    />
                   </div>
                 </div>
               );
             })}
-            {featList.length > 20 && (
-              <input
-                value={featFilter}
-                aria-label="Filter feats"
-                placeholder={`filter ${featList.length} feats…`}
-                style={{ marginTop: 10 }}
-                onChange={(e) => setFeatFilter(e.target.value)}
-              />
-            )}
           </div>
         </section>
       )}

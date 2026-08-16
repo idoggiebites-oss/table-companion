@@ -1078,3 +1078,10 @@ html, body { overscroll-behavior-y: none; }
   padding: 12px; margin-top: 10px; border-radius: 10px;
   background: var(--raised); border: 1px solid var(--steel);
 }
+
+/* ---- feats: a description, not a dropdown ---- */
+.feat-pick { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+/* The list scrolls inside itself: eight hundred and fifty rows must not
+   push the rest of the level-up off the screen. */
+.feat-scroll { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
+.feat-took { margin-top: 8px; }

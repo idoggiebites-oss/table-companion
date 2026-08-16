@@ -109,6 +109,8 @@ export interface EffectiveBuild {
   readonly id: CharacterId;
   readonly name: string;
   readonly edition: Edition;
+  /** Carried through because feat prerequisites ask, and half of them ask. */
+  readonly race: string;
   readonly classes: readonly ClassEntry[];
   readonly totalLevel: number;
   readonly proficiencyBonus: number;
@@ -235,6 +237,7 @@ export function effectiveBuild(character: Character): EffectiveBuild {
     id: b.id,
     name: b.name,
     edition: b.edition,
+    race: b.race,
     classes: b.classes,
     totalLevel,
     proficiencyBonus: pb,

@@ -17,6 +17,11 @@
  * of them lying.
  */
 
+import { nameMark } from "./marks.js";
+
+/** Re-exported: the provenance rule is shared with feats, the callers are here. */
+export { nameMark };
+
 /**
  * Structural, not the importer's type. The domain must not depend on the
  * compendium adapter: events.ts reaches this file, the Worker reaches
@@ -123,29 +128,6 @@ export function canCast(spell: KnownSpell, slots: readonly SlotState[]): boolean
   if (!isReady(spell)) return false;
   if (spell.level === 0) return true;
   return slotsFor(spell, slots).length > 0;
-}
-
-/**
- * What a compendium is telling you in parentheses.
- *
- * A complete compendium is mostly not the game: 1,820 of its 3,443 spells are
- * marked (HB), another 329 (TP), 78 (UA), 59 (Alt), and the rest name their
- * setting or their tier — "Conducting Technique: Crash (Marcato)". Two thirds
- * of the list, and alphabetically it lands on top, so a first-time wizard
- * opening the spell picker met "Acid Burn (HB)" and "Acid Splash (Alt) (HB)"
- * before a single spell from the actual game.
- *
- * Every parenthetical in the file is provenance of some kind, and no spell
- * from the game carries one — Fireball, Cure Wounds, Eldritch Blast and the
- * rest are all plain. So the rule is that simple, and it is checked against
- * the shipped file rather than assumed.
- *
- * Marked, not hidden: somebody imported it on purpose, and a table running a
- * homebrew campaign needs it. It just goes after the thing most people came
- * for.
- */
-export function nameMark(name: string): string | null {
-  return /\(([^)]{1,20})\)/.exec(name ?? "")?.[1] ?? null;
 }
 
 /**

@@ -455,7 +455,23 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         builds: { ...state.builds, [e.who]: build },
         // Levelling raises the maximum; it does not heal you.
         characters: before
-          ? { ...state.characters, [e.who]: { ...before, milestoneLevel: build.totalLevel } }
+          ? {
+              ...state.characters,
+              [e.who]: {
+                /*
+                 * Never DOWN. Pinning the milestone to the level just taken
+                 * threw away every other level the DM had granted: award two
+                 * at the end of a session, take one, and the second was
+                 * silently gone — with nothing on any screen to say so.
+                 *
+                 * It only ever needs to catch up, for a character who gained
+                 * a level some other way (an import, a hand-edit) and is now
+                 * ahead of what the DM has given out.
+                 */
+                ...before,
+                milestoneLevel: Math.max(before.milestoneLevel, build.totalLevel),
+              },
+            }
           : state.characters,
       };
     }

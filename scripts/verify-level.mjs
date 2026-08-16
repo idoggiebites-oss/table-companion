@@ -136,7 +136,14 @@ ok("and will not finish until they are taken",
 await player.page.getByRole("button", { name: "Level 4 raise int" }).click();
 await player.page.getByRole("button", { name: "Level 4 raise int" }).click();
 await player.page.waitForTimeout(300);
-await player.page.selectOption('select[aria-label="Level 8 feat"]', { index: 1 });
+// The level-8 improvement, spent on a feat. A dropdown of names became a
+// list you can read before choosing, so this reads one and takes it.
+const lv8 = player.page.locator(".chooser", { hasText: "Level 8" }).locator(".feat-pick");
+await lv8.locator('input[aria-label="Filter feats"]').fill("alert");
+await player.page.waitForTimeout(400);
+await lv8.locator(".menu-hd").first().click();
+await player.page.waitForTimeout(250);
+await lv8.getByRole("button", { name: "Take it" }).click();
 await player.page.waitForTimeout(400);
 ok("one raised, one feat, and it is satisfied",
   await player.page.getByRole("button", { name: "Create character" }).isDisabled(), false);
