@@ -21,7 +21,7 @@ import type { EffectiveBuild } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
 import type { CharacterState } from "../domain/project.js";
 import {
-  canCast, castableBy, groupByLevel, isClassFeature, isReady, levelLabel,
+  byBookOrder, canCast, castableBy, groupByLevel, isClassFeature, isReady, levelLabel,
   slotsFor, toKnown,
   type KnownSpell, type SlotState,
 } from "../domain/spells.js";
@@ -109,7 +109,7 @@ export function Spells({
         if (onlyMine && !classIds.some((c) => castableBy(s, c))) return false;
         return true;
       })
-      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+      .sort(byBookOrder)
       .slice(0, 60);
   }, [book, text, onlyMine, showFeatures, known, classIds]);
 

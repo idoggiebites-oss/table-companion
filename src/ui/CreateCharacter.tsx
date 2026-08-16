@@ -38,7 +38,7 @@ import {
 } from "../store/srd.js";
 import type { CompendiumSpell } from "../import/compendium.js";
 import {
-  castableBy, isClassFeature, levelLabel, toKnown, type KnownSpell,
+  byBookOrder, castableBy, isClassFeature, levelLabel, toKnown, type KnownSpell,
 } from "../domain/spells.js";
 import {
   ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, describePriority,
@@ -302,7 +302,7 @@ export function CreateCharacter({
         if (q && !s.name.toLowerCase().includes(q)) return false;
         return true;
       })
-      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+      .sort(byBookOrder);
   }, [book, klass, castsAtAll, spellFilter, chosenSpells, atLevel]);
 
   /**

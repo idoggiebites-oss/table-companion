@@ -77,6 +77,12 @@ for (const [which, label] of [["Cantrips", /^Cantrips,/], ["Spells", /^Spells,/]
   await page.waitForTimeout(1200);
   const offered = await page.locator(".chooser-list .menu-hd").count();
   ok(`the ${which.toLowerCase()} picker offers something to choose`, offered > 0, true);
+  /* And offers the game's own first. Two thirds of a complete compendium is
+     homebrew and third-party, and alphabetically it lands on top: the first
+     thing a first-time wizard saw was "Acid Burn (HB)". */
+  const first = await page.locator(".chooser-list .menu-hd .nm").first().innerText();
+  ok(`the first ${which.toLowerCase()} offered comes from the game`,
+    /\(/.test(first) ? first : "no marker", "no marker");
   await hd.click();
   await page.waitForTimeout(200);
 }
