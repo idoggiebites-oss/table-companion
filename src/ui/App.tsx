@@ -4,6 +4,7 @@ import type { Stack } from "../domain/items.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { actorKey } from "../domain/permissions.js";
 import { combatantIdOf, turnsUntil, type Combatant } from "../domain/combat.js";
+import { useWide } from "./useWide.js";
 import { stanceFor } from "../domain/stance.js";
 import { levelsOwed } from "../domain/project.js";
 import { useCampaign } from "../store/useCampaign.js";
@@ -44,6 +45,8 @@ export function App() {
   const { seat, mine: myCharacters, setSeat, claim } = useSeat();
   /** Null until you pick one, so the sensible default can change under you. */
   const [tab, setTab] = useState<TabId | null>(null);
+  /** Room for the fight and something else at the same time. */
+  const wide = useWide();
   const [adding, setAdding] = useState(false);
   const [building, setBuilding] = useState(false);
 
@@ -134,13 +137,22 @@ export function App() {
     { id: "gear", label: "Gear", dot: shopOpen },
     { id: "log", label: "Log" },
   ];
-  const tabs = dmView ? dmTabs : playerTabs;
+  /*
+   * Wide enough for two things at once, and there is a fight to be the first
+   * of them. The tabs exist because a phone cannot show two things — given
+   * the room, the fight simply stays on screen and the tab bar drives what
+   * sits beside it. So the Fight tab is not offered: it is already there, and
+   * a tab that shows you what you are looking at is a dead control.
+   */
+  const twoUp = wide && state.combat !== null && !needsCharacter && !needsClaim;
+  const tabs = (dmView ? dmTabs : playerTabs).filter((t) => !(twoUp && t.id === "fight"));
   /**
    * Where you land before choosing. Never "Fight" when there is no fight —
    * that is a dead screen with "No fight yet" on it. A player's home is their
    * sheet; a DM's is the party they are looking after.
    */
-  const home: TabId = state.combat !== null ? "fight" : dmView ? "party" : "sheet";
+  const home: TabId =
+    state.combat !== null && !twoUp ? "fight" : dmView ? "party" : "sheet";
   /** What this character did on their turn that changes their own dice. */
   const mySeatId = state.combat && mine ? combatantIdOf(state.combat, mine.id) : null;
   const myTags = (mySeatId && state.combat?.tags[mySeatId]) || [];
@@ -159,9 +171,10 @@ export function App() {
   const inFight = state.combat !== null;
   const wasFighting = useRef(inFight);
   useEffect(() => {
-    if (inFight && !wasFighting.current) setTab("fight");
+    // Nothing to move to when the fight is already pinned beside you.
+    if (inFight && !wasFighting.current && !twoUp) setTab("fight");
     wasFighting.current = inFight;
-  }, [inFight]);
+  }, [inFight, twoUp]);
 
   const wasOwed = useRef(saveOwed);
   useEffect(() => {
@@ -223,7 +236,7 @@ export function App() {
   if (!ready) return <div className="app"><p className="faint">Loading…</p></div>;
 
   return (
-    <div className="app">
+    <div className={`app${twoUp ? " two" : ""}`}>
       <UpdateBar />
       <RoomBar
         room={room}
@@ -281,6 +294,18 @@ export function App() {
         </div>
       )}
 
+      {twoUp && (
+        <div className="pane-pin">
+          <Combat
+            state={state}
+            seat={seat}
+            append={append}
+            onCast={() => setTab("spells")}
+          />
+        </div>
+      )}
+
+      <div className="pane-main">
       {!needsCharacter && !needsClaim && (
         <Tabs tabs={tabs} active={current} onPick={setTab} />
       )}
@@ -526,6 +551,7 @@ export function App() {
         </section>
       )}
       </Boundary>
+      </div>
     </div>
   );
 }

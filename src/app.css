@@ -75,6 +75,53 @@ body {
 }
 
 .app { max-width: 720px; margin: 0 auto; padding: 24px 18px 96px; }
+/*
+ * The app is drawn for a phone held under a table, which is right for a
+ * player and wrong for a DM with an iPad propped in front of them. Two steps,
+ * not one: a portrait tablet is a big phone and only wants a wider column; a
+ * landscape tablet can hold the fight AND whatever you are doing beside it.
+ *
+ * The fight is what gets pinned, because it is what you glance at — the tab
+ * bar exists to work around a phone showing one thing at a time, and given
+ * the room that constraint is simply gone.
+ *
+ * Nothing here names a class belonging to another component. The shell's own
+ * children are addressed as "everything that is not one of the two panes",
+ * which is also what the rule means.
+ */
+@media (min-width: 760px) {
+  .app { max-width: 860px; padding: 28px 24px 96px; }
+}
+
+@media (min-width: 1024px) {
+  .app.two {
+    max-width: 1280px;
+    display: grid;
+    grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+    column-gap: 22px;
+    align-items: start;
+  }
+  /* The room bar, the title and the seat belong to the whole screen. */
+  .app.two > :not(.pane-pin):not(.pane-main) { grid-column: 1 / -1; }
+
+  .pane-pin {
+    grid-column: 1;
+    position: sticky;
+    top: 18px;
+    max-height: calc(100vh - 36px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .pane-main { grid-column: 2; min-width: 0; }
+  /*
+   * The tab bar stretches to fill a phone, which is right there and silly
+   * across eight hundred pixels — four words spread so far apart they stop
+   * reading as one control. Element selectors, because the bar belongs to
+   * another component and a layout should not reach in and rename its parts.
+   */
+  .pane-main > nav { gap: 4px; }
+  .pane-main > nav > button { flex: 0 0 auto; }
+}
 
 .topbar {
   display: flex; justify-content: space-between; align-items: center;
