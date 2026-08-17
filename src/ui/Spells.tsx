@@ -29,18 +29,9 @@ import type { CompendiumSpell } from "../import/compendium.js";
 import type { Combat, Combatant } from "../domain/combat.js";
 import type { Stance, StanceReason } from "../domain/stance.js";
 import { costOf } from "../domain/spellcast.js";
-import { loadSpells } from "../store/srd.js";
 import { AimSpell } from "./AimSpell.js";
+import { useCasting } from "./useCasting.js";
 import { SpellPick } from "./SpellPick.js";
-
-function useSpellbook(when: boolean): CompendiumSpell[] | null {
-  const [all, setAll] = useState<CompendiumSpell[] | null>(null);
-  useEffect(() => {
-    if (!when || all) return;
-    void loadSpells().then(setAll, () => setAll([]));
-  }, [when, all]);
-  return all;
-}
 
 export function Spells({
   build, state, append, combat, stanceAt, onCast,
@@ -71,27 +62,9 @@ export function Spells({
   >(null);
   const [open, setOpen] = useState<string | null>(null);
 
-  /*
-   * Always, not only while browsing. Casting needs the file too — what the
-   * spell costs, whether the caster rolls or the target saves, and the dice
-   * at this level. Loaded lazily it was absent at exactly the moment a spell
-   * was pointed at something, and every spell became "nothing to roll".
-   */
-  const book = useSpellbook(true);
-
-  /** Slots, as the sheet already knows them. */
-  const slots: SlotState[] = useMemo(
-    () =>
-      build.resources
-        .filter((r) => /^slot\d$/.test(r.id))
-        .map((r) => ({
-          level: Number(r.id.slice(4)),
-          max: r.max,
-          left: r.max - (state.spent[r.id] ?? 0),
-        }))
-        .filter((s) => s.max > 0),
-    [build.resources, state.spent],
-  );
+  const { book, slots, costFor, canAfford, commit } = useCasting({
+    build, state, combat, append,
+  });
 
   const classIds = build.classes.map((c) => c.classId);
   const known = state.spells;
@@ -117,39 +90,6 @@ export function Spells({
       .sort(byBookOrder)
       .slice(0, 60);
   }, [book, text, onlyMine, showFeatures, known, classIds]);
-
-  /** What the file says this one costs, and whether it can be paid. */
-  const costFor = (spell: KnownSpell) => {
-    const full = book?.find((s) => s.id === spell.id);
-    return full ? costOf(full.time) : "action";
-  };
-  const canAfford = (spell: KnownSpell) => {
-    const cost = costFor(spell);
-    if (cost === "long") return combat ? false : true;
-    return !state.economy[cost];
-  };
-
-  /**
-   * The moment it is really cast: the slot goes, the pips move, the log says
-   * so. Out of a fight that is the instant you press Cast, because there is
-   * nothing left to decide.
-   */
-  function commit(spell: KnownSpell, atLevel: number, ritual = false) {
-    append({
-      type: "spellCast",
-      who: build.id,
-      spellId: spell.id,
-      name: spell.name,
-      atLevel,
-      concentration: spell.concentration,
-      ...(ritual ? { ritual: true } : {}),
-    });
-    // In a fight it costs what the file says, and the pips have to show it.
-    const cost = costFor(spell);
-    if (combat && cost !== "long" && !state.economy[cost]) {
-      append({ type: "economySpent", who: build.id, kind: cost });
-    }
-  }
 
   /*
    * In a fight, casting is not finished until it has been pointed at

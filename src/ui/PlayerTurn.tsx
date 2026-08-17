@@ -11,8 +11,12 @@
  * turn, so it is the only part that has to stay legible while you do nothing.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ResolvedAttack } from "../domain/attack.js";
+import type { EffectiveBuild } from "../domain/build.js";
+import { levelLabel, type KnownSpell } from "../domain/spells.js";
+import { AimSpell } from "./AimSpell.js";
+import { useCasting } from "./useCasting.js";
 import { blockedBecause, STANDARD_ACTIONS } from "../domain/actions.js";
 import { stanceFor } from "../domain/stance.js";
 import { Swing } from "./Swing.js";
@@ -23,6 +27,15 @@ import {
 import type { CharacterId } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
 import type { CharacterState } from "../domain/project.js";
+
+/*
+ * A stand-in for a build this device has not resolved yet. The casting hook
+ * cannot be called conditionally, and a character with no spells never reads
+ * any of it — enabled:false stops it loading four megabytes of spellbook.
+ */
+const EMPTY_BUILD = {
+  id: "", resources: [], classes: [], abilityMods: {},
+} as unknown as EffectiveBuild;
 
 const LABEL: Record<EconomyKind, string> = {
   action: "Action",
@@ -100,11 +113,14 @@ function Movement({
 }
 
 export function PlayerTurn({
-  combat, seat, character, append, attacks = [], onSwing, canCast = false, onCast,
+  combat, seat, character, build, append, attacks = [], onSwing, onCast,
+  takeReaction, onReactionOpened,
 }: {
   combat: Combat;
   seat: Extract<Seat, { kind: "player" }>;
   character: CharacterState;
+  /** Present once this device knows whose turn it is. Casting needs it. */
+  build?: EffectiveBuild;
   append: (body: EventBody) => void;
   /** What they are actually holding — the walkthrough names the weapon. */
   attacks?: readonly ResolvedAttack[];
@@ -114,18 +130,28 @@ export function PlayerTurn({
     toHit: number;
     damage: number;
   }) => void;
-  /** Whether they have any spells at all. */
-  canCast?: boolean;
-  /** Takes them to the spell list, which is where casting lives. */
-  onCast?: () => void;
+  /** Sends an aimed spell to the DM, exactly as a weapon attack is sent. */
+  onCast?: (c: {
+    spell: KnownSpell;
+    atLevel: number;
+    target: Combatant;
+    toHit: number | null;
+    damage: number;
+    damageType: string;
+  }) => void;
+  /** The DM offered a reaction and they said yes from another screen. */
+  takeReaction?: boolean;
+  onReactionOpened?: () => void;
 }) {
   const [picking, setPicking] = useState<
-    null | "attack" | "opportunity" | "menu" | "help" | "shove" | "ready"
+    null | "attack" | "opportunity" | "menu" | "help" | "shove" | "ready" | "cast"
   >(null);
   const [took, setTook] = useState<string | null>(null);
   const [trigger, setTrigger] = useState("");
   const [athletics, setAthletics] = useState("");
   const [shoveAt, setShoveAt] = useState<Combatant | null>(null);
+  const [casting, setCasting] = useState<KnownSpell | null>(null);
+  const [aiming, setAiming] = useState<{ spell: KnownSpell; atLevel: number } | null>(null);
   const [looking, setLooking] = useState<string | null>(null);
   const who = seat.characterId;
   const active = activeCombatant(combat);
@@ -162,6 +188,18 @@ export function PlayerTurn({
       range: attack?.range ?? "melee",
     });
 
+  /*
+   * Said yes on another screen. The prompt above the tabs is the alert; the
+   * swing itself lives here, and arriving should not ask the same question a
+   * second time while the table waits.
+   */
+  useEffect(() => {
+    if (takeReaction) {
+      setPicking("opportunity");
+      onReactionOpened?.();
+    }
+  }, [takeReaction, onReactionOpened]);
+
   /** An offer the DM made that names me and that I have not answered. */
   const offered =
     combat.offer &&
@@ -170,6 +208,25 @@ export function PlayerTurn({
     !combat.offer.declined.includes(self.id)
       ? combat.offer
       : null;
+
+  /*
+   * Casting, here, beside attacking.
+   *
+   * It used to send you to the Spells tab — a moment implemented as a place.
+   * Your turn has a clock on it and a tab is somewhere you can walk away
+   * from, which is how a slot got spent on a spell that was never cast.
+   */
+  const cast = useCasting({
+    build: build ?? EMPTY_BUILD,
+    state: character,
+    combat,
+    append,
+    enabled: build !== undefined && character.spells.length > 0,
+  });
+  /** What they could actually cast this instant — prepared, paid for, in time. */
+  const castable = character.spells.filter(
+    (s) => cast.ready(s) && cast.canAfford(s),
+  );
 
   /** Everyone else in the fight you could put a hand on the shoulder of. */
   const allies = combat.order.filter(
@@ -204,7 +261,9 @@ export function PlayerTurn({
                   * to fit on the screen for the menu to be the teaching.
                   */}
                 {STANDARD_ACTIONS.map((a) => {
-                  const why = blockedBecause(a, character.economy, attacks.length > 0, canCast);
+                  const why = blockedBecause(
+                    a, character.economy, attacks.length > 0, castable.length > 0,
+                  );
                   const shown = looking === a.id;
                   return (
                     <div className={`menu-row${why ? " off" : ""}`} key={a.id}>
@@ -228,10 +287,7 @@ export function PlayerTurn({
                                 if (a.id === "attack") return setPicking("attack");
                                 // Casting has its own screen; the menu's job
                                 // is to say it exists and take you there.
-                                if (a.id === "cast") {
-                                  setPicking(null);
-                                  return onCast?.();
-                                }
+                                if (a.id === "cast") return setPicking("cast");
                                 /*
                                  * Actions that need somebody or something
                                  * named get their own step. The rest used to
@@ -405,6 +461,90 @@ export function PlayerTurn({
                   <button onClick={() => setPicking("menu")}>Back</button>
                 )}
               </div>
+            ) : picking === "cast" && build ? (
+              /*
+                * The same three questions a weapon asks — which one, at what,
+                * how much — because a beginner should not meet two different
+                * ways of doing the same thing. Names and costs only until you
+                * pick one: a hundred descriptions is a spellbook, and a
+                * spellbook is what they already could not read.
+                */
+              aiming ? (
+                <AimSpell
+                  spell={aiming.spell}
+                  atLevel={aiming.atLevel}
+                  build={build}
+                  book={cast.book ?? []}
+                  combat={combat}
+                  stanceAt={(target) => stanceAt(target)}
+                  onCancel={() => {
+                    setAiming(null);
+                    setPicking(null);
+                  }}
+                  onDone={(aim) => {
+                    cast.commit(aiming.spell, aiming.atLevel);
+                    if (aim) {
+                      onCast?.({ ...aim, spell: aiming.spell, atLevel: aiming.atLevel });
+                    }
+                    setAiming(null);
+                    setTook("cast");
+                    setPicking(null);
+                  }}
+                />
+              ) : casting ? (
+                <div className="swing-step">
+                  <span className="label">Which slot for {casting.name}?</span>
+                  {cast.optionsFor(casting).map((sl) => (
+                    <button
+                      className="tgt-row"
+                      key={sl.level}
+                      onClick={() => {
+                        setAiming({ spell: casting, atLevel: sl.level });
+                        setCasting(null);
+                      }}
+                    >
+                      {levelLabel(sl.level)}
+                      <span className="faint num"> · {sl.left} left</span>
+                    </button>
+                  ))}
+                  <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
+                    A higher slot makes it stronger. Nothing is spent yet.
+                  </p>
+                  <button onClick={() => setCasting(null)}>Back</button>
+                </div>
+              ) : (
+                <div className="swing-step">
+                  <span className="label">What are you casting?</span>
+                  {castable.map((sp) => (
+                    <button
+                      className="tgt-row"
+                      key={sp.id}
+                      onClick={() => {
+                        const options = cast.optionsFor(sp);
+                        if (sp.level === 0) return setAiming({ spell: sp, atLevel: 0 });
+                        if (options.length === 1) {
+                          return setAiming({ spell: sp, atLevel: options[0]!.level });
+                        }
+                        setCasting(sp);
+                      }}
+                    >
+                      {sp.name}
+                      <span className="faint">
+                        {" "}· {sp.level === 0 ? "cantrip" : levelLabel(sp.level)} ·{" "}
+                        {cast.costFor(sp)}
+                      </span>
+                    </button>
+                  ))}
+                  {castable.length === 0 && (
+                    <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+                      {cast.book === null
+                        ? "Looking up your spells…"
+                        : "Nothing you can cast right now — no slot left, or nothing prepared."}
+                    </p>
+                  )}
+                  <button onClick={() => setPicking("menu")}>Back</button>
+                </div>
+              )
             ) : picking === "attack" ? (
               <Swing
                 attacks={attacks}
@@ -480,34 +620,6 @@ export function PlayerTurn({
       </div>
       {/* The one part of the economy that matters while you are doing nothing. */}
       <Pips who={who} character={character} kinds={["reaction"]} append={append} />
-
-      {/*
-        * The moment, brought to you.
-        *
-        * A reaction was always available here and nothing ever said when to
-        * use one — which is how a table plays fifteen sessions without anyone
-        * taking an opportunity attack. The app cannot see reach, so it cannot
-        * raise this itself; the DM does, and it arrives on the screens of the
-        * people it concerns rather than as a question to the room.
-        */}
-      {offered && !character.economy.reaction && (
-        <div className="react-ask">
-          <span className="label">{offered.because}</span>
-          <p className="swing-ask">
-            {offered.from} — this is your reaction, if you want it.
-          </p>
-          <div className="row">
-            <button onClick={() => setPicking("opportunity")}>Take a swing</button>
-            <button
-              onClick={() =>
-                self && append({ type: "reactionDeclined", combatantId: self.id })
-              }
-            >
-              Let it go
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* The reaction pip has always been here for this. An opportunity
           attack is the reason it stays on screen while you do nothing. */}

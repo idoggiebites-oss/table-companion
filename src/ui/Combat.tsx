@@ -13,6 +13,7 @@
  */
 
 import { ConditionStrip } from "./Conditions.js";
+import type { KnownSpell } from "../domain/spells.js";
 import { useEffect, useState } from "react";
 import {
   instanceLabel, mergeStatblocks, rollHp, type Statblock,
@@ -375,13 +376,24 @@ function InitiativeRow({
 }
 
 export function Combat({
-  state, seat, append, onCast,
+  state, seat, append, onCast, takeReaction, onReactionOpened,
 }: {
   state: CampaignState;
   seat: Seat;
   append: (body: EventBody) => void;
   /** Sends a player to their spells, where casting lives. */
-  onCast?: () => void;
+  /** An aimed spell, on its way to the DM's queue like any other claim. */
+  onCast?: (c: {
+    spell: KnownSpell;
+    atLevel: number;
+    target: Combatant;
+    toHit: number | null;
+    damage: number;
+    damageType: string;
+  }) => void;
+  /** Said yes to a reaction from another screen — open the swing on arrival. */
+  takeReaction?: boolean;
+  onReactionOpened?: () => void;
 }) {
   const [hit, setHit] = useState(5);
   const [area, setArea] = useState(false);
@@ -454,7 +466,9 @@ export function Combat({
           character={state.characters[seat.characterId]!}
           append={append}
           attacks={playerAttacks}
-          canCast={(seatedState?.spells.length ?? 0) > 0}
+          {...(seated ? { build: seated } : {})}
+          {...(takeReaction ? { takeReaction } : {})}
+          {...(onReactionOpened ? { onReactionOpened } : {})}
           {...(onCast ? { onCast } : {})}
           onSwing={(swing) => {
             // Claimed, not applied: the DM says whether it lands.

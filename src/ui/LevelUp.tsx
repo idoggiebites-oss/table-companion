@@ -41,7 +41,6 @@ export function LevelUp({
   const [route, setRoute] = useState<"asi" | "feat">("asi");
   const [bumps, setBumps] = useState<Partial<Record<Ability, number>>>({});
   const [featId, setFeatId] = useState("");
-  const [featFilter, setFeatFilter] = useState("");
 
   useEffect(() => {
     loadClassLevels().then(setLevels, () => setLevels({}));
@@ -78,13 +77,6 @@ export function LevelUp({
   };
   const choiceReady = !grantsChoice
     || (route === "asi" ? spent === 2 : chosenFeat !== undefined);
-
-  const shownFeats = feats
-    .filter((f) => {
-      const q = featFilter.trim().toLowerCase();
-      return !q || f.name.toLowerCase().includes(q);
-    })
-    .slice(0, 60);
 
   const gain = (rolled: number) => {
     append({

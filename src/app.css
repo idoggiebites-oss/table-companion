@@ -123,6 +123,37 @@ body {
   .pane-main > nav > button { flex: 0 0 auto; }
 }
 
+/*
+ * Two-up, where the content is a pile of small cards rather than one wide
+ * one. A sheet is nine boxes of numbers and reads badly as a single column
+ * half a metre long; the party, the prep tables and the log are wide by
+ * nature and stay as they are.
+ *
+ * Only above 1180, because two columns of anything narrower is worse than
+ * one — and the tab bar keeps the full width so it still reads as one control.
+ */
+@media (min-width: 1180px) {
+  .pane-main[data-pane="sheet"],
+  .pane-main[data-pane="gear"] {
+    /*
+     * Columns rather than a grid: cards are wildly different heights, and a
+     * grid aligns rows — which leaves a hole under every short card. Columns
+     * flow, so the second one starts where the first ran out.
+     *
+     * Reading order becomes down-then-across. That is right for a sheet,
+     * which is a surface you look things up on rather than a sequence you
+     * read, and wrong for anything with steps — which is why the fight, the
+     * builder and the log are not in this list.
+     */
+    column-count: 2;
+    column-gap: 18px;
+  }
+  .pane-main[data-pane="sheet"] > *,
+  .pane-main[data-pane="gear"] > * { break-inside: avoid; }
+  .pane-main[data-pane="sheet"] > nav,
+  .pane-main[data-pane="gear"] > nav { column-span: all; }
+}
+
 .topbar {
   display: flex; justify-content: space-between; align-items: center;
   gap: 12px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--rule);
@@ -1073,9 +1104,10 @@ html, body { overscroll-behavior-y: none; }
 }
 .ready-row .faint { flex: 1; font-size: 0.78rem; }
 
+/* Owed NOW, above the tabs, on whatever screen you are on. */
 .react-ask {
   display: flex; flex-direction: column; gap: 8px;
-  padding: 12px; margin-top: 10px; border-radius: 10px;
+  padding: 14px 16px; margin-top: 12px; border-radius: 10px;
   background: var(--raised); border: 1px solid var(--steel);
 }
 

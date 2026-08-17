@@ -19,6 +19,7 @@ import { Homebrew } from "./Homebrew.js";
 import { LevelUp } from "./LevelUp.js";
 import { Npcs } from "./Npcs.js";
 import { Progression } from "./Progression.js";
+import { ReactionAsk } from "./ReactionAsk.js";
 import { Reference } from "./Reference.js";
 import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
@@ -45,6 +46,8 @@ export function App() {
   const { seat, mine: myCharacters, setSeat, claim } = useSeat();
   /** Null until you pick one, so the sensible default can change under you. */
   const [tab, setTab] = useState<TabId | null>(null);
+  /** Said yes to a reaction from another screen; the fight opens the swing. */
+  const [takingReaction, setTakingReaction] = useState(false);
   /** Room for the fight and something else at the same time. */
   const wide = useWide();
   const [adding, setAdding] = useState(false);
@@ -119,6 +122,22 @@ export function App() {
     mine !== undefined &&
     turnsUntil(state.combat, mine.id) === 0;
 
+  /** What this character did on their turn that changes their own dice. */
+  const mySeatId = state.combat && mine ? combatantIdOf(state.combat, mine.id) : null;
+  /*
+   * A reaction the DM has offered me and I have not answered. It is owed NOW
+   * — the table is stopped on it — so it belongs above the tabs beside a
+   * check, not inside the fight where only somebody already looking would
+   * find it.
+   */
+  const offer = state.combat?.offer ?? null;
+  const offeredToMe =
+    offer && mySeatId && offer.to.includes(mySeatId) && !offer.declined.includes(mySeatId)
+      ? offer
+      : null;
+  const reactionSpare = mineState ? !mineState.economy.reaction : false;
+  const askingReaction = offeredToMe !== null && reactionSpare;
+
   const dmTabs: TabDef<TabId>[] = [
     { id: "fight", label: "Fight", dot: state.combat?.phase === "rolling" },
     { id: "party", label: "Party" },
@@ -131,7 +150,7 @@ export function App() {
     mine !== undefined &&
     (mine.spellSlots.some((n) => n > 0) || (mineState?.spells.length ?? 0) > 0);
   const playerTabs: TabDef<TabId>[] = [
-    { id: "fight", label: "Fight", dot: myTurn },
+    { id: "fight", label: "Fight", dot: myTurn || askingReaction },
     { id: "sheet", label: "Sheet", dot: owed > 0 || saveOwed },
     ...(casts ? [{ id: "spells" as const, label: "Spells" }] : []),
     { id: "gear", label: "Gear", dot: shopOpen },
@@ -151,10 +170,38 @@ export function App() {
    * that is a dead screen with "No fight yet" on it. A player's home is their
    * sheet; a DM's is the party they are looking after.
    */
+  /**
+   * An aimed spell, sent to the DM exactly as a weapon attack is. Shared,
+   * because a spell can now be cast from the turn as well as from the Spells
+   * tab and the two must reach the DM's queue identically.
+   */
+  const sendSpell = (c: {
+    spell: { name: string };
+    target: { id: string; name: string };
+    toHit: number | null;
+    damage: number;
+    damageType: string;
+  }) => {
+    if (!mine) return;
+    append({
+      type: "attackClaimed",
+      claim: {
+        id: `sp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        who: mine.id,
+        whoName: mine.name,
+        targetId: c.target.id,
+        targetName: c.target.name,
+        weapon: c.spell.name,
+        toHit: c.toHit,
+        damage: c.damage,
+        damageType: c.damageType,
+        at: Date.now(),
+      },
+    });
+  };
+
   const home: TabId =
     state.combat !== null && !twoUp ? "fight" : dmView ? "party" : "sheet";
-  /** What this character did on their turn that changes their own dice. */
-  const mySeatId = state.combat && mine ? combatantIdOf(state.combat, mine.id) : null;
   const myTags = (mySeatId && state.combat?.tags[mySeatId]) || [];
   // A seat change can also leave you on a tab the other side does not have.
   const current = tab !== null && tabs.some((t) => t.id === tab) ? tab : home;
@@ -297,21 +344,35 @@ export function App() {
       {twoUp && (
         <div className="pane-pin">
           <Combat
-            state={state}
-            seat={seat}
-            append={append}
-            onCast={() => setTab("spells")}
-          />
+              state={state}
+              seat={seat}
+              append={append}
+              onCast={sendSpell}
+              takeReaction={takingReaction}
+              onReactionOpened={() => setTakingReaction(false)}
+            />
         </div>
       )}
 
-      <div className="pane-main">
+      <div className="pane-main" data-pane={current}>
       {!needsCharacter && !needsClaim && (
         <Tabs tabs={tabs} active={current} onPick={setTab} />
       )}
 
-      {/* A roll the DM asked for is owed NOW, so it sits above whatever tab
-          you happen to be on rather than waiting to be found. */}
+      {/* Owed NOW, both of them, so they sit above whatever tab you happen to
+          be on rather than waiting to be found. */}
+      {askingReaction && offeredToMe && (
+        <ReactionAsk
+          offer={offeredToMe}
+          onTake={() => {
+            setTab("fight");
+            setTakingReaction(true);
+          }}
+          onDecline={() =>
+            mySeatId && append({ type: "reactionDeclined", combatantId: mySeatId })
+          }
+        />
+      )}
       {mine &&
         state.checks
           .filter((c) => c.who.includes(mine.id))
@@ -397,7 +458,9 @@ export function App() {
               state={state}
               seat={seat}
               append={append}
-              onCast={() => setTab("spells")}
+              onCast={sendSpell}
+              takeReaction={takingReaction}
+              onReactionOpened={() => setTakingReaction(false)}
             />
           )}
 
@@ -484,23 +547,7 @@ export function App() {
                           }),
                       }
                     : {})}
-                  onCast={(c) =>
-                    append({
-                      type: "attackClaimed",
-                      claim: {
-                        id: `sp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-                        who: mine.id,
-                        whoName: mine.name,
-                        targetId: c.target.id,
-                        targetName: c.target.name,
-                        weapon: c.spell.name,
-                        toHit: c.toHit,
-                        damage: c.damage,
-                        damageType: c.damageType,
-                        at: Date.now(),
-                      },
-                    })
-                  }
+                  onCast={sendSpell}
                 />
               )}
 

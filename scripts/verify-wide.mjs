@@ -128,6 +128,26 @@ await player.page.setViewportSize({ width: 1024, height: 768 });
 await player.page.waitForTimeout(600);
 ok("and back again on its side", await player.page.locator(".pane-pin").count(), 1);
 
+// Two-up where the content is a pile of small cards. A sheet is nine boxes of
+// numbers and reads badly as one column half a metre long.
+await player.page.setViewportSize({ width: 1440, height: 950 });
+await player.page.waitForTimeout(600);
+await go(player.page, "sheet");
+const cols = await player.page.locator(".pane-main").evaluate(
+  (el) => getComputedStyle(el).columnCount,
+);
+ok("the sheet flows into two columns where there is room", cols, "2");
+const wide = await player.page.locator(".pane-main").boundingBox();
+const card = await player.page.locator(".pane-main .card").first().boundingBox();
+ok("so a card is about half the pane, not all of it", card.width < wide.width * 0.6, true);
+await player.page.screenshot({ path: `${OUT}/53-sheet-two-up.png` });
+
+// The fight is a sequence, not a surface, and stays one column.
+await go(player.page, "log");
+ok("but the log does not — it is a sequence, and reading order matters",
+  await player.page.locator(".pane-main").evaluate((el) => getComputedStyle(el).columnCount),
+  "auto");
+
 // The phone is what this app is for. It must be untouched.
 const phone = await device("phone", 390, 844);
 await phone.page.locator('input[aria-label="Room code"]').fill(code);

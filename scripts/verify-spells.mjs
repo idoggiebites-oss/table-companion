@@ -265,7 +265,48 @@ ok("and says the cost varies rather than pretending it does not",
   /bonus action/i.test(await page.locator(".menu-more .what").innerText()), true);
 await page.getByRole("button", { name: "Do it" }).click();
 await page.waitForTimeout(600);
-ok("taking it goes to the spells", await page.locator('[data-tab="spells"].on').count(), 1);
+/* Casting happens HERE now, not two tabs away.
+
+   It used to send you to the Spells tab: a moment implemented as a place.
+   Your turn has a clock on it and a tab is somewhere you can walk away from,
+   which is how a slot got spent on a spell that was never cast. */
+ok("taking it does not leave the fight",
+  await page.locator('[data-tab="fight"].on').count(), 1);
+ok("and asks what you are casting, right there",
+  /what are you casting/i.test(await page.locator(".swing-step").innerText()), true);
+const castables = await page.locator(".swing-step .tgt-row").allInnerTexts();
+ok("listing only what can be cast this instant, with what it costs",
+  castables.some((t) => /fire bolt/i.test(t) && /cantrip/i.test(t)), true);
+
+// All the way through, from the turn: aim, roll, and into the DM's queue.
+await page.locator(".swing-step .tgt-row", { hasText: /fire bolt/i }).first().click();
+await page.waitForTimeout(500);
+await page.locator(".tgt-row", { hasText: "Goblin" }).first().click();
+await page.waitForTimeout(400);
+await page.locator('input[aria-label="Spell attack roll"]').fill("18");
+await page.locator('input[aria-label="Spell damage roll"]').fill("7");
+await page.getByRole("button", { name: "Send to the DM" }).click();
+await page.waitForTimeout(700);
+ok("a spell cast from the turn spends the action", await page.locator(".ec.spent").count(), 1);
+await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForTimeout(700);
+await go(page, "fight");
+ok("and reaches the DM exactly as a weapon attack does",
+  /fire bolt/i.test(await page.locator(".claim").first().innerText()), true);
+// Cleared, so the queue below is about one claim rather than two.
+await page.locator(".claim").first().getByRole("button", { name: /^Reject/ }).click();
+await page.waitForTimeout(600);
+
+// A fresh turn, so the rest of this suite has an action to spend. The Spells
+// tab still casts — it is where you go when you are NOT in the middle of a
+// turn, and it must not have been broken by moving the turn's copy.
+for (let i = 0; i < 2; i++) {
+  await page.getByRole("button", { name: "Advance turn" }).click();
+  await page.waitForTimeout(700);
+}
+await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await page.waitForTimeout(700);
+await go(page, "spells");
 
 /* Walking away from an aim costs nothing.
 
