@@ -82,6 +82,45 @@ export function choicesBy(points: readonly ChoicePoint[], level: number): Choice
   return points.filter((p) => p.level <= level);
 }
 
+/**
+ * The OUTERMOST trailing parenthetical, which is not the innermost.
+ *
+ * A compendium class table names subclass features as "Rallying Cry (Purple
+ * Dragon Knight (Banneret))". Reading the last group gives "Banneret", which
+ * matches no option and made the feature look class-wide — so a fighter
+ * reaching 3 was told they gained a hundred and fifty features belonging to
+ * subclasses they had not taken.
+ */
+export function outerParen(name: string): string | null {
+  const t = (name ?? "").trim();
+  if (!t.endsWith(")")) return null;
+  let depth = 0;
+  for (let i = t.length - 1; i >= 0; i--) {
+    if (t[i] === ")") depth++;
+    else if (t[i] === "(") {
+      depth--;
+      if (depth === 0) return t.slice(i + 1, -1).trim();
+    }
+  }
+  return null;
+}
+
+/**
+ * Whose feature this is, given the options that actually exist.
+ *
+ * A trailing parenthetical is only an owner if it names one: "Action Surge
+ * (one use)" is a plain class feature, and a rule that read every
+ * parenthetical as a subclass would drop it from what you just gained.
+ */
+export function ownerOf(name: string, options: ReadonlySet<string>): string | null {
+  const inner = outerParen(name);
+  if (inner === null) return null;
+  for (const o of options) {
+    if (inner === o || inner.startsWith(`${o} (`) || inner.startsWith(`${o}(`)) return o;
+  }
+  return null;
+}
+
 /** What an option actually grants, for showing beside it. */
 export function featuresOf(
   features: readonly ClassFeature[],

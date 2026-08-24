@@ -97,6 +97,12 @@ export interface BuildDelta {
   readonly feat?: { readonly id: string; readonly name: string };
   /** Except this: Resilient hands over a saving throw, and only Resilient. */
   readonly save?: Ability;
+  /**
+   * What the level asked and what was answered — a subclass at 3, a patron,
+   * a fighting style. On the delta rather than in its own event so that
+   * undoing the level takes back everything the level gave.
+   */
+  readonly picks?: readonly { readonly of: string; readonly name: string }[];
   readonly at: string;
 }
 
@@ -168,12 +174,19 @@ function applyDeltas(base: BuildBase, deltas: readonly BuildDelta[]): BuildBase 
     const saves = d.save && !out.saveProficiencies.includes(d.save)
       ? [...out.saveProficiencies, d.save]
       : out.saveProficiencies;
+    const picked = d.picks?.length
+      ? [
+          ...(out.choices ?? []),
+          ...d.picks.filter((p) => !(out.choices ?? []).some((c) => c.of === p.of)),
+        ]
+      : out.choices;
     out = {
       ...out,
       classes,
       maxHp: out.maxHp + d.hpGain,
       abilities,
       saveProficiencies: saves,
+      ...(picked ? { choices: picked } : {}),
       ...(feats ? { feats } : {}),
     };
   }
@@ -310,6 +323,7 @@ export function appendLevel(
     readonly abilities?: Partial<Record<Ability, number>>;
     readonly feat?: { readonly id: string; readonly name: string };
     readonly save?: Ability;
+    readonly picks?: readonly { readonly of: string; readonly name: string }[];
   },
 ): Character {
   const current = effectiveBuild(character).totalLevel;
@@ -326,6 +340,7 @@ export function appendLevel(
         ...(choice?.abilities ? { abilities: choice.abilities } : {}),
         ...(choice?.feat ? { feat: choice.feat } : {}),
         ...(choice?.save ? { save: choice.save } : {}),
+        ...(choice?.picks?.length ? { picks: choice.picks } : {}),
       },
     ],
   };

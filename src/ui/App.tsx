@@ -514,6 +514,7 @@ export function App() {
                 <>
                   <LevelUp
                     build={mine}
+                    state={mineState}
                     owed={levelsOwed(state, mine.id)}
                     append={append}
                   />

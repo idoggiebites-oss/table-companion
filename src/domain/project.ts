@@ -446,6 +446,8 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       const next = appendLevel(source, e.classId, e.hpGain, new Date(e.at).toISOString(), {
         ...(e.abilities ? { abilities: e.abilities } : {}),
         ...(e.feat ? { feat: e.feat } : {}),
+        ...(e.save ? { save: e.save } : {}),
+        ...(e.picks?.length ? { picks: e.picks } : {}),
       });
       const build = effectiveBuild(next);
       const before = state.characters[e.who];

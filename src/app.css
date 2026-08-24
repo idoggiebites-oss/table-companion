@@ -1122,3 +1122,12 @@ html, body { overscroll-behavior-y: none; }
 .prof-lists { display: flex; flex-direction: column; gap: 10px; }
 .prof-line { margin: 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .prof-line > span:last-child { color: var(--ink-dim); font-size: 0.9rem; }
+
+/* ---- what a level actually gives you ---- */
+.lv-gains {
+  margin: 0 0 14px; padding: 10px 12px; border-radius: 8px;
+  background: var(--raised); border-left: 2px solid var(--unharmed);
+  font-size: 0.86rem; color: var(--ink-dim);
+}
+.lv-choice { margin: 0 0 16px; }
+.lv-choice > .label { display: block; margin-bottom: 8px; }

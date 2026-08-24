@@ -18,6 +18,11 @@ import { ABILITIES, formatModifier, type Ability } from "../domain/abilities.js"
 import type { CompendiumFeat } from "../import/compendium.js";
 import { loadClassLevels, loadFeats, type ClassLevels } from "../store/srd.js";
 import { FeatPick } from "./FeatPick.js";
+import { SpellPick } from "./SpellPick.js";
+import { useSpellbook } from "./useCasting.js";
+import type { CharacterState } from "../domain/project.js";
+import { choicesBy, findChoices, ownerOf } from "../domain/subclass.js";
+import { castableBy, isClassFeature, toKnown, type KnownSpell } from "../domain/spells.js";
 import { effectsOf } from "../domain/featvariants.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
@@ -29,9 +34,11 @@ export function averageGain(die: number, conMod: number): number {
 }
 
 export function LevelUp({
-  build, owed, append,
+  build, state, owed, append,
 }: {
   build: EffectiveBuild;
+  /** For what they already know — spells learned are not on the build. */
+  state: CharacterState;
   owed: number;
   append: (body: EventBody) => void;
 }) {
@@ -42,6 +49,9 @@ export function LevelUp({
   const [route, setRoute] = useState<"asi" | "feat">("asi");
   const [bumps, setBumps] = useState<Partial<Record<Ability, number>>>({});
   const [featId, setFeatId] = useState("");
+  const [pick, setPick] = useState<Record<string, string>>({});
+  const [learned, setLearned] = useState<KnownSpell[]>([]);
+  const book = useSpellbook(true);
 
   useEffect(() => {
     loadClassLevels().then(setLevels, () => setLevels({}));
@@ -63,6 +73,65 @@ export function LevelUp({
   const nextLevel = build.classes.find((c) => c.classId === classId)?.level ?? 0;
   const grantsChoice = (levels?.[classId]?.[nextLevel]?.asi ?? false);
 
+  /*
+   * What this level actually gives them.
+   *
+   * The level-up asked for hit points and an improvement and stopped. It
+   * never asked for a subclass — build at 1, reach 3, and nothing ever
+   * prompted you — never said which spells were learned, and never named the
+   * features gained. Every character meets that; only some multiclass.
+   */
+  const rows = levels?.[classId] ?? [];
+  const row = rows[nextLevel];
+  const previous = rows[nextLevel - 1];
+
+  /** A choice this level opens and nobody has answered — the subclass at 3. */
+  const allFeatures = rows.flatMap((r) => r.features.map((n) => ({ level: r.level, name: n })));
+  const points = findChoices(allFeatures);
+  /** Every name that IS an option, so a parenthetical can be told from one. */
+  const options = new Set(points.flatMap((p) => p.options.map((o) => o.name)));
+  const answered = new Set(build.choices.map((c) => c.of));
+  const opening = choicesBy(points, to).filter((c) => !answered.has(c.of));
+
+  /*
+   * What THIS character gains, not what the class table lists.
+   *
+   * A compendium class table carries every subclass's features at every
+   * level, so a cleric reaching 2 was told they gained "Fear and Surprise
+   * (Inquisition Domain (HB))" and "Channel Divinity (Snack Domain (HB))".
+   * A feature in parentheses belongs to an option; it is theirs only if they
+   * took that option.
+   */
+  const mine = new Set(build.choices.map((c) => c.name));
+  const gained = (row?.features ?? [])
+    .filter((n) => !/^.{3,40}?:\s/.test(n))
+    .filter((n) => {
+      /*
+       * A trailing parenthetical is an option name only if it IS one. Not
+       * every one is: "Action Surge (one use)" is a plain class feature, and
+       * a rule that read it as a subclass would drop it from the list of
+       * things you just gained.
+       */
+      const owner = ownerOf(n, options);
+      return owner === null || mine.has(owner);
+    });
+
+  /** How many more spells and cantrips the class table says they know. */
+  const newCantrips = Math.max(0, (row?.cantrips ?? 0) - (previous?.cantrips ?? 0));
+  const newSpells = Math.max(0, (row?.known ?? 0) - (previous?.known ?? 0));
+  const owedSpells = newCantrips + newSpells;
+  const classIds = build.classes.map((c) => c.classId);
+  const have = new Set([...state.spells.map((sp) => sp.id), ...learned.map((sp) => sp.id)]);
+  const offerable = (book ?? []).filter(
+    (sp) =>
+      !have.has(sp.id) &&
+      !isClassFeature(sp) &&
+      classIds.some((c) => castableBy(sp, c)) &&
+      (learned.filter((x) => x.level === 0).length < newCantrips
+        ? sp.level === 0
+        : sp.level > 0 && sp.level <= Math.ceil(to / 2)),
+  );
+
   const spent = ABILITIES.reduce((n, a) => n + (bumps[a] ?? 0), 0);
   const chosenFeat = feats.find((f) => f.id === featId);
   /*
@@ -76,8 +145,10 @@ export function LevelUp({
     knowsSpells: build.spellSlots.some((n) => n > 0),
     race: build.race,
   };
-  const choiceReady = !grantsChoice
-    || (route === "asi" ? spent === 2 : chosenFeat !== undefined);
+  const choiceReady =
+    (!grantsChoice || (route === "asi" ? spent === 2 : chosenFeat !== undefined)) &&
+    opening.every((c) => pick[c.of]) &&
+    learned.length >= owedSpells;
 
   const gain = (rolled: number) => {
     append({
@@ -91,6 +162,13 @@ export function LevelUp({
        * the sheet moves. The feat itself stays recorded rather than
        * mechanised — this is the one number it is fair to be sure about.
        */
+      ...(opening.some((c) => pick[c.of])
+        ? {
+            picks: opening
+              .filter((c) => pick[c.of])
+              .map((c) => ({ of: c.of, name: pick[c.of]! })),
+          }
+        : {}),
       ...(grantsChoice && route === "feat" && chosenFeat
         ? {
             feat: { id: chosenFeat.id, name: chosenFeat.name },
@@ -103,9 +181,16 @@ export function LevelUp({
           }
         : {}),
     });
+    // A subclass and the spells it opens are their own events: undoing the
+    // level should take back everything the level gave.
+    for (const sp of learned) {
+      append({ type: "spellLearned", who: build.id, spell: sp });
+    }
     setOpen(false);
     setBumps({});
     setFeatId("");
+    setPick({});
+    setLearned([]);
   };
 
   return (
@@ -207,6 +292,79 @@ export function LevelUp({
                   {...(featId ? { taken: featId } : {})}
                   onPick={(f) => setFeatId(f?.id ?? "")}
                 />
+              )}
+            </div>
+          )}
+
+          {/*
+            * What the level actually gives. It used to give hit points and an
+            * improvement and say nothing else — so a character reached 3 and
+            * was never asked for a subclass, learned spells nobody mentioned,
+            * and gained features that appeared silently on the sheet.
+            */}
+          {gained.length > 0 && (
+            <p className="lv-gains">
+              <span className="label">You gain</span> {gained.join(" · ")}
+            </p>
+          )}
+
+          {opening.map((c) => (
+            <div className="lv-choice" key={c.of}>
+              <span className="label">{c.of}</span>
+              <div className="chips">
+                {c.options.map((o) => (
+                  <button
+                    key={o.name}
+                    className={`chip${pick[c.of] === o.name ? " on" : ""}`}
+                    aria-pressed={pick[c.of] === o.name}
+                    aria-label={`${c.of}: ${o.name}`}
+                    onClick={() => setPick({ ...pick, [c.of]: o.name })}
+                  >
+                    {o.name}
+                  </button>
+                ))}
+              </div>
+              {pick[c.of] && (
+                <p className="faint" style={{ fontSize: ".82rem", margin: "6px 0 0" }}>
+                  {c.options.find((o) => o.name === pick[c.of])?.text?.slice(0, 220) ??
+                    "Chosen. The features it grants are on your sheet."}
+                </p>
+              )}
+            </div>
+          ))}
+
+          {owedSpells > 0 && (
+            <div className="lv-choice">
+              <span className="label">
+                {learned.length} of {owedSpells}{" "}
+                {newCantrips > learned.filter((x) => x.level === 0).length
+                  ? "cantrips"
+                  : "spells"}
+              </span>
+              {book === null ? (
+                <p className="faint" style={{ fontSize: ".84rem", margin: "6px 0 0" }}>
+                  Looking up what you can learn…
+                </p>
+              ) : (
+                <SpellPick
+                  spells={offerable.slice(0, 60)}
+                  actionLabel="Learn it"
+                  onPick={(sp) => setLearned([...learned, toKnown(sp)])}
+                />
+              )}
+              {learned.length > 0 && (
+                <div className="chips" style={{ marginTop: 8 }}>
+                  {learned.map((sp) => (
+                    <button
+                      key={sp.id}
+                      className="chip on"
+                      aria-label={`Forget ${sp.name}`}
+                      onClick={() => setLearned(learned.filter((x) => x.id !== sp.id))}
+                    >
+                      {sp.name}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}

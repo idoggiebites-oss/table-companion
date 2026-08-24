@@ -15,6 +15,25 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* A level now asks for what it opens — a subclass, the spells it grants —
+   before the hit-point roll is offered. Answer whatever is there. */
+const answerWhatTheLevelOpens = async (page) => {
+  for (const chips of await page.locator(".lv-choice .chips").all()) {
+    const first = chips.locator("button").first();
+    if (await first.count()) { await first.click(); await page.waitForTimeout(300); }
+  }
+  for (let i = 0; i < 4; i++) {
+    const head = page.locator(".lv-choice .menu-hd").first();
+    if ((await head.count()) === 0) break;
+    await head.click();
+    await page.waitForTimeout(250);
+    const take = page.getByRole("button", { name: "Learn it" }).first();
+    if ((await take.count()) === 0) break;
+    await take.click();
+    await page.waitForTimeout(350);
+  }
+};
+
 /** Sit as a character: a device claims its own once, then picks a seat. */
 const sitAs = async (page, name) => {
   // A device joining a campaign that already has characters is asked which
@@ -106,6 +125,7 @@ await player.page.waitForSelector(".lv-pad");
 ok("it names the die", (await player.page.locator(".lv-ask").innerText()).includes("d10"), true);
 ok("and offers the fixed average", (await player.page.locator(".lv-avg").innerText()).includes("8"), true);
 await player.page.screenshot({ path: `${OUT}/33-levelup.png` });
+await answerWhatTheLevelOpens(player.page);
 await player.page.locator(".lv-pad button", { hasText: /^7$/ }).click();
 await player.page.waitForTimeout(900);
 

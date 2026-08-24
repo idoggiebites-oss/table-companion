@@ -153,6 +153,8 @@ export type DomainEvent = Meta &
         readonly feat?: { readonly id: string; readonly name: string };
         /** Resilient: a saving throw the feat handed over. */
         readonly save?: Ability;
+        /** A subclass, a patron, a fighting style — what the level asked. */
+        readonly picks?: readonly { readonly of: string; readonly name: string }[];
       }
     /** Prep that survives contact: built on a laptop, opened at the table. */
     | { readonly type: "encounterSaved"; readonly encounter: Encounter }
