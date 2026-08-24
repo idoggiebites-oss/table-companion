@@ -40,6 +40,20 @@
    */
   --gold: #c9a227;
   --gold-dim: #8a7220;
+  /*
+   * The trim: a rule with warmth in it rather than gold outright. A card is a
+   * frame around content, not a highlight — every card in full gold would
+   * make the one card that matters indistinguishable from the rest.
+   */
+  --trim: #33301f;
+
+  /*
+   * The edge that marks the active thing — the tab you are on, the row you
+   * chose. It was USED in three places and never defined, so it silently fell
+   * back to currentColor and the active tab has been ink-coloured all along.
+   * That is the slot this accent belongs in.
+   */
+  --edge: var(--gold);
 
   /* Reserved ramp — never stands in for a category or a creature. */
   --unharmed: #4fa97a;
@@ -206,11 +220,13 @@ input, select {
 input:focus-visible, select:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
 input[type="number"] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
-section.card { border: 1px solid var(--rule); background: var(--panel); margin-top: 18px; }
+section.card { border: 1px solid var(--trim); background: var(--panel); margin-top: 18px; }
 .card-hd {
   display: flex; justify-content: space-between; align-items: center;
-  gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--rule); flex-wrap: wrap;
+  gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--trim); flex-wrap: wrap;
 }
+/* The card's own name reads warm; everything else in it stays as it was. */
+.card-hd > .label:first-child { color: var(--gold); }
 .card-body { padding: 16px; }
 
 /* ---- identity + stat strip ---- */
