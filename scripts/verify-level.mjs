@@ -18,6 +18,14 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* The builder is a flow now: one question per screen, and the rail is how you
+   move between them. Every step is reachable at any time — which is also how a
+   person changes their mind about a race after picking spells. */
+const atStep = async (page, label) => {
+  const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
+  if (await node.count()) { await node.first().click(); await page.waitForTimeout(250); }
+};
+
 /* A level now asks for what it opens — a subclass, the spells it grants —
    before the hit-point roll is offered. Answer whatever is there. */
 const answerWhatTheLevelOpens = async (page) => {
@@ -50,6 +58,12 @@ const sitAs = async (page, name) => {
 // weapon the kit means, and what the class asks about itself — a domain, a
 // fighting style. Answer both.
 const answerGear = async (page) => {
+  // Two steps' worth of questions: what the class asks about itself, and
+  // which martial weapon the kit meant.
+  await atStep(page, "Scores");
+  const cls0 = page.locator(".card", { hasText: "Your class" }).locator("select");
+  for (let i = 0; i < (await cls0.count()); i++) await cls0.nth(i).selectOption({ index: 1 });
+  await atStep(page, "Gear");
   const sel = page.locator('select[aria-label^="Choose"]');
   for (let i = 0; i < (await sel.count()); i++) {
     await sel.nth(i).selectOption({ index: 1 });
@@ -86,77 +100,108 @@ await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForTimeout(1200);
 await player.page.getByRole("button", { name: "Build a character" }).click();
+await atStep(player.page, "Class");
 await player.page.waitForSelector(".klass-cards", { timeout: 20000 });
 
 // The level control only means anything once a class is chosen, so it lives
 // with the class and not above it.
+await atStep(player.page, "Class");
+await atStep(player.page, "Class");
 ok("no level asked before a class", await player.page.locator('input[aria-label="Starting level"]').count(), 0);
 await player.page.getByRole("button", { name: "Ranger", exact: true }).click();
 await player.page.waitForTimeout(400);
+await atStep(player.page, "Class");
 const lvl = player.page.locator('input[aria-label="Starting level"]');
 ok("level appears with the class", await lvl.count(), 1);
 ok("and defaults to one", await lvl.inputValue(), "1");
 ok("level 1 says nothing about joining", await player.page.getByText("joining a campaign in progress").count(), 0);
 
+await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Train stealth" }).click();
+await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Train perception" }).click();
+await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Train survival" }).click();
+await atStep(player.page, "Race");
 await player.page.selectOption('select[aria-label="Race"]', "elf");
 await player.page.waitForTimeout(400);
+await atStep(player.page, "Scores");
 await player.page.waitForSelector(".cr-ab");
+await atStep(player.page, "Scores");
 await player.page.getByRole("button", { name: "Recommend" }).click();
 await player.page.waitForTimeout(400);
 
 // Recommend's deterministic ranger spread: dex 15(+2 elf), wis 14, con 13,
 // str 12, int 10(+1), cha 8 — so con is +1.
+await atStep(player.page, "Scores");
 const hp1 = await stat(player.page, "Hit points").innerText();
 ok("hit points at level one are the full die plus con", hp1, "11");
+
+await atStep(player.page, "Class");
 
 await lvl.fill("8");
 await player.page.waitForTimeout(400);
 ok("now it says what a high level means", await player.page.getByText("joining a campaign in progress").count(), 1);
 
 // d10, con +1: 11 at first, then seven levels of 6+1.
+await atStep(player.page, "Scores");
 ok("hit points recomputed for the level", await stat(player.page, "Hit points").innerText(), "60");
+// The level brief sits with the consequences, not with the level input.
+await atStep(player.page, "Scores");
 const brief = await player.page.locator(".cr-note").filter({ hasText: "Level 8" }).innerText();
 ok("proficiency is stated before you commit", brief.includes("+3"), true);
 ok("so are the spell slots", brief.includes("4/3"), true);
 ok("and the ability points still owed", brief.includes("4 ability points"), true);
 // The preview is the teaching surface, so it must show the level-8 number and
 // not the level-1 one — a wrong bonus here is worse than no bonus.
+await atStep(player.page, "Scores");
 ok("the skill preview uses the level's proficiency, not level one's",
   await player.page.locator(".cr-srow", { hasText: "stealth" }).locator(".num").innerText(), "+6");
 await player.page.screenshot({ path: `${OUT}/40-level-8.png`, fullPage: true });
 
 // out of range in both directions
+await atStep(player.page, "Class");
 await lvl.fill("40");
 await player.page.waitForTimeout(250);
+await atStep(player.page, "Class");
 ok("clamped above the table", await lvl.inputValue(), "20");
 await lvl.fill("0");
 await player.page.waitForTimeout(250);
+await atStep(player.page, "Class");
 ok("clamped below it", await lvl.inputValue(), "1");
 await lvl.fill("8");
 await player.page.waitForTimeout(300);
 
+await atStep(player.page, "Story");
 await player.page.getByRole("button", { name: "nature", exact: true }).click();
+await atStep(player.page, "Story");
 await player.page.getByRole("button", { name: "animal handling", exact: true }).click();
+await atStep(player.page, "Story");
 await player.page.locator('input[aria-label="Background name"]').fill("Greenwarden");
+await atStep(player.page, "Review");
 await player.page.locator('input[aria-label="Character name"]').fill("Bel Ashcroft");
 await player.page.waitForTimeout(300);
 await answerGear(player.page);
 // A character made at 8 has already passed levels 4 and 8; the builder used
 // to state the points owed and give nowhere to spend them.
+await atStep(player.page, "Scores");
 ok("the builder asks for improvements already earned",
   await player.page.getByText("6 · Improvements").count(), 1);
+await atStep(player.page, "Review");
+await atStep(player.page, "Review");
 ok("and will not finish until they are taken",
   await player.page.getByRole("button", { name: "Create character" }).isDisabled(), true);
 // Into Intelligence, which nothing else in this suite asserts on — raising
 // dex would move Stealth and muddy a claim about proficiency.
+await atStep(player.page, "Scores");
 await player.page.getByRole("button", { name: "Level 4 raise int" }).click();
+await atStep(player.page, "Scores");
 await player.page.getByRole("button", { name: "Level 4 raise int" }).click();
 await player.page.waitForTimeout(300);
 // The level-8 improvement, spent on a feat. A dropdown of names became a
 // list you can read before choosing, so this reads one and takes it.
+await atStep(player.page, "Spells");
+await atStep(player.page, "Scores");
 const lv8 = player.page.locator(".chooser", { hasText: "Level 8" }).locator(".feat-pick");
 await lv8.locator('input[aria-label="Filter feats"]').fill("alert");
 await player.page.waitForTimeout(400);
@@ -164,9 +209,12 @@ await lv8.locator(".menu-hd").first().click();
 await player.page.waitForTimeout(250);
 await lv8.getByRole("button", { name: "Take it" }).click();
 await player.page.waitForTimeout(400);
+await atStep(player.page, "Review");
+await atStep(player.page, "Review");
 ok("one raised, one feat, and it is satisfied",
   await player.page.getByRole("button", { name: "Create character" }).isDisabled(), false);
 
+await atStep(player.page, "Review");
 await player.page.getByRole("button", { name: "Create character" }).click();
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
@@ -174,6 +222,7 @@ ok("arrives at the table with the right hit points",
   (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "60 / 60");
 ok("proficiency is a level-8 bonus, not a level-1 one",
   await player.page.locator(".strip div").nth(3).locator("b").innerText(), "+3");
+await atStep(player.page, "Scores");
 ok("the improvement reached the sheet",
   Number((await player.page.locator(".cr-ab, .strip div").first().innerText().catch(() => "0"))
     .replace(/\D/g, "")) >= 0, true);
@@ -256,6 +305,7 @@ ok("and a feat instead of it",
 ok("the roll waits until the choice is made",
   await player.page.locator(".lv-pad button").first().isDisabled(), true);
 
+await atStep(player.page, "Scores");
 const before = await player.page.locator(".lv-abils .chip").first().innerText();
 await player.page.getByRole("button", { name: "Raise str" }).click();
 await player.page.waitForTimeout(200);
@@ -263,6 +313,7 @@ await player.page.getByRole("button", { name: "Raise str" }).click();
 await player.page.waitForTimeout(300);
 ok("spending both points unblocks it",
   await player.page.locator(".lv-pad button").first().isDisabled(), false);
+await atStep(player.page, "Scores");
 ok("and the score moves as they are spent",
   (await player.page.locator(".lv-abils .chip").first().innerText()) !== before, true);
 

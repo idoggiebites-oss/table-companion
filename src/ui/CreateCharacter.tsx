@@ -158,6 +158,8 @@ export function CreateCharacter({
   const [bgSkills, setBgSkills] = useState<SkillId[]>([]);
   const [pickedLangs, setPickedLangs] = useState<string[]>([]);
   const [identity, setIdentity] = useState<Identity>({});
+  /** Which question is in front of you. */
+  const [step, setStep] = useState(0);
   const [pickedTools, setPickedTools] = useState<string[]>([]);
   const [bgId, setBgId] = useState("");
   const [bgFilter, setBgFilter] = useState("");
@@ -484,19 +486,77 @@ export function CreateCharacter({
   const toggle = <T,>(list: T[], v: T, max: number): T[] =>
     list.includes(v) ? list.filter((x) => x !== v) : list.length < max ? [...list, v] : list;
 
+  /*
+   * One question per screen.
+   *
+   * The builder was a single column you scrolled: eight cards, every one of
+   * them open, and no sign of where you were or how much was left. Paging it
+   * costs a tap between steps and buys the thing a scroll cannot give — the
+   * question in front of you being the only question in front of you.
+   *
+   * The rail is the way back. Every step on it is reachable at any time,
+   * because changing your race after picking spells is a normal thing to want
+   * and a linear flow that forbids it is worse than the scroll was.
+   */
+  const steps: { readonly id: string; readonly label: string; readonly done: boolean }[] = [
+    { id: "class", label: "Class", done: klass !== undefined && classSkills.length === skillsNeeded },
+    { id: "race", label: "Race", done: race !== undefined },
+    {
+      id: "abilities",
+      label: "Scores",
+      done: allAssigned && improvementsDone && picksDone,
+    },
+    { id: "background", label: "Story", done: bgSkills.length >= 2 && bgName.trim() !== "" },
+    ...(castsAtAll ? [{ id: "spells", label: "Spells", done: true }] : []),
+    { id: "gear", label: "Gear", done: gearMode !== "kit" || unpicked.length === 0 },
+    { id: "review", label: "Review", done: gaps.length === 0 },
+  ];
+  const stepIndex = Math.min(step, steps.length - 1);
+  const here = steps[stepIndex]!.id;
+  const at = (id: string) => here === id;
+  const go = (n: number) => setStep(Math.max(0, Math.min(steps.length - 1, n)));
+
   return (
     <>
-      <section className="card">
+      <section className="card cr-chrome">
         <div className="card-hd">
-          <span className="label">Build a character</span>
+          <span className="label">
+            {klass ? `${race?.name ?? "Someone"} ${klass.name} ${level}` : "Build a character"}
+          </span>
+          {/* The summary follows you: the two numbers that move while you
+              choose, where you can see them move. */}
+          {klass && (
+            <span className="cr-vitals">
+              <span><b>{hpAtLevel(klass.hitDie as DieSize, mods.con, level)}</b>HP</span>
+              <span><b>{10 + mods.dex}</b>AC</span>
+              <span><b>{formatModifier(prof)}</b>PROF</span>
+            </span>
+          )}
           <button onClick={onCancel}>Cancel</button>
         </div>
+
+        {races && classes && (
+          <nav className="cr-rail" aria-label="Steps">
+            {steps.map((st, i) => (
+              <button
+                key={st.id}
+                className={`cr-node${i === stepIndex ? " on" : ""}${st.done ? " done" : ""}`}
+                aria-current={i === stepIndex ? "step" : undefined}
+                aria-label={`Step ${i + 1}, ${st.label}`}
+                onClick={() => go(i)}
+              >
+                <span className="cr-dot">{st.done && i !== stepIndex ? "✓" : i + 1}</span>
+                <span className="cr-lb">{st.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
 
         {(!races || !classes) && (
           <div className="card-body"><p className="faint" style={{ margin: 0 }}>Loading…</p></div>
         )}
 
-        {races && classes && (
+        {races && classes && at("class") && (
           <div className="card-body">
             {/* Class first: it is what lets every later step advise. */}
             <span className="label cr-step">1 · Class</span>
@@ -669,7 +729,11 @@ export function CreateCharacter({
               </>
             )}
 
-            <span className="label cr-step">2 · Race</span>
+          </div>
+        )}
+
+        {races && classes && at("race") && (
+          <div className="card-body">
             {/* A shipped SRD list is nine long; an imported one is six hundred.
                 The filter appears only when the list is long enough to need
                 it, so the common case stays a single control. */}
@@ -753,7 +817,7 @@ export function CreateCharacter({
         )}
       </section>
 
-      {klass && race && (
+      {at("abilities") && klass && race && (
         <section className="card">
           <div className="card-hd">
             <span className="label">3 · Ability scores</span>
@@ -933,7 +997,7 @@ export function CreateCharacter({
         </section>
       )}
 
-      {klass && race && (
+      {at("background") && klass && race && (
         <section className="card">
           <div className="card-hd">
             <span className="label">4 · Background</span>
@@ -1036,7 +1100,7 @@ export function CreateCharacter({
         * choice; only what is actually chosen is offered. A background is
         * two of either, which is the rule and also why they share one card.
         */}
-      {klass && race && (
+      {at("background") && klass && race && (
         <section className="card">
           <div className="card-hd">
             <span className="label">5 · Languages &amp; tools</span>
@@ -1135,7 +1199,7 @@ export function CreateCharacter({
         * character. None of it is required: a blank one is a character too,
         * and these usually turn up at the table rather than before it.
         */}
-      {klass && race && (
+      {at("background") && klass && race && (
         <section className="card">
           <div className="card-hd">
             <span className="label">6 · Who are they?</span>
@@ -1179,7 +1243,7 @@ export function CreateCharacter({
       {/* Its own step rather than buried in the ability-score block, where it
           was invisible until two unrelated questions had been answered. Last
           in the flow because it is the least consequential thing here. */}
-      {klass && race && (
+      {at("gear") && klass && race && (
         <section className="card">
           <div className="card-hd">
             <span className="label cr-step">5 · Equipment</span>
@@ -1285,7 +1349,7 @@ export function CreateCharacter({
         </section>
       )}
 
-      {klass && race && classChoices.length > 0 && (
+      {at("abilities") && klass && race && classChoices.length > 0 && (
         <section className="card">
           <div className="card-hd">
             <span className="label cr-step">6 · Your class</span>
@@ -1345,7 +1409,7 @@ export function CreateCharacter({
         * "4 ability points to spend in your builder" and giving nowhere to
         * spend them — a promise the screen made and did not keep.
         */}
-      {klass && race && earnedLevels.length > 0 && (
+      {at("abilities") && klass && race && earnedLevels.length > 0 && (
         <section className="card">
           <div className="card-hd">
             <span className="label cr-step">6 · Improvements</span>
@@ -1437,7 +1501,7 @@ export function CreateCharacter({
       {/* Only for casters, and only as many as the class table allows. The
           counts are the point: a wizard is told three cantrips and six
           spells, not left to remember it. */}
-      {klass && race && castsAtAll && (
+      {at("spells") && klass && race && castsAtAll && (
         <section className="card">
           <div className="card-hd">
             <span className="label cr-step">6 · Spells</span>
@@ -1564,8 +1628,18 @@ export function CreateCharacter({
         </section>
       )}
 
-      {klass && race && (
-        <section className="card">
+      {/*
+        * The review. A form you have filled in is not a character until
+        * something reads it back to you as one.
+        */}
+      {at("review") && klass && race && (
+        <section className="card cr-review">
+          <div className="card-hd">
+            <span className="label">Your hero</span>
+            <span className="faint" style={{ fontSize: ".78rem" }}>
+              nothing is saved until you say so
+            </span>
+          </div>
           <div className="card-body">
             <input
               value={name}
@@ -1573,7 +1647,59 @@ export function CreateCharacter({
               placeholder="Kira Vance"
               onChange={(e) => setName(e.target.value)}
             />
-            <div className="row" style={{ marginTop: 12 }}>
+
+            <div className="rv-who">
+              <span className="rv-crest">{shapeOf(klass.id)?.glyph ?? "\u25C7"}</span>
+              <span>
+                <span className="rv-nm">{name.trim() || "Unnamed"}</span>
+                <span className="rv-sub">
+                  {raceChoice?.subraceName ? `${raceChoice.subraceName} ` : ""}
+                  {race.name} · {klass.name} {level}
+                  {bgName.trim() ? ` · ${bgName.trim()}` : ""}
+                </span>
+              </span>
+            </div>
+
+            {(identity.ideals || identity.personality) && (
+              <p className="rv-quote">
+                &ldquo;{identity.ideals || identity.personality}&rdquo;
+              </p>
+            )}
+
+            <div className="rv-abils">
+              {ABILITIES.map((a) => (
+                <div key={a}>
+                  <b>{scores[a]}</b>
+                  <span>{a}</span>
+                  <em>{formatModifier(mods[a])}</em>
+                </div>
+              ))}
+            </div>
+
+            <div className="rv-cols">
+              <div>
+                <span className="label">Trained in</span>
+                <p>{[...new Set([...classSkills, ...bgSkills])].map(spaced).join(", ") || "—"}</p>
+              </div>
+              <div>
+                <span className="label">Hit points</span>
+                <p>{hpAtLevel(klass.hitDie as DieSize, mods.con, level)} · d{klass.hitDie} hit die</p>
+              </div>
+              {gather(raceLangs.known, pickedLangs).length > 0 && (
+                <div>
+                  <span className="label">Speaks</span>
+                  <p>{gather(raceLangs.known, pickedLangs).join(", ")}</p>
+                </div>
+              )}
+              {chosenSpells.length > 0 && (
+                <div>
+                  <span className="label">Knows</span>
+                  <p>{chosenSpells.map((sp) => sp.name).join(", ")}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="row" style={{ marginTop: 14 }}>
               <button
                 disabled={gaps.length > 0 || !choices}
                 onClick={() => choices && onCreate({ base: assemble(choices), deltas: [] }, { ...starting, spells: chosenSpells })}
@@ -1586,6 +1712,20 @@ export function CreateCharacter({
             </div>
           </div>
         </section>
+      )}
+
+      {/* Back and on. The rail is for jumping; these are for walking. */}
+      {races && classes && (
+        <div className="cr-nav">
+          <button disabled={stepIndex === 0} onClick={() => go(stepIndex - 1)}>Back</button>
+          <button
+            className="cr-on"
+            disabled={stepIndex === steps.length - 1}
+            onClick={() => go(stepIndex + 1)}
+          >
+            Continue
+          </button>
+        </div>
       )}
     </>
   );

@@ -18,6 +18,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/* The builder is a flow: the rail is how you move between its steps. */
+const atStep = async (page, label) => {
+  const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
+  if (await node.count()) { await node.first().click(); await page.waitForTimeout(250); }
+};
 // The builder asks two kinds of question before it will finish: which martial
 // weapon the kit means, and what the class asks about itself — a domain, a
 // fighting style. Answer both.
@@ -83,6 +89,7 @@ await page.selectOption('select[aria-label="Attack 1 ability"]', "str");
 await page.selectOption('select[aria-label="Attack 1 die"]', "12");
 await page.locator('input[aria-label="Attack 1 damage type"]').fill("slashing");
 await answerGear(page);
+await atStep(page, "Review");
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".hp-big");
 // str +4, proficiency +3 at level 5

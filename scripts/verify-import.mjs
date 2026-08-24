@@ -19,6 +19,12 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/* The builder is a flow: the rail is how you move between its steps. */
+const atStep = async (page, label) => {
+  const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
+  if (await node.count()) { await node.first().click(); await page.waitForTimeout(250); }
+};
 // The builder asks two kinds of question before it will finish: which martial
 // weapon the kit means, and what the class asks about itself — a domain, a
 // fighting style. Answer both.
@@ -71,6 +77,7 @@ await page.locator("#sp").fill("35");
 await page.locator("#sl-0").fill("4");
 await page.locator("#sl-1").fill("3");
 await answerGear(page);
+await atStep(page, "Review");
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".hp-big");
 

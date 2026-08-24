@@ -16,6 +16,14 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/* The builder is a flow now: one question per screen, and the rail is how you
+   move between them. Every step is reachable at any time — which is also how a
+   person changes their mind about a race after picking spells. */
+const atStep = async (page, label) => {
+  const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
+  if (await node.count()) { await node.first().click(); await page.waitForTimeout(250); }
+};
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
   await page.waitForTimeout(250);
@@ -147,38 +155,50 @@ ok("with no way to take them",
 // need and a new one nothing at all.
 const b = await device("builder");
 await b.page.getByRole("button", { name: "Build a character" }).click();
+await atStep(b.page, "Class");
 await b.page.waitForSelector(".klass-cards", { timeout: 20000 });
 ok("nothing is explained before a class is chosen",
   await b.page.locator(".cr-blurb").count(), 0);
 
+await atStep(b.page, "Class");
 await b.page.getByRole("button", { name: "Fighter", exact: true }).click();
 await b.page.waitForTimeout(700);
 const blurb = await b.page.locator(".cr-blurb").first().innerText();
 ok("choosing one says what it is LIKE to play",
   /hit things|simplest place to start/i.test(blurb), true);
+await atStep(b.page, "Class");
 ok("and keeps the mechanical line underneath",
   /d10 hit die/i.test(await b.page.locator(".cr-note").first().innerText()), true);
 
+await atStep(b.page, "Race");
 await b.page.locator('input[aria-label="Filter races"]').fill("human");
 await b.page.waitForTimeout(400);
+await atStep(b.page, "Race");
 const ro = await b.page.locator('select[aria-label="Race"] option').allInnerTexts();
 await b.page.selectOption('select[aria-label="Race"]', { label: ro[1] });
 await b.page.waitForTimeout(800);
 
-const advice = (await b.page.locator(".cr-blurb").allInnerTexts()).join(" ");
+// Class advice sits on the class step; the score advice with the scores.
+const advice = [
+  await (async () => { await atStep(b.page, "Class"); return (await b.page.locator(".cr-blurb").allInnerTexts()).join(" "); })(),
+  await (async () => { await atStep(b.page, "Scores"); return (await b.page.locator(".cr-blurb").allInnerTexts()).join(" "); })(),
+].join(" ");
 ok("and which scores matter for it", /Strength and Constitution matter most/i.test(advice), true);
 
 // Concise by default: six explanations at once is the wall of text the turn
 // menu had to be rescued from.
+await atStep(b.page, "Scores");
 ok("the abilities are not explained until asked",
   await b.page.locator(".cr-abils-help").count(), 0);
 await b.page.getByRole("button", { name: "What do these do?" }).click();
 await b.page.waitForTimeout(300);
+await atStep(b.page, "Scores");
 const help = (await b.page.locator(".cr-abils-help").innerText()).toLowerCase();
 ok("asking explains all six", (help.match(/strength|dexterity|constitution|intelligence|wisdom|charisma/g) ?? []).length >= 6, true);
 ok("leading with what they change",
   /hit points/.test(help) && /armour class/.test(help), true);
 // --- races and backgrounds, where there are hundreds ---------------------
+await atStep(b.page, "Race");
 const raceBlurbs = await b.page.locator(".cr-blurb").allInnerTexts();
 ok("a shipped race says what it is",
   raceBlurbs.some((t) => /little of everything/i.test(t)), true);
@@ -187,8 +207,10 @@ ok("a shipped race says what it is",
 ok("a race with nothing to list offers no list",
   await b.page.getByRole("button", { name: "What does this give me?" }).count(), 0);
 
+await atStep(b.page, "Race");
 await b.page.locator('input[aria-label="Filter races"]').fill("halfling");
 await b.page.waitForTimeout(500);
+await atStep(b.page, "Race");
 const hf = await b.page.locator('select[aria-label="Race"] option').allInnerTexts();
 await b.page.selectOption('select[aria-label="Race"]', { label: hf[1] });
 await b.page.waitForTimeout(700);
@@ -201,8 +223,10 @@ ok("listing what the data says, not something invented",
   /Lucky/.test(traitText) && /Brave/.test(traitText), true);
 
 // An imported race has no hand-written line, and uses its own description.
+await atStep(b.page, "Race");
 await b.page.locator('input[aria-label="Filter races"]').fill("aasimar");
 await b.page.waitForTimeout(500);
+await atStep(b.page, "Race");
 const opts = await b.page.locator('select[aria-label="Race"] option').allInnerTexts();
 if (opts.length > 1) {
   await b.page.selectOption('select[aria-label="Race"]', { label: opts[1] });
@@ -211,19 +235,24 @@ if (opts.length > 1) {
   ok("an imported race falls back to its own description",
     after.length > 0 && !/little of everything/i.test(after), true);
 }
+await atStep(b.page, "Race");
 await b.page.locator('input[aria-label="Filter races"]').fill("human");
 await b.page.waitForTimeout(400);
+await atStep(b.page, "Race");
 const back = await b.page.locator('select[aria-label="Race"] option').allInnerTexts();
 await b.page.selectOption('select[aria-label="Race"]', { label: back[1] });
 await b.page.waitForTimeout(600);
 
 // A background's one mechanical line is the one worth showing.
+await atStep(b.page, "Story");
 await b.page.locator('input[aria-label="Filter backgrounds"]').fill("Acolyte");
 await b.page.waitForTimeout(400);
+await atStep(b.page, "Story");
 await b.page.selectOption('select[aria-label="Background"]', { label: "Acolyte" });
 await b.page.waitForTimeout(700);
 // The card, not every card that says the word — the languages step mentions
 // backgrounds too, because a background is two languages or tools.
+await atStep(b.page, "Story");
 const bgText = (await b.page
   .locator(".card", { has: b.page.locator('select[aria-label="Background"]') })
   .innerText()).replace(/\s+/g, " ");

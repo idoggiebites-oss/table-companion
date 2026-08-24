@@ -17,10 +17,24 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/* The builder is a flow now: one question per screen, and the rail is how you
+   move between them. Every step is reachable at any time — which is also how a
+   person changes their mind about a race after picking spells. */
+const atStep = async (page, label) => {
+  const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
+  if (await node.count()) { await node.first().click(); await page.waitForTimeout(250); }
+};
 // The builder asks two kinds of question before it will finish: which martial
 // weapon the kit means, and what the class asks about itself — a domain, a
 // fighting style. Answer both.
 const answerGear = async (page) => {
+  // Two steps' worth of questions: what the class asks about itself, and
+  // which martial weapon the kit meant.
+  await atStep(page, "Scores");
+  const cls0 = page.locator(".card", { hasText: "Your class" }).locator("select");
+  for (let i = 0; i < (await cls0.count()); i++) await cls0.nth(i).selectOption({ index: 1 });
+  await atStep(page, "Gear");
   const sel = page.locator('select[aria-label^="Choose"]');
   for (let i = 0; i < (await sel.count()); i++) {
     await sel.nth(i).selectOption({ index: 1 });
@@ -80,6 +94,7 @@ await go(dm.page, "prep");
 await dm.page.getByRole("button", { name: "Add someone" }).click();
 await dm.page.locator('input[aria-label="NPC name"]').fill("Marta the Harbourmaster");
 await dm.page.locator('input[aria-label="NPC role"]').fill("harbourmaster");
+await atStep(dm.page, "Story");
 await dm.page.locator('textarea[aria-label="NPC notes"]').fill("Owes the party a favour. Knows about the bridge.");
 ok("stock is not asked for by default",
   await dm.page.locator('input[aria-label="Find stock"]').count(), 0);
@@ -116,20 +131,30 @@ await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForSelector('button:has-text("Build a character")', { timeout: 20000 });
 await player.page.getByRole("button", { name: "Build a character" }).click();
+await atStep(player.page, "Class");
 await player.page.waitForSelector(".klass-cards", { timeout: 20000 });
+await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Fighter", exact: true }).click();
 await player.page.waitForTimeout(300);
+await atStep(player.page, "Class");
 for (const s of ["Athletics", "Perception"]) {
   await player.page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
+await atStep(player.page, "Race");
 await player.page.selectOption('select[aria-label="Race"]', "human");
 await player.page.waitForTimeout(400);
+await atStep(player.page, "Scores");
 await player.page.getByRole("button", { name: "Recommend" }).click();
+await atStep(player.page, "Story");
 await player.page.getByRole("button", { name: "nature", exact: true }).click();
+await atStep(player.page, "Story");
 await player.page.getByRole("button", { name: "animal handling", exact: true }).click();
+await atStep(player.page, "Story");
 await player.page.locator('input[aria-label="Background name"]').fill("Soldier");
+await atStep(player.page, "Review");
 await player.page.locator('input[aria-label="Character name"]').fill("Kira Vance");
 await answerGear(player.page);
+await atStep(player.page, "Review");
 await player.page.getByRole("button", { name: "Create character" }).click();
 await player.page.waitForSelector(".hp-big", { timeout: 20000 });
 await dm.page.waitForTimeout(1500);

@@ -17,6 +17,14 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/* The builder is a flow now: one question per screen, and the rail is how you
+   move between them. Every step is reachable at any time — which is also how a
+   person changes their mind about a race after picking spells. */
+const atStep = async (page, label) => {
+  const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
+  if (await node.count()) { await node.first().click(); await page.waitForTimeout(250); }
+};
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
   await page.waitForTimeout(300);
@@ -28,13 +36,17 @@ page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 await page.goto(URL, { waitUntil: "networkidle" });
 
 await page.getByRole("button", { name: "Build a character" }).click();
+await atStep(page, "Class");
 await page.waitForSelector(".klass-cards", { timeout: 20000 });
 
 // --- the class, before you commit to it ----------------------------------
+await atStep(page, "Class");
+await atStep(page, "Class");
 const cards = page.locator(".klass");
 ok("the twelve are cards", await cards.count(), 12);
 ok("nothing is chosen to begin with", await page.locator(".klass.on").count(), 0);
 
+await atStep(page, "Class");
 const wizard = page.locator(".klass", { has: page.locator(".nm", { hasText: /^Wizard$/ }) }).first();
 const wizardText = (await wizard.innerText()).replace(/\s+/g, " ");
 ok("a card says what the class is for", /arcane|magic|spell/i.test(wizardText), true);
@@ -43,25 +55,31 @@ ok("and what it plays like",
   ["spellcaster", "control"]);
 ok("and how much bookkeeping it asks — five dots for a wizard",
   await wizard.locator(".kcx i.f").count(), 5);
+await atStep(page, "Class");
 const fighter = page.locator(".klass", { has: page.locator(".nm", { hasText: /^Fighter$/ }) }).first();
 ok("against one for a fighter", await fighter.locator(".kcx i.f").count(), 1);
 await page.screenshot({ path: `${OUT}/A0-class-cards.png`, fullPage: true });
 
 await fighter.click();
 await page.waitForTimeout(500);
+await atStep(page, "Class");
 ok("choosing one marks it", await page.locator(".klass.on").count(), 1);
-ok("and the rest of the builder opens",
-  await page.locator('select[aria-label="Race"]').count(), 1);
+ok("and the flow can move on",
+  await page.getByRole("button", { name: "Continue" }).isDisabled(), false);
 
 // --- who they are ---------------------------------------------------------
+await atStep(page, "Class");
 for (const s of ["Athletics", "Perception"]) {
   await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
+await atStep(page, "Race");
 await page.selectOption('select[aria-label="Race"]', "human");
 await page.waitForTimeout(600);
+await atStep(page, "Scores");
 await page.getByRole("button", { name: "Recommend" }).click();
 await page.waitForTimeout(500);
 
+await atStep(page, "Story");
 const who = page.locator(".card", { hasText: "Who are they?" }).first();
 await who.scrollIntoViewIfNeeded();
 ok("the builder asks who they are", await who.count(), 1);
@@ -79,17 +97,25 @@ ok("counting what is left of the line",
 await page.screenshot({ path: `${OUT}/A1-identity.png`, fullPage: true });
 
 // Finish, and find it on the sheet.
+await atStep(page, "Story");
 await page.getByRole("button", { name: "nature", exact: true }).click();
+await atStep(page, "Story");
 await page.getByRole("button", { name: "animal handling", exact: true }).click();
+await atStep(page, "Story");
 await page.locator('input[aria-label="Background name"]').fill("Soldier");
+await atStep(page, "Review");
 await page.locator('input[aria-label="Character name"]').fill("Kaelen Lightfoot");
+await atStep(page, "Gear");
 const sel = page.locator('select[aria-label^="Choose"]');
 for (let i = 0; i < (await sel.count()); i++) await sel.nth(i).selectOption({ index: 1 });
+await atStep(page, "Scores");
 const cls = page.locator(".card", { hasText: "Your class" }).locator("select");
 for (let i = 0; i < (await cls.count()); i++) await cls.nth(i).selectOption({ index: 1 });
+await atStep(page, "Gear");
 const kit = page.locator(".kit select");
 for (let i = 0; i < (await kit.count()); i++) await kit.nth(i).selectOption({ index: 1 });
 await page.waitForTimeout(400);
+await atStep(page, "Review");
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".hp-big", { timeout: 20000 });
 await go(page, "sheet");

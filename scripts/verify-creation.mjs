@@ -14,6 +14,14 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* The builder is a flow now: one question per screen, and the rail is how you
+   move between them. Every step is reachable at any time — which is also how a
+   person changes their mind about a race after picking spells. */
+const atStep = async (page, label) => {
+  const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
+  if (await node.count()) { await node.first().click(); await page.waitForTimeout(250); }
+};
+
 /** Sit as a character: a device claims its own once, then picks a seat. */
 const sitAs = async (page, name) => {
   // A device joining a campaign that already has characters is asked which
@@ -27,6 +35,12 @@ const sitAs = async (page, name) => {
 // weapon the kit means, and what the class asks about itself — a domain, a
 // fighting style. Answer both.
 const answerGear = async (page) => {
+  // Two steps' worth of questions: what the class asks about itself, and
+  // which martial weapon the kit meant.
+  await atStep(page, "Scores");
+  const cls0 = page.locator(".card", { hasText: "Your class" }).locator("select");
+  for (let i = 0; i < (await cls0.count()); i++) await cls0.nth(i).selectOption({ index: 1 });
+  await atStep(page, "Gear");
   const sel = page.locator('select[aria-label^="Choose"]');
   for (let i = 0; i < (await sel.count()); i++) {
     await sel.nth(i).selectOption({ index: 1 });
@@ -64,29 +78,44 @@ await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForTimeout(1200);
 
 await player.page.getByRole("button", { name: "Build a character" }).click();
+await atStep(player.page, "Class");
 await player.page.waitForSelector(".klass-cards", { timeout: 20000 });
 
 // class first — it is what lets everything after it advise
+await atStep(player.page, "Class");
+await atStep(player.page, "Race");
+await atStep(player.page, "Class");
 ok("class is asked first", await player.page.locator(".cr-step").first().innerText(), "1 · CLASS");
-ok("race is not offered until then", await player.page.locator('select[aria-label="Race"]').count(), 1);
+// One question per screen: race is its own step now, reached after this one.
+ok("race is not offered until then",
+  await player.page.locator('select[aria-label="Race"]').count(), 0);
+ok("but the flow says it is coming",
+  await player.page.getByRole("button", { name: /^Step 2, Race$/ }).count(), 1);
 
+await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Ranger", exact: true }).click();
 await player.page.waitForTimeout(300);
+await atStep(player.page, "Class");
 const note = await player.page.locator(".cr-note").first().innerText();
 ok("the class states its own facts", note.includes("d10 hit die"), true);
 ok("and its saves", note.includes("STR and DEX"), true);
 ok("ranger does not claim to cast at level 1", note.includes("casts from level 1"), false);
 
 // class skills: three from a list of eight
+await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Train stealth" }).click();
+await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Train perception" }).click();
+await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Train survival" }).click();
 // Chips became a table: the consequence of taking a skill is a number, so
 // the number is what is checked.
+await atStep(player.page, "Class");
 ok("three class skills taken", await player.page.locator(".skl tr.on").count(), 3);
 /* The point of the table: the total is the ability plus proficiency, and it
    moves when you take the skill. Parsed with the real minus sign the app
    renders (U+2212), not the hyphen a naive Number() expects. */
+await atStep(player.page, "Class");
 ok("and each rolls at its ability plus proficiency",
   await player.page.locator(".skl tr.on").evaluateAll((rows) =>
     rows.every((r) => {
@@ -96,43 +125,56 @@ ok("and each rolls at its ability plus proficiency",
     })),
   true);
 
+await atStep(player.page, "Race");
 await player.page.selectOption('select[aria-label="Race"]', "elf");
 await player.page.waitForTimeout(400);
+await atStep(player.page, "Race");
 ok("a subrace is offered where the SRD has one",
   await player.page.locator('select[aria-label="Subrace"]').count(), 1);
+await atStep(player.page, "Scores");
 await player.page.waitForSelector(".cr-ab");
 
 // consequences move as scores are assigned — the whole teaching mechanism
+await atStep(player.page, "Scores");
 const acBefore = await stat(player.page, "Armour class").innerText();
 await player.page.locator(".chipv", { hasText: /^15$/ }).click();
 await player.page.getByRole("button", { name: "dex", exact: true }).click();
 await player.page.waitForTimeout(300);
+await atStep(player.page, "Scores");
 const acAfter = await stat(player.page, "Armour class").innerText();
 ok("armour class moved when dexterity was set", acBefore !== acAfter, true);
 ok("and is right: 10 + (15+2 elf) modifier", acAfter, "13");
 ok("racial bonus is shown as its own term, not a mystery total",
   (await player.page.locator(".cr-ab", { hasText: "dex" }).first().innerText()).includes("+ 2"), true);
 
+await atStep(player.page, "Scores");
 await player.page.locator(".chipv", { hasText: /^14$/ }).click();
 await player.page.getByRole("button", { name: "con", exact: true }).click();
 await player.page.waitForTimeout(300);
 ok("hit points follow constitution", await stat(player.page, "Hit points").innerText(), "12");
 
 // Recommend fills the rest — advice, offered rather than applied
+await atStep(player.page, "Scores");
 await player.page.getByRole("button", { name: "Recommend" }).click();
 await player.page.waitForTimeout(400);
+await atStep(player.page, "Scores");
 ok("recommend placed every score", await player.page.locator(".cr-ab.empty").count(), 0);
 await player.page.screenshot({ path: `${OUT}/34-creation.png`, fullPage: true });
 
 // custom background: two skills and a name
+await atStep(player.page, "Story");
 await player.page.getByRole("button", { name: "nature", exact: true }).click();
+await atStep(player.page, "Story");
 await player.page.getByRole("button", { name: "animal handling", exact: true }).click();
+await atStep(player.page, "Story");
 await player.page.locator('input[aria-label="Background name"]').fill("Greenwarden");
+await atStep(player.page, "Review");
 await player.page.locator('input[aria-label="Character name"]').fill("Kira Vance");
 await player.page.waitForTimeout(300);
 
 await answerGear(player.page);
 
+await atStep(player.page, "Review");
 const create = player.page.getByRole("button", { name: "Create character" });
 ok("ready to create", await create.isDisabled(), false);
 await create.click();

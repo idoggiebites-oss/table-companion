@@ -17,10 +17,24 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/* The builder is a flow now: one question per screen, and the rail is how you
+   move between them. Every step is reachable at any time — which is also how a
+   person changes their mind about a race after picking spells. */
+const atStep = async (page, label) => {
+  const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
+  if (await node.count()) { await node.first().click(); await page.waitForTimeout(250); }
+};
 // The builder asks two kinds of question before it will finish: which martial
 // weapon the kit means, and what the class asks about itself — a domain, a
 // fighting style. Answer both.
 const answerGear = async (page) => {
+  // Two steps' worth of questions: what the class asks about itself, and
+  // which martial weapon the kit meant.
+  await atStep(page, "Scores");
+  const cls0 = page.locator(".card", { hasText: "Your class" }).locator("select");
+  for (let i = 0; i < (await cls0.count()); i++) await cls0.nth(i).selectOption({ index: 1 });
+  await atStep(page, "Gear");
   const sel = page.locator('select[aria-label^="Choose"]');
   for (let i = 0; i < (await sel.count()); i++) {
     await sel.nth(i).selectOption({ index: 1 });
@@ -57,20 +71,30 @@ const addItem = async (name) => {
 // A human fighter under Recommend: str 16 (+3), dex 14 (+2), con 15 — human
 // adds +1 to everything, which is why these are one higher than the raw array.
 await page.getByRole("button", { name: "Build a character" }).click();
+await atStep(page, "Class");
 await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await atStep(page, "Class");
 await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(300);
+await atStep(page, "Class");
 for (const s of ["Athletics", "Perception"]) {
   await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
+await atStep(page, "Race");
 await page.selectOption('select[aria-label="Race"]', "human");
 await page.waitForTimeout(400);
+await atStep(page, "Scores");
 await page.getByRole("button", { name: "Recommend" }).click();
+await atStep(page, "Story");
 await page.getByRole("button", { name: "nature", exact: true }).click();
+await atStep(page, "Story");
 await page.getByRole("button", { name: "animal handling", exact: true }).click();
+await atStep(page, "Story");
 await page.locator('input[aria-label="Background name"]').fill("Soldier");
+await atStep(page, "Review");
 await page.locator('input[aria-label="Character name"]').fill("Kira Vance");
 await answerGear(page);
+await atStep(page, "Review");
 await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".hp-big", { timeout: 20000 });
 
