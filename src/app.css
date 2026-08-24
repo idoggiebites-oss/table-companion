@@ -1404,3 +1404,11 @@ html, body { overscroll-behavior-y: none; }
 .role.cr-standard { border-color: var(--injured); color: var(--injured); }
 .role.cr-deadly { border-color: var(--bloodied); color: var(--bloodied); }
 .role.cr-legendary { border-color: var(--near); color: var(--near); }
+
+/* ---- more than one class, added at the end ---- */
+.mc { margin-top: 16px; }
+.mc-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-top: 1px solid var(--rule);
+}
+.mc-row .nm { flex: 1; color: var(--ink-dim); text-transform: capitalize; }

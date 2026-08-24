@@ -25,6 +25,7 @@ import {
 import type { Character } from "../domain/build.js";
 import {
   asiPoints, assemble, finalScores, hpAtLevel, missing, withImprovements,
+  type ExtraClass,
   type BackgroundChoice, type ClassChoice, type RaceChoice, type ScoreMethod,
 } from "../domain/creation.js";
 import {
@@ -37,6 +38,7 @@ import { effectsOf } from "../domain/featvariants.js";
 import { sensesFrom } from "../domain/senses.js";
 import { freeBonusFrom, freeSkillsFrom, grantsFeatFrom } from "../domain/races.js";
 import { hasInnate, innateAt, innateFrom } from "../domain/innate.js";
+import { multiclassBlock } from "../domain/multiclass.js";
 import { isCore } from "../domain/marks.js";
 import { useHomebrew } from "./useHomebrew.js";
 import { HomebrewToggle } from "./HomebrewToggle.js";
@@ -168,6 +170,8 @@ export function CreateCharacter({
   const [freeBonuses, setFreeBonuses] = useState<Partial<Record<Ability, number>>>({});
   const [raceSkills, setRaceSkills] = useState<SkillId[]>([]);
   const [raceFeat, setRaceFeat] = useState<{ id: string; name: string } | null>(null);
+  /** Classes beyond the first — added at the end, the way a rebuild goes. */
+  const [extras, setExtras] = useState<ExtraClass[]>([]);
   /** Which question is in front of you. */
   const [step, setStep] = useState(0);
   /** Whether other people's material is in the lists. Device-local. */
@@ -503,6 +507,7 @@ export function CreateCharacter({
           languages: gather(raceLangs.known, pickedLangs),
           tools: gather(classTools.known, pickedTools),
           baseScores,
+          ...(extras.length > 0 ? { extraClasses: extras } : {}),
           // The race's own skill counts as a proficiency like any other.
           classSkills: [...new Set([...classSkills, ...raceSkills])],
           level,
@@ -530,8 +535,26 @@ export function CreateCharacter({
     );
   });
 
+  /*
+   * Whether these classes will have each other. The rule cuts both ways and
+   * people forget the first half: a new class asks for its own minimum AND
+   * the minimum of every class already taken.
+   */
+  const mcBlock =
+    klass && extras.length > 0
+      ? multiclassBlock({
+          from: [
+            { classId: klass.id, level },
+            ...extras.map((c) => ({ classId: c.id, level: c.level })),
+          ],
+          into: extras[extras.length - 1]!.id,
+          abilities: scores,
+        })
+      : null;
+
   const gaps = [
     ...missing(choices ?? {}),
+    ...(mcBlock ? [mcBlock.toLowerCase().replace(/\.$/, "")] : []),
     // A racial choice half-made is a character two points short of the book.
     ...(freeSpent === freeOwed ? [] : [`${freeOwed - freeSpent} racial ability points`]),
     ...(raceSkills.length >= freeSkills ? [] : [`${freeSkills} racial skill`]),
@@ -1943,6 +1966,86 @@ export function CreateCharacter({
                 </div>
               ))}
             </div>
+
+            {/*
+              * More than one class, added at the end.
+              *
+              * Every screen before this one answers a single class's
+              * questions — which is what makes them legible — and a rebuild
+              * happens in this order anyway: you know you are a Fighter 5 /
+              * Warlock 3, so you build the fighter and add the warlock.
+              */}
+            {classes && (
+              <div className="mc">
+                <div className="cnt" style={{ marginBottom: 8 }}>
+                  <span>Is this character more than one class?</span>
+                  <b>{level + extras.reduce((n, c) => n + c.level, 0)}</b>
+                </div>
+
+                {extras.map((c, i) => (
+                  <div className="mc-row" key={c.id}>
+                    <span className="nm">{c.name}</span>
+                    <input
+                      type="number" min={1} max={19}
+                      aria-label={`${c.name} levels`}
+                      value={c.level}
+                      style={{ width: 70 }}
+                      onChange={(e) =>
+                        setExtras(
+                          extras.map((x, j) =>
+                            j === i
+                              ? { ...x, level: Math.max(1, Math.min(19, +e.target.value || 1)) }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                    <button
+                      aria-label={`Remove ${c.name}`}
+                      onClick={() => setExtras(extras.filter((_, j) => j !== i))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+
+                {/* The rule cuts both ways, and people forget the first half. */}
+                {mcBlock && (
+                  <p className="lv-block" style={{ marginTop: 8 }}>{mcBlock}</p>
+                )}
+
+                <select
+                  aria-label="Add a class"
+                  value=""
+                  style={{ marginTop: 8 }}
+                  onChange={(e) => {
+                    const k = classes.find((x) => x.id === e.target.value);
+                    if (!k) return;
+                    setExtras([
+                      ...extras,
+                      {
+                        id: k.id as ClassId,
+                        name: k.name,
+                        hitDie: k.hitDie as DieSize,
+                        level: 1,
+                      },
+                    ]);
+                  }}
+                >
+                  <option value="">add another class…</option>
+                  {classes
+                    .filter(
+                      (k) =>
+                        k.id !== klass.id &&
+                        !extras.some((x) => x.id === k.id) &&
+                        (homebrew || !k.extra),
+                    )
+                    .map((k) => (
+                      <option key={k.id} value={k.id}>{k.name}</option>
+                    ))}
+                </select>
+              </div>
+            )}
 
             <div className="rv-cols">
               <div>

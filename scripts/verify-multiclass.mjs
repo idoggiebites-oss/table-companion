@@ -169,6 +169,101 @@ await go(page, "spells");
 ok("a dip into a non-caster leaves the slots exactly alone",
   await page.locator(".slot .num").allInnerTexts(), ["4", "2"]);
 
+
+// --- and building one from scratch ---------------------------------------
+/* Every screen before the review answers a single class's questions, which is
+   what makes them legible. A rebuild happens in this order anyway: you know
+   you are a Fighter 5 / Warlock 3, so you build the fighter and add the
+   warlock. */
+const p2 = await (await browser.newContext({ viewport: { width: 430, height: 1500 } })).newPage();
+p2.on("pageerror", (e) => errors.push(`${e}`));
+await p2.goto(URL, { waitUntil: "networkidle" });
+await p2.getByRole("button", { name: "Build a character" }).click();
+await p2.waitForSelector(".klass-cards", { timeout: 20000 });
+await p2.getByRole("button", { name: "Fighter", exact: true }).click();
+await p2.waitForTimeout(400);
+await atStep(p2, "Skills");
+for (const s of ["athletics", "perception"]) {
+  const t = p2.getByRole("button", { name: `Train ${s}` });
+  if (await t.count()) await t.click();
+}
+await atStep(p2, "Class");
+await p2.locator('input[aria-label="Starting level"]').fill("5");
+await p2.waitForTimeout(400);
+await atStep(p2, "Race");
+await p2.locator('input[aria-label="Filter races"]').fill("human");
+await p2.waitForTimeout(600);
+const hh = await p2.locator('select[aria-label="Race"] option').allInnerTexts();
+await p2.selectOption('select[aria-label="Race"]', { label: hh[1] });
+await p2.waitForTimeout(700);
+await atStep(p2, "Scores");
+await p2.getByRole("button", { name: "Recommend" }).click();
+await p2.waitForTimeout(600);
+const cls2 = p2.locator(".card", { hasText: "Your class" }).locator("select");
+for (let i = 0; i < (await cls2.count()); i++) await cls2.nth(i).selectOption({ index: 1 });
+const imp = p2.locator(".card", { hasText: "Improvements" }).locator(".chip:not([disabled])");
+for (let i = 0; i < Math.min(2, await imp.count()); i++) {
+  await imp.first().click();
+  await p2.waitForTimeout(200);
+}
+await atStep(p2, "Story");
+await p2.getByRole("button", { name: "nature", exact: true }).click();
+await p2.getByRole("button", { name: "insight", exact: true }).click();
+await p2.locator('input[aria-label="Background name"]').fill("Soldier");
+await atStep(p2, "Gear");
+const sel2 = p2.locator('select[aria-label^="Choose"]');
+for (let i = 0; i < (await sel2.count()); i++) await sel2.nth(i).selectOption({ index: 1 });
+const kit2 = p2.locator(".kit select");
+for (let i = 0; i < (await kit2.count()); i++) await kit2.nth(i).selectOption({ index: 1 });
+await atStep(p2, "Review");
+await p2.locator('input[aria-label="Character name"]').fill("Bel Twiceborn");
+await p2.waitForTimeout(500);
+
+const adder = p2.locator('select[aria-label="Add a class"]');
+ok("the review asks whether this is more than one class", await adder.count(), 1);
+const totalLine = () => p2.locator(".mc .cnt b").first().innerText();
+ok("counting the levels so far", await totalLine(), "5");
+
+/* A recommended fighter has Charisma 8, so warlock is refused — and the app
+   names the score rather than greying the option out. */
+await adder.selectOption("warlock");
+await p2.waitForTimeout(700);
+ok("a class they do not qualify for is refused here too",
+  /charisma 13/i.test(await p2.locator(".lv-block").innerText()), true);
+const create2 = p2.getByRole("button", { name: "Create character" });
+ok("and the character cannot be finished", await create2.isDisabled(), true);
+await p2.getByRole("button", { name: "Remove Warlock" }).click();
+await p2.waitForTimeout(500);
+
+// Barbarian they do qualify for: Strength is high, and a fighter's own
+// minimum is met. It also brings a d12, which the pool has to show.
+await adder.selectOption("barbarian");
+await p2.waitForTimeout(600);
+await p2.locator('input[aria-label="Barbarian levels"]').fill("3");
+await p2.waitForTimeout(600);
+ok("adding a class adds its levels to the total", await totalLine(), "8");
+ok("and it can be finished", await create2.isDisabled(), false);
+await p2.screenshot({ path: `${OUT}/I0-multiclass-build.png`, fullPage: true });
+await create2.click();
+await p2.waitForSelector(".hp-big", { timeout: 20000 });
+
+await go(p2, "sheet");
+const sheet2 = (await p2.locator(".app").innerText()).replace(/\s+/g, " ");
+ok("arriving as both classes",
+  /fighter 5/i.test(sheet2) && /barbarian 3/i.test(sheet2), true);
+ok("with hit dice as a pool it can choose from",
+  await p2.locator('select[aria-label="Which hit die"]').count(), 1);
+const sizes2 = await p2.locator('select[aria-label="Which hit die"] option').allInnerTexts();
+ok("of the two sizes it actually has", sizes2.length, 2);
+ok("of the sizes it actually has",
+  sizes2.some((t) => /d10/.test(t)) && sizes2.some((t) => /d12/.test(t)), true);
+/* Neither class casts, so the effective caster level is zero and there must
+   be no Spells tab at all — a table that added class tables together would
+   hand out slots here. */
+ok("and no spells, because neither class casts",
+  await p2.locator('[data-tab="spells"]').count(), 0);
+await p2.screenshot({ path: `${OUT}/I1-multiclass-sheet.png`, fullPage: true });
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

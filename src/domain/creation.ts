@@ -54,6 +54,15 @@ export interface BackgroundChoice {
   readonly languages?: readonly string[];
 }
 
+/** A class taken beyond the first, at creation. */
+export interface ExtraClass {
+  readonly id: ClassId;
+  readonly name: string;
+  readonly hitDie: DieSize;
+  readonly level: number;
+  readonly subclass?: string;
+}
+
 export interface CreationChoices {
   readonly name: string;
   /** Defaults to 1. Above that, the character is joining mid-campaign. */
@@ -83,6 +92,16 @@ export interface CreationChoices {
   readonly languages?: readonly string[];
   /** Everything they can use, likewise. */
   readonly tools?: readonly string[];
+  /**
+   * Classes beyond the first.
+   *
+   * The builder asks for one class and then, at the end, for anything else —
+   * which is how a rebuild actually happens: you know you are a Fighter 5 /
+   * Warlock 3, so you build the fighter and add the warlock. It also keeps
+   * the whole flow before that point answering ONE class's questions, which
+   * is what makes those screens legible.
+   */
+  readonly extraClasses?: readonly ExtraClass[];
   readonly race: RaceChoice;
   readonly klass: ClassChoice;
   readonly background: BackgroundChoice;
@@ -142,6 +161,35 @@ export function hpAtLevel(
 }
 
 /**
+ * Hit points for one class or several.
+ *
+ * The first level of the first class is the full die; everything after it is
+ * an average, in whichever class earned it. Kept here rather than in
+ * multiclass.ts because it is creation's question — at the table, levels
+ * arrive one at a time and each brings its own roll.
+ */
+export function multiclassHp(
+  first: { die: DieSize; level: number },
+  rest: readonly { die: DieSize; level: number }[],
+  conMod: number,
+  rolls: readonly number[] = [],
+): number {
+  let total = first.die + conMod;
+  let taken = 1;
+  for (let i = 1; i < first.level; i++) {
+    total += (rolls[taken - 1] ?? averagePerLevel(first.die)) + conMod;
+    taken++;
+  }
+  for (const c of rest) {
+    for (let i = 0; i < c.level; i++) {
+      total += (rolls[taken - 1] ?? averagePerLevel(c.die)) + conMod;
+      taken++;
+    }
+  }
+  return Math.max(taken, total);
+}
+
+/**
  * Ability score points a character has to spend by a given level. Each
  * improvement is +2 to distribute, and which levels grant one is per class —
  * fighters get extra ones at 6 and 14, rogues at 10.
@@ -189,13 +237,41 @@ export function assemble(choices: CreationChoices, id = `c${Date.now().toString(
     name: choices.name.trim() || "Unnamed",
     edition: "2014",
     source: "builder",
-    classes: [{ classId: choices.klass.id, level }],
+    classes: [
+      { classId: choices.klass.id, level },
+      ...(choices.extraClasses ?? [])
+        .filter((c) => c.level > 0)
+        .map((c) => ({
+          classId: c.id,
+          level: c.level,
+          ...(c.subclass ? { subclass: c.subclass } : {}),
+        })),
+    ],
     race: choices.race.subraceName
       ? `${choices.race.subraceName} ${choices.race.name}`
       : choices.race.name,
     abilities,
-    maxHp: hpAtLevel(choices.klass.hitDie, conMod, level, choices.hpRolls ?? []),
+    /*
+     * Hit points across every class taken. The FIRST level of the first class
+     * is the full die — that is the only free maximum anybody gets — and
+     * every level after it, in whichever class, is that class's average. A
+     * dip into d12 barbarian is worth more than a dip into d6 wizard, and the
+     * total has to say so.
+     */
+    maxHp: multiclassHp(
+      { die: choices.klass.hitDie, level },
+      (choices.extraClasses ?? []).map((c) => ({ die: c.hitDie, level: c.level })),
+      conMod,
+      choices.hpRolls ?? [],
+    ),
     hitDie: choices.klass.hitDie,
+    ...(( choices.extraClasses ?? []).length > 0
+      ? {
+          classDice: Object.fromEntries(
+            (choices.extraClasses ?? []).map((c) => [c.id, c.hitDie]),
+          ),
+        }
+      : {}),
     armourClass: choices.armourClass ?? 10 + dexMod,
     speed: choices.race.speed,
     ...(( choices.improvements ?? []).some((i) => i.feat)

@@ -53,11 +53,7 @@ Ordered by how many characters meet them.
    3** — build at 1, level to 3, and nothing prompts you. It does not say
    which **spells** you learn or name the **features** you gained. Every
    character meets this.
-2. **Multiclassing at creation.** *Creation & Progression.* Done at the
-   table — a level can be taken in a new class, with prerequisites enforced,
-   hit dice pooled and slots from the multiclass caster table. What remains is
-   BUILDING one from scratch: the builder still starts you in one class.
-3. **You cannot get the character out.** *Creation & Progression.* Import
+2. **You cannot get the character out.** *Creation & Progression.* Import
    exists; export does not. No printable sheet, no file, no link.
 7. **Nothing about who the character is.** *Guidance.* No alignment, ideals,
    bonds, flaws, appearance or backstory. Mechanically irrelevant, and the
