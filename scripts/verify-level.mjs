@@ -98,9 +98,9 @@ ok("level appears with the class", await lvl.count(), 1);
 ok("and defaults to one", await lvl.inputValue(), "1");
 ok("level 1 says nothing about joining", await player.page.getByText("joining a campaign in progress").count(), 0);
 
-await player.page.getByRole("button", { name: "Stealth", exact: true }).click();
-await player.page.getByRole("button", { name: "Perception", exact: true }).click();
-await player.page.getByRole("button", { name: "Survival", exact: true }).click();
+await player.page.getByRole("button", { name: "Train stealth" }).click();
+await player.page.getByRole("button", { name: "Train perception" }).click();
+await player.page.getByRole("button", { name: "Train survival" }).click();
 await player.page.selectOption('select[aria-label="Race"]', "elf");
 await player.page.waitForTimeout(400);
 await player.page.waitForSelector(".cr-ab");

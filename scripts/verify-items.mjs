@@ -61,7 +61,7 @@ await page.waitForSelector(".klass-cards", { timeout: 20000 });
 await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(300);
 for (const s of ["Athletics", "Perception"]) {
-  await page.getByRole("button", { name: s, exact: true }).click();
+  await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await page.selectOption('select[aria-label="Race"]', "human");
 await page.waitForTimeout(400);

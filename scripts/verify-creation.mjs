@@ -78,10 +78,23 @@ ok("and its saves", note.includes("STR and DEX"), true);
 ok("ranger does not claim to cast at level 1", note.includes("casts from level 1"), false);
 
 // class skills: three from a list of eight
-await player.page.getByRole("button", { name: "Stealth", exact: true }).click();
-await player.page.getByRole("button", { name: "Perception", exact: true }).click();
-await player.page.getByRole("button", { name: "Survival", exact: true }).click();
-ok("three class skills taken", await player.page.locator(".chip.on").count(), 3);
+await player.page.getByRole("button", { name: "Train stealth" }).click();
+await player.page.getByRole("button", { name: "Train perception" }).click();
+await player.page.getByRole("button", { name: "Train survival" }).click();
+// Chips became a table: the consequence of taking a skill is a number, so
+// the number is what is checked.
+ok("three class skills taken", await player.page.locator(".skl tr.on").count(), 3);
+/* The point of the table: the total is the ability plus proficiency, and it
+   moves when you take the skill. Parsed with the real minus sign the app
+   renders (U+2212), not the hyphen a naive Number() expects. */
+ok("and each rolls at its ability plus proficiency",
+  await player.page.locator(".skl tr.on").evaluateAll((rows) =>
+    rows.every((r) => {
+      const td = [...r.querySelectorAll("td")].map((c) =>
+        Number(c.textContent.replace(/\u2212/g, "-")));
+      return td[3] === td[2] + 2;
+    })),
+  true);
 
 await player.page.selectOption('select[aria-label="Race"]', "elf");
 await player.page.waitForTimeout(400);

@@ -66,7 +66,9 @@ await page.selectOption('select[aria-label="Class"]', { label: "Blood Hunter" })
 await page.waitForTimeout(800);
 ok("a compendium-only class derives its saves from the one proficiency line",
   /saves in DEX and INT/i.test(await page.locator(".cr-note").first().innerText()), true);
-ok("and its skill choices", (await page.locator(".chips .chip").count()) > 5, true);
+// Skills are a table now — a compendium-only class still fills one.
+ok("and its skill choices",
+  (await page.locator(".skl tr:not(.shut)").count()) > 5, true);
 
 await page.locator('input[aria-label="Filter races"]').fill("human");
 await page.waitForTimeout(500);
@@ -227,7 +229,7 @@ await page.locator('input[aria-label="Filter spells"]').fill("");
 await page.waitForTimeout(400);
 
 for (const s of ["Arcana", "History"]) {
-  await page.getByRole("button", { name: s, exact: true }).click();
+  await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await page.getByRole("button", { name: "Recommend" }).click();
 await page.locator('input[aria-label="Filter backgrounds"]').fill("Sage");

@@ -50,7 +50,7 @@ await page.waitForTimeout(500);
 await page.locator('input[aria-label="Starting level"]').fill("3");
 await page.waitForTimeout(400);
 for (const s of ["Medicine", "Religion"]) {
-  const b = page.getByRole("button", { name: s, exact: true });
+  const b = page.getByRole("button", { name: `Train ${s.toLowerCase()}` });
   if (await b.count()) await b.first().click();
 }
 await page.selectOption('select[aria-label="Race"]', "human");

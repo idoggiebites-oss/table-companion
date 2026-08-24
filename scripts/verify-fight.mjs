@@ -66,7 +66,7 @@ async function build(page, name, klass, skills) {
   // same class, so picking positionally chose the wrong ones and left the
   // class-skill count unsatisfied.
   for (const s of skills) {
-    await page.getByRole("button", { name: s, exact: true }).first().click();
+    await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).first().click();
   }
   await page.selectOption('select[aria-label="Race"]', "human");
   await page.waitForTimeout(400);

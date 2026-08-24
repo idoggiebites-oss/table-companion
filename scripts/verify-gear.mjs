@@ -46,7 +46,7 @@ await page.waitForSelector(".klass-cards", { timeout: 20000 });
 await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(400);
 for (const s of ["Athletics", "Perception"]) {
-  await page.getByRole("button", { name: s, exact: true }).click();
+  await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await page.selectOption('select[aria-label="Race"]', "human");
 await page.waitForTimeout(600);
@@ -117,7 +117,7 @@ await page.waitForTimeout(400);
 // Named, not read off the page: .chip is uppercased in CSS, so innerText
 // gives "ACROBATICS" while the accessible name is still "Acrobatics".
 for (const s of ["Acrobatics", "Stealth"]) {
-  await page.getByRole("button", { name: s, exact: true }).first().click();
+  await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).first().click();
 }
 await page.selectOption('select[aria-label="Race"]', "human");
 await page.waitForTimeout(600);

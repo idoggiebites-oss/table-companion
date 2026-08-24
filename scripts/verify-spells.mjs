@@ -43,7 +43,7 @@ await page.getByRole("button", { name: "Wizard", exact: true }).click();
 await page.waitForTimeout(400);
 await page.locator('input[aria-label="Starting level"]').fill("5");
 for (const s of ["Arcana", "History"]) {
-  await page.getByRole("button", { name: s, exact: true }).click();
+  await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await page.selectOption('select[aria-label="Race"]', "human");
 await page.waitForTimeout(600);

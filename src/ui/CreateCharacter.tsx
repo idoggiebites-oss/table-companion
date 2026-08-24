@@ -591,26 +591,78 @@ export function CreateCharacter({
                 </p>
                 {klass.skillChoices && (
                   <>
-                    <span className="label cr-sub">
-                      Choose {klass.skillChoices.choose} skills
-                      <span className="faint"> — {classSkills.length} of {klass.skillChoices.choose}</span>
-                    </span>
-                    <div className="chips">
-                      {klass.skillChoices.from.map((label) => {
-                        const id = skillIdOf(label);
-                        if (!id) return null;
-                        const on = classSkills.includes(id);
-                        return (
-                          <button
-                            key={label}
-                            className={`chip${on ? " on" : ""}`}
-                            aria-pressed={on}
-                            onClick={() => setClassSkills(toggle(classSkills, id, klass.skillChoices!.choose))}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
+                    {/*
+                      * A table, not a wall of chips.
+                      *
+                      * The consequence of taking a skill IS a number, so the
+                      * number is the control: what the ability gives you, what
+                      * proficiency adds, and what you end up rolling. Skills a
+                      * ${klass.name} cannot train are shown and locked rather
+                      * than hidden — "why is Stealth not here" is a question
+                      * an absent row cannot answer.
+                      */}
+                    <div className="cnt" style={{ marginTop: 12 }}>
+                      <span>Proficiency adds to whatever you take</span>
+                      <b>{formatModifier(prof)}</b>
+                    </div>
+                    <table className="skl">
+                      <thead>
+                        <tr>
+                          <th>Skill</th><th>Prof</th><th>Ability</th><th>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {SKILL_IDS.map((id) => {
+                          const offered = klass.skillChoices!.from.some(
+                            (label) => skillIdOf(label) === id,
+                          );
+                          const on = classSkills.includes(id);
+                          const ability = SKILLS[id];
+                          const total = mods[ability] + (on ? prof : 0);
+                          return (
+                            <tr
+                              key={id}
+                              className={`${on ? "on" : ""}${offered ? "" : " shut"}`}
+                            >
+                              <td>
+                                {spaced(id)}
+                                <span className="ab">{ability}</span>
+                              </td>
+                              <td>
+                                {offered ? (
+                                  <button
+                                    className="mark"
+                                    aria-pressed={on}
+                                    aria-label={`Train ${spaced(id)}`}
+                                    onClick={() =>
+                                      setClassSkills(
+                                        toggle(classSkills, id, klass.skillChoices!.choose),
+                                      )
+                                    }
+                                  >
+                                    ✓
+                                  </button>
+                                ) : (
+                                  <span
+                                    className="mark"
+                                    title={`Not on the ${klass.name} list`}
+                                  >
+                                    ·
+                                  </span>
+                                )}
+                              </td>
+                              <td>{formatModifier(mods[ability])}</td>
+                              <td>{formatModifier(total)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div
+                      className={`cnt${classSkills.length === klass.skillChoices.choose ? " full" : ""}`}
+                    >
+                      <span>Chosen</span>
+                      <b>{classSkills.length} of {klass.skillChoices.choose}</b>
                     </div>
                   </>
                 )}
