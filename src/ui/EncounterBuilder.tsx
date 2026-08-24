@@ -16,6 +16,10 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  crBand, creatureKind, CR_BANDS, CR_LABEL, CREATURE_KINDS,
+  type CrBand, type CreatureKind,
+} from "../domain/creature.js";
 import type { Combatant, Disclosure } from "../domain/combat.js";
 import { DISCLOSURE } from "../domain/combat.js";
 import { budgetForParty, encounterMultiplier } from "../domain/non-srd.js";
@@ -127,6 +131,8 @@ export function EncounterBuilder({
   const [open, setOpen] = useState(false);
   const [all, setAll] = useState<Statblock[] | null>(null);
   const [text, setText] = useState("");
+  const [kind, setKind] = useState<CreatureKind | null>(null);
+  const [band, setBand] = useState<CrBand | null>(null);
   const [encounter, setEncounter] = useState<Encounter>({
     ...EMPTY_ENCOUNTER,
     id: `enc-${Date.now().toString(36)}`,
@@ -141,9 +147,31 @@ export function EncounterBuilder({
     () => (all ? mergeStatblocks(all, state.homebrew) : null),
     [all, state.homebrew],
   );
+  const counts = useMemo(() => {
+    const kinds = new Map<CreatureKind, number>();
+    const bands = new Map<CrBand, number>();
+    for (const m of catalogue ?? []) {
+      const k = creatureKind(m.type);
+      if (k) kinds.set(k, (kinds.get(k) ?? 0) + 1);
+      bands.set(crBand(m.cr), (bands.get(crBand(m.cr)) ?? 0) + 1);
+    }
+    return { kinds, bands };
+  }, [catalogue]);
+
+  /*
+   * Search OR browse. It was search-only, which assumes you already know what
+   * you want — and building an encounter is usually the other way round:
+   * "something undead, and not too hard". The piles let you ask that.
+   */
   const results = useMemo(
-    () => (catalogue && text.trim() ? searchStatblocks(catalogue, { text }).slice(0, 8) : []),
-    [catalogue, text],
+    () =>
+      catalogue && (text.trim() || kind || band)
+        ? searchStatblocks(catalogue, { ...(text.trim() ? { text } : {}) })
+            .filter((m) => kind === null || creatureKind(m.type) === kind)
+            .filter((m) => band === null || crBand(m.cr) === band)
+            .slice(0, 12)
+        : [],
+    [catalogue, text, kind, band],
   );
   const saved = Object.values(state.encounters);
 
@@ -232,8 +260,36 @@ export function EncounterBuilder({
                 placeholder="search to add — goblin, ogre, wolf…"
                 onChange={(e) => setText(e.target.value)}
               />
+              {/* Kind, then difficulty — the order a DM asks them in. */}
+              <div className="roles" style={{ marginTop: 10 }}>
+                {CREATURE_KINDS.filter((k) => (counts.kinds.get(k) ?? 0) > 0).map((k) => (
+                  <button
+                    key={k}
+                    className={`role${kind === k ? " on" : ""}`}
+                    aria-pressed={kind === k}
+                    aria-label={`Only ${k}`}
+                    onClick={() => setKind(kind === k ? null : k)}
+                  >
+                    {k} <span className="n">{counts.kinds.get(k)}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="roles" style={{ marginTop: 6 }}>
+                {CR_BANDS.filter((b) => (counts.bands.get(b) ?? 0) > 0).map((b) => (
+                  <button
+                    key={b}
+                    className={`role cr-${b}${band === b ? " on" : ""}`}
+                    aria-pressed={band === b}
+                    aria-label={`Only ${CR_LABEL[b]}`}
+                    onClick={() => setBand(band === b ? null : b)}
+                  >
+                    {CR_LABEL[b]} <span className="n">{counts.bands.get(b)}</span>
+                  </button>
+                ))}
+              </div>
+
               {results.length > 0 && (
-                <div className="picks">
+                <div className="picks ref-scroll">
                   {results.map((m) => (
                     <button
                       key={m.id}
@@ -249,7 +305,9 @@ export function EncounterBuilder({
                       }}
                     >
                       <span className="nm">{m.name}</span>
-                      <span className="faint">CR {formatCr(m.cr)} · {m.xp} XP</span>
+                      <span className="faint">
+                        {creatureKind(m.type) ?? m.type} · CR {formatCr(m.cr)} · {m.xp} XP
+                      </span>
                     </button>
                   ))}
                 </div>

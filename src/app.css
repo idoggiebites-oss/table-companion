@@ -265,10 +265,19 @@ section.card { border: 1px solid var(--rule); background: var(--panel); margin-t
 .pip.dice { transform: rotate(45deg); }
 
 /* ---- chips ---- */
-.chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+/*
+ * A chip is a tap target on a phone, and it was 30px tall with 7px between
+ * neighbours — under every published minimum, and small enough that a
+ * deliberate tap landed on the chip beside it or was eaten as a scroll. That
+ * is what "I tap three to select two" is: two of the taps went somewhere else.
+ *
+ * 44px is Apple's floor and 48 is Google's. The text stays the size it was;
+ * the box around it grew.
+ */
 .chip {
   font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 500;
-  padding: 6px 9px; color: var(--ink-dim); background: var(--raised);
+  padding: 6px 11px; min-height: 44px; color: var(--ink-dim); background: var(--raised);
   border: 1px solid var(--rule); display: inline-flex; align-items: center; gap: 6px;
 }
 .chip.on { color: var(--ink); border-color: var(--steel); }
@@ -1213,7 +1222,7 @@ html, body { overscroll-behavior-y: none; }
 }
 .skl th:first-child { text-align: left; }
 .skl td {
-  padding: 6px 0; border-top: 1px solid var(--rule); text-align: right;
+  padding: 12px 0; border-top: 1px solid var(--rule); text-align: right;
   font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--muted);
 }
 .skl td:first-child {
@@ -1227,6 +1236,7 @@ html, body { overscroll-behavior-y: none; }
   text-transform: uppercase; color: var(--faint); margin-left: 6px;
 }
 .skl .mark {
+  /* The row is the tap target here — 44px tall — so the mark can stay small. */
   width: 18px; height: 18px; padding: 0; min-width: 0;
   border: 1px solid var(--rule); border-radius: 50%;
   background: transparent; color: transparent;

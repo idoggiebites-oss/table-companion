@@ -318,9 +318,16 @@ await page.waitForTimeout(700);
 await go(page, "fight");
 ok("and reaches the DM exactly as a weapon attack does",
   /fire bolt/i.test(await page.locator(".claim").first().innerText()), true);
-// Cleared, so the queue below is about one claim rather than two.
-await page.locator(".claim").first().getByRole("button", { name: /^Reject/ }).click();
-await page.waitForTimeout(600);
+
+/* Confirmed, not rejected — the earlier version of this rejected the claim,
+   so the in-turn path's damage was never actually asserted to land. */
+const hpBefore = await page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText();
+await page.locator(".claim").first().getByRole("button", { name: /^Apply/ }).click();
+await page.waitForTimeout(700);
+const hpAfter = await page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText();
+ok("and the damage lands on the creature", hpBefore !== hpAfter, true);
+ok("by the amount that was rolled",
+  Number(hpBefore.split("/")[0]) - Number(hpAfter.split("/")[0]), 7);
 
 // A fresh turn, so the rest of this suite has an action to spend. The Spells
 // tab still casts — it is where you go when you are NOT in the middle of a
@@ -392,15 +399,18 @@ await page.waitForTimeout(700);
 await page.selectOption('select[aria-label="Seat"]', "dm");
 await page.waitForTimeout(600);
 await go(page, "fight");
-ok("nothing lands until the DM says so",
-  (await page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "20/20");
+/* Relative, because a spell was already cast at this goblin from the turn
+   earlier in this suite — an absolute number here would encode the order the
+   assertions happen to run in. */
+const hpNow = () => page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText();
+const before9 = Number((await hpNow()).split("/")[0]);
 const claim = (await page.locator(".claim").innerText()).replace(/\s+/g, " ");
 ok("the claim names the spell", /Fire Bolt/.test(claim), true);
 ok("and works out the verdict", /19 against 13 — hits/i.test(claim), true);
+ok("nothing lands until the DM says so", Number((await hpNow()).split("/")[0]), before9);
 await page.getByRole("button", { name: /Apply 9 to Goblin/ }).click();
 await page.waitForTimeout(700);
-ok("confirming applies it",
-  (await page.locator(".cbt", { hasText: "Goblin" }).locator(".hp").innerText()), "11/20");
+ok("confirming applies it", before9 - Number((await hpNow()).split("/")[0]), 9);
 
 // The economy is the point of the second half: a cantrip still costs the
 // action, and the app has to stop the next one.

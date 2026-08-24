@@ -305,6 +305,7 @@ export function Spells({
           atLevel={aiming.atLevel}
           build={build}
           book={book ?? []}
+          loading={book === null}
           combat={combat}
           stanceAt={stanceAt ?? (() => ({ stance: "straight" as const, reasons: [] }))}
           onCancel={() => setAiming(null)}

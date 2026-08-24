@@ -106,6 +106,33 @@ ok("and reading the whole of it", text.length > 200, true);
 ok("including how it ends", /end of its turns|saving throw/i.test(text), true);
 await page.screenshot({ path: `${OUT}/E1-dm-spells.png`, fullPage: true });
 
+
+// --- the encounter builder, same piles ------------------------------------
+// It was search-only, which assumes you already know what you want. Building
+// an encounter is usually the other way round: "something undead, not too
+// hard".
+await go(page, "prep");
+const enc = page.locator(".card", { hasText: "Encounter" }).first();
+const openBtn = enc.getByRole("button", { name: /^(Build|New|Open)/ }).first();
+if (await openBtn.count()) { await openBtn.click(); await page.waitForTimeout(2500); }
+
+ok("the encounter builder piles them the same way",
+  (await enc.locator(".roles .role").count()) > 8, true);
+ok("and offers nothing until asked", await enc.locator(".pick").count(), 0);
+
+await enc.getByRole("button", { name: "Only undead" }).click();
+await page.waitForTimeout(700);
+const picks = await enc.locator(".pick .faint").allInnerTexts();
+ok("browsing a pile offers monsters without typing", picks.length > 0, true);
+ok("all of that kind", picks.every((t) => /undead/i.test(t)), true);
+
+await enc.getByRole("button", { name: "Only CR 0–2" }).click();
+await page.waitForTimeout(700);
+const easy = await enc.locator(".pick .faint").allInnerTexts();
+ok("and the two piles narrow together",
+  easy.every((t) => /undead/i.test(t)) && easy.length <= picks.length, true);
+await page.screenshot({ path: `${OUT}/E2-encounter-piles.png`, fullPage: true });
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

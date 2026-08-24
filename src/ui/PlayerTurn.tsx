@@ -483,6 +483,7 @@ export function PlayerTurn({
                   atLevel={aiming.atLevel}
                   build={build}
                   book={cast.book ?? []}
+                  loading={cast.book === null}
                   combat={combat}
                   stanceAt={(target) => stanceAt(target)}
                   onCancel={() => {

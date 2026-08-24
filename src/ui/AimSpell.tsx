@@ -28,13 +28,18 @@ import {
 } from "../domain/spellcast.js";
 
 export function AimSpell({
-  spell, atLevel, build, book, combat, stanceAt, onDone, onCancel,
+  spell, atLevel, build, book, combat, loading = false, stanceAt, onDone, onCancel,
 }: {
   spell: KnownSpell;
   atLevel: number;
   build: EffectiveBuild;
   book: readonly CompendiumSpell[];
   combat: Combat;
+  /**
+   * Whether the spellbook has arrived. Absent is treated as loaded, for the
+   * callers that only ever pass a settled list.
+   */
+  loading?: boolean;
   /** How the dice fall against this target, and why. A spell is ranged. */
   stanceAt: (target: Combatant) => { stance: Stance; reasons: readonly StanceReason[] };
   /**
@@ -66,6 +71,28 @@ export function AimSpell({
     : null;
   const dice = roll ? resolveDice(roll.dice, mod) : null;
   const damageType = roll ? damageTypeFrom(roll.description) : "damage";
+
+  /*
+   * The book is four megabytes and arrives when it arrives.
+   *
+   * Until it does, `full` is undefined for EVERY spell — which read as "this
+   * one has nothing to roll", so a spell cast in the first seconds of a
+   * session silently did nothing at all: no dice asked for, no claim sent, no
+   * damage. The player saw "tell the table what it does" and the DM saw
+   * nothing. That is the worst possible way to be wrong, because it looks
+   * like an answer.
+   */
+  if (!full && (loading || book.length === 0)) {
+    return (
+      <div className="swing-step">
+        <span className="label">{spell.name}</span>
+        <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+          Looking up what it does…
+        </p>
+        <button onClick={onCancel}>Never mind</button>
+      </div>
+    );
+  }
 
   // A spell that neither attacks nor damages has nothing to point at.
   if (kind.kind === "none" && !dice) {
