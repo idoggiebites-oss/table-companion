@@ -127,6 +127,8 @@ export function Sheet({
   const [amount, setAmount] = useState(5);
   const [rest, setRest] = useState<RestKind | null>(null);
   const [roll, setRoll] = useState(1);
+  /** Which size to spend. Only a multiclass character is ever asked. */
+  const [die, setDie] = useState(build.hitDie);
   const [pad, setPad] = useState<
     { kind: "check" | "concentration"; target: RollTarget } | null
   >(null);
@@ -269,15 +271,30 @@ export function Sheet({
             </>
           )}
 
+          {/* A multiclass character has more than one size of hit die and
+              chooses which to spend; a single-class one has exactly one and
+              should not be asked. */}
           <div className="controls">
             <span className="label">Hit die</span>
-            <input type="number" min={1} max={build.hitDie} value={roll} aria-label="Rolled"
-              onChange={(e) => setRoll(Math.max(1, Math.min(build.hitDie, +e.target.value || 1)))} />
+            {build.multiclass && (
+              <select
+                aria-label="Which hit die"
+                value={die}
+                style={{ width: "auto" }}
+                onChange={(e) => setDie(Number(e.target.value) as typeof build.hitDie)}
+              >
+                {build.hitDicePool.map((h) => (
+                  <option key={h.die} value={h.die}>d{h.die} · {h.count}</option>
+                ))}
+              </select>
+            )}
+            <input type="number" min={1} max={die} value={roll} aria-label="Rolled"
+              onChange={(e) => setRoll(Math.max(1, Math.min(die, +e.target.value || 1)))} />
             <button
               disabled={hitDiceLeft <= 0 || state.currentHp >= build.maxHp}
               onClick={() => append({ type: "hitDiceSpent", who, rolled: roll, conMod })}
             >
-              Spend d{build.hitDie} {formatModifier(conMod)}
+              Spend d{die} {formatModifier(conMod)}
             </button>
             <span className="faint" style={{ fontSize: ".82rem" }}>{hitDiceLeft} left</span>
           </div>

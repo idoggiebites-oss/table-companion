@@ -16,7 +16,10 @@
 import { useEffect, useState } from "react";
 import { ABILITIES, formatModifier, type Ability } from "../domain/abilities.js";
 import type { CompendiumFeat } from "../import/compendium.js";
-import { loadClassLevels, loadFeats, type ClassLevels } from "../store/srd.js";
+import {
+  loadClassLevels, loadClasses, loadFeats, type ClassEntry, type ClassLevels,
+} from "../store/srd.js";
+import { multiclassBlock } from "../domain/multiclass.js";
 import { FeatPick } from "./FeatPick.js";
 import { SpellPick } from "./SpellPick.js";
 import { useSpellbook } from "./useCasting.js";
@@ -26,7 +29,7 @@ import { castableBy, isClassFeature, toKnown, type KnownSpell } from "../domain/
 import { effectsOf } from "../domain/featvariants.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
-import type { ClassId } from "../domain/resources.js";
+import type { ClassId, DieSize } from "../domain/resources.js";
 
 /** The fixed alternative to rolling: half the die, rounded up. */
 export function averageGain(die: number, conMod: number): number {
@@ -51,17 +54,30 @@ export function LevelUp({
   const [featId, setFeatId] = useState("");
   const [pick, setPick] = useState<Record<string, string>>({});
   const [learned, setLearned] = useState<KnownSpell[]>([]);
+  const [classList, setClassList] = useState<ClassEntry[] | null>(null);
   const book = useSpellbook(true);
 
   useEffect(() => {
     loadClassLevels().then(setLevels, () => setLevels({}));
     loadFeats().then(setFeats, () => setFeats([]));
+    loadClasses().then(setClassList, () => setClassList([]));
   }, []);
 
   if (owed <= 0) return null;
 
   const conMod = build.abilityMods.con;
-  const die = build.hitDie;
+  /** Classes they do not have yet, offered as a dip. */
+  const others = (classList ?? []).filter(
+    (k) => !build.classes.some((c) => c.classId === k.id),
+  );
+  const isNew = !build.classes.some((c) => c.classId === classId);
+  const block = isNew
+    ? multiclassBlock({ from: build.classes, into: classId, abilities: build.abilities })
+    : null;
+
+  /** A dip rolls its new class's die, not the one they started with. */
+  const newClass = (classList ?? []).find((k) => k.id === classId);
+  const die = (isNew ? (newClass?.hitDie as DieSize | undefined) : undefined) ?? build.hitDie;
   const average = averageGain(die, conMod);
   const to = build.totalLevel + 1;
 
@@ -145,7 +161,7 @@ export function LevelUp({
     knowsSpells: build.spellSlots.some((n) => n > 0),
     race: build.race,
   };
-  const choiceReady =
+  const choiceReady = block === null &&
     (!grantsChoice || (route === "asi" ? spent === 2 : chosenFeat !== undefined)) &&
     opening.every((c) => pick[c.of]) &&
     learned.length >= owedSpells;
@@ -156,6 +172,7 @@ export function LevelUp({
       who: build.id,
       classId,
       hpGain: Math.max(1, rolled + conMod),
+      ...(isNew && newClass ? { hitDie: newClass.hitDie as DieSize } : {}),
       ...(grantsChoice && route === "asi" ? { abilities: bumps } : {}),
       /*
        * A half-feat's +1 goes through the same field an improvement does, so
@@ -215,20 +232,50 @@ export function LevelUp({
         </div>
       ) : (
         <div className="card-body">
-          {build.classes.length > 1 && (
-            <div className="row" style={{ marginBottom: 12 }}>
-              <span className="label">In</span>
-              <select
-                aria-label="Class to level"
-                value={classId}
-                style={{ width: "auto" }}
-                onChange={(e) => setClassId(e.target.value as ClassId)}
-              >
-                {build.classes.map((c) => (
-                  <option key={c.classId} value={c.classId}>{c.classId}</option>
-                ))}
-              </select>
-            </div>
+          {/*
+            * Where this level goes. Multiclassing happens here rather than in
+            * the builder because that is how it happens at a table: somebody
+            * reaches 5 and dips warlock, having played four sessions as a
+            * fighter.
+            */}
+          <div className="row" style={{ marginBottom: 12 }}>
+            <span className="label">In</span>
+            <select
+              aria-label="Class to level"
+              value={classId}
+              style={{ width: "auto" }}
+              onChange={(e) => setClassId(e.target.value as ClassId)}
+            >
+              {build.classes.map((c) => (
+                <option key={c.classId} value={c.classId}>
+                  {c.classId} {c.level} → {c.level + 1}
+                </option>
+              ))}
+              {others.length > 0 && (
+                <optgroup label="Something new">
+                  {others.map((k) => (
+                    <option key={k.id} value={k.id}>{k.name}</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </div>
+
+          {/*
+            * The rule cuts both ways, and people forget the first half: a new
+            * class asks for its own minimum AND the one you already have.
+            */}
+          {block && (
+            <p className="lv-block">
+              {block} Pick a class you qualify for, or raise the score first.
+            </p>
+          )}
+          {isNew && !block && (
+            <p className="cr-note" style={{ marginTop: 0 }}>
+              A first level in {classId} brings its hit die and its own
+              proficiencies — not the ones a {classId} gets at level 1 from
+              scratch. Saving throws stay with your first class.
+            </p>
           )}
 
           {grantsChoice && (

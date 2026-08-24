@@ -448,6 +448,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         ...(e.feat ? { feat: e.feat } : {}),
         ...(e.save ? { save: e.save } : {}),
         ...(e.picks?.length ? { picks: e.picks } : {}),
+        ...(e.hitDie ? { hitDie: e.hitDie } : {}),
       });
       const build = effectiveBuild(next);
       const before = state.characters[e.who];

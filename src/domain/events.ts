@@ -12,7 +12,7 @@
  */
 
 import type { CharacterId, Character } from "./build.js";
-import type { ClassId } from "./resources.js";
+import type { ClassId, DieSize } from "./resources.js";
 import type { Combatant, Disclosure, EconomyKind, StanceTag, TargetRef } from "./combat.js";
 import type { Encounter } from "./encounter.js";
 import type { Progression } from "./progression.js";
@@ -155,6 +155,8 @@ export type DomainEvent = Meta &
         readonly save?: Ability;
         /** A subclass, a patron, a fighting style — what the level asked. */
         readonly picks?: readonly { readonly of: string; readonly name: string }[];
+        /** The die of the class this level was taken in, when it is a new one. */
+        readonly hitDie?: DieSize;
       }
     /** Prep that survives contact: built on a laptop, opened at the table. */
     | { readonly type: "encounterSaved"; readonly encounter: Encounter }

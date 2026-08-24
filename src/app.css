@@ -1131,3 +1131,10 @@ html, body { overscroll-behavior-y: none; }
 }
 .lv-choice { margin: 0 0 16px; }
 .lv-choice > .label { display: block; margin-bottom: 8px; }
+
+/* ---- taking a level somewhere new ---- */
+.lv-block {
+  margin: 0 0 12px; padding: 10px 12px; border-radius: 8px;
+  background: var(--raised); border-left: 2px solid var(--damage);
+  font-size: 0.86rem; color: var(--ink-dim);
+}

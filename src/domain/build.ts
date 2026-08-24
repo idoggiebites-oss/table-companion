@@ -9,6 +9,7 @@
  * character.
  */
 
+import { hitDicePool, isMulticlass, multiclassSlots, pactMagic } from "./multiclass.js";
 import {
   ABILITIES,
   abilityModifier,
@@ -51,6 +52,11 @@ export interface BuildBase {
   readonly abilities: AbilityScores;
   readonly maxHp: number;
   readonly hitDie: DieSize;
+  /**
+   * Hit dice for classes taken after the first. The base's own `hitDie` is
+   * the first class's; a dip into something else brings its die with it.
+   */
+  readonly classDice?: Readonly<Record<string, DieSize>>;
   readonly armourClass: number;
   readonly speed: number;
   /** Taken at an improvement level. Shown on the sheet, never applied. */
@@ -103,6 +109,12 @@ export interface BuildDelta {
    * undoing the level takes back everything the level gave.
    */
   readonly picks?: readonly { readonly of: string; readonly name: string }[];
+  /**
+   * The hit die of the class this level was taken in. Only meaningful for a
+   * class the character did not already have — a dip brings its own die, and
+   * nothing else in the log knows what it is.
+   */
+  readonly hitDie?: DieSize;
   readonly at: string;
 }
 
@@ -133,11 +145,24 @@ export interface EffectiveBuild {
   readonly abilityMods: Record<Ability, number>;
   readonly maxHp: number;
   readonly hitDie: DieSize;
+  /**
+   * Hit dice for classes taken after the first. The base's own `hitDie` is
+   * the first class's; a dip into something else brings its die with it.
+   */
+  readonly classDice?: Readonly<Record<string, DieSize>>;
   readonly armourClass: number;
   readonly speed: number;
   readonly saveMods: Record<Ability, number>;
   readonly skillMods: Record<SkillId, number>;
   readonly passivePerception: number;
+  /**
+   * Hit dice per die size. A Fighter 5 / Warlock 3 has five d10 and three d8
+   * and spends whichever they choose; one `hitDie` could only ever be a lie
+   * about one of them. Single-class characters get a pool of one entry.
+   */
+  readonly hitDicePool: readonly { readonly die: DieSize; readonly count: number }[];
+  /** True once more than one class has levels in it. */
+  readonly multiclass: boolean;
   readonly languages: readonly string[];
   readonly toolProficiencies: readonly string[];
   readonly spellSlots: readonly number[];
@@ -145,6 +170,16 @@ export interface EffectiveBuild {
   readonly attacks: readonly ResolvedAttack[];
   readonly feats: readonly { readonly id: string; readonly name: string }[];
   readonly choices: readonly { readonly of: string; readonly name: string }[];
+}
+
+/**
+ * The hit die a class uses. The base carries one — its first class's — and
+ * anything taken since names its own on the delta, because a level gained in
+ * a new class is the only place that knows.
+ */
+function dieOfClass(b: BuildBase, classId: string): DieSize | undefined {
+  if (b.classes[0]?.classId === classId) return b.hitDie;
+  return b.classDice?.[classId] ?? b.hitDie;
 }
 
 function totalLevelOf(classes: readonly ClassEntry[]): number {
@@ -180,9 +215,14 @@ function applyDeltas(base: BuildBase, deltas: readonly BuildDelta[]): BuildBase 
           ...d.picks.filter((p) => !(out.choices ?? []).some((c) => c.of === p.of)),
         ]
       : out.choices;
+    // A dip carries its own hit die; the first class's stays on the base.
+    const classDice = d.hitDie && out.classes[0]?.classId !== d.classId
+      ? { ...(out.classDice ?? {}), [d.classId]: d.hitDie }
+      : out.classDice;
     out = {
       ...out,
       classes,
+      ...(classDice ? { classDice } : {}),
       maxHp: out.maxHp + d.hpGain,
       abilities,
       saveProficiencies: saves,
@@ -197,6 +237,21 @@ export function effectiveBuild(character: Character): EffectiveBuild {
   const b = applyDeltas(character.base, character.deltas);
   const totalLevel = totalLevelOf(b.classes);
   const pb = proficiencyBonus(totalLevel);
+
+  /*
+   * Multiclass slots do not come from adding two class tables together. One
+   * effective caster level is worked out and the full-caster table read at
+   * it — which is why a Cleric 3 / Wizard 3 casts with a 6th-level caster's
+   * slots while knowing only 2nd-level spells.
+   *
+   * A single-class character keeps their own table, because the multiclass
+   * one is wrong for them: a lone paladin at 5 has 4/2, not the 3 the shared
+   * table would hand them.
+   */
+  const multi = isMulticlass(b.classes);
+  const slots = multi ? multiclassSlots(b.classes) : b.spellSlots;
+  const pact = multi ? (pactMagic(b.classes) ?? b.pactSlots) : b.pactSlots;
+  const pool = hitDicePool(b.classes, (id) => dieOfClass(b, id));
 
   const abilityMods = Object.fromEntries(
     ABILITIES.map((a) => [a, abilityModifier(b.abilities[a])]),
@@ -220,7 +275,13 @@ export function effectiveBuild(character: Character): EffectiveBuild {
 
   const resources: ResolvedResource[] = [];
 
-  // Hit dice first: the one pool whose recharge is partial.
+  /*
+   * Hit dice first: the one pool whose recharge is partial.
+   *
+   * A multiclass character has more than one size of them. The pool below
+   * carries the split; this resource keeps the total, because the number that
+   * matters on a short rest is how many are left.
+   */
   resources.push({
     id: "hitDice",
     name: "Hit dice",
@@ -244,7 +305,7 @@ export function effectiveBuild(character: Character): EffectiveBuild {
   }
 
   // Spell slots are resources too — pact slots prove they aren't all long-rest.
-  b.spellSlots.forEach((count, i) => {
+  slots.forEach((count, i) => {
     if (count > 0) {
       resources.push({
         id: `slot${i + 1}`,
@@ -254,11 +315,11 @@ export function effectiveBuild(character: Character): EffectiveBuild {
       });
     }
   });
-  if (b.pactSlots && b.pactSlots.count > 0) {
+  if (pact && pact.count > 0) {
     resources.push({
       id: "pactSlots",
-      name: `Pact slots (level ${b.pactSlots.level})`,
-      max: b.pactSlots.count,
+      name: `Pact slots (level ${pact.level})`,
+      max: pact.count,
       recharge: { on: "short" },
     });
   }
@@ -282,9 +343,11 @@ export function effectiveBuild(character: Character): EffectiveBuild {
     saveMods,
     skillMods,
     passivePerception: 10 + skillMods.perception,
+    hitDicePool: pool,
+    multiclass: isMulticlass(b.classes),
     languages: b.languages ?? [],
     toolProficiencies: b.toolProficiencies ?? [],
-    spellSlots: b.spellSlots,
+    spellSlots: slots,
     resources,
     attacks: b.attacks.map((a) => resolveAttack(a, abilityMods, pb)),
   };
@@ -324,6 +387,7 @@ export function appendLevel(
     readonly feat?: { readonly id: string; readonly name: string };
     readonly save?: Ability;
     readonly picks?: readonly { readonly of: string; readonly name: string }[];
+    readonly hitDie?: DieSize;
   },
 ): Character {
   const current = effectiveBuild(character).totalLevel;
@@ -341,6 +405,7 @@ export function appendLevel(
         ...(choice?.feat ? { feat: choice.feat } : {}),
         ...(choice?.save ? { save: choice.save } : {}),
         ...(choice?.picks?.length ? { picks: choice.picks } : {}),
+        ...(choice?.hitDie ? { hitDie: choice.hitDie } : {}),
       },
     ],
   };
