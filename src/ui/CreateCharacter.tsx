@@ -35,6 +35,7 @@ import {
 } from "../domain/proficiencies.js";
 import { effectsOf } from "../domain/featvariants.js";
 import { sensesFrom } from "../domain/senses.js";
+import { freeBonusFrom, freeSkillsFrom, grantsFeatFrom } from "../domain/races.js";
 import { isCore } from "../domain/marks.js";
 import { useHomebrew } from "./useHomebrew.js";
 import { HomebrewToggle } from "./HomebrewToggle.js";
@@ -162,6 +163,10 @@ export function CreateCharacter({
   const [bgSkills, setBgSkills] = useState<SkillId[]>([]);
   const [pickedLangs, setPickedLangs] = useState<string[]>([]);
   const [identity, setIdentity] = useState<Identity>({});
+  /** The half of a racial bonus the race leaves to you. */
+  const [freeBonuses, setFreeBonuses] = useState<Partial<Record<Ability, number>>>({});
+  const [raceSkills, setRaceSkills] = useState<SkillId[]>([]);
+  const [raceFeat, setRaceFeat] = useState<{ id: string; name: string } | null>(null);
   /** Which question is in front of you. */
   const [step, setStep] = useState(0);
   /** Whether other people's material is in the lists. Device-local. */
@@ -230,6 +235,8 @@ export function CreateCharacter({
           subraceBonuses: subrace.abilityBonuses as Partial<Record<Ability, number>>,
         }
       : {}),
+    // The half the race left to the player — see freeBonusFrom.
+    ...(Object.keys(freeBonuses).length > 0 ? { freeBonuses } : {}),
   };
 
   const baseScores = useMemo<Record<Ability, number>>(() => {
@@ -238,6 +245,21 @@ export function CreateCharacter({
       ABILITIES.map((a) => [a, assigned[a] ?? 8]),
     ) as Record<Ability, number>;
   }, [method, buy, assigned]);
+
+  /*
+   * What the race hands over, and what it leaves to you.
+   *
+   * A half-elf gets +2 Charisma and two more points of their own choosing; a
+   * variant human gets nothing fixed, two free points, a skill and a feat.
+   * The builder applied the fixed half and dropped the rest, so a half-elf
+   * arrived two points short of the book — on the one screen whose whole job
+   * is showing consequences.
+   */
+  const freeBonus = useMemo(() => freeBonusFrom(race?.traits), [race]);
+  const freeSkills = useMemo(() => freeSkillsFrom(race?.traits), [race]);
+  const offersFeat = useMemo(() => grantsFeatFrom(race?.traits), [race]);
+  const freeSpent = Object.values(freeBonuses).reduce((n, v) => n + (v ?? 0), 0);
+  const freeOwed = (freeBonus?.count ?? 0) * (freeBonus?.each ?? 1);
 
   const raced = raceChoice ? finalScores(baseScores, raceChoice) : baseScores;
   /*
@@ -461,9 +483,18 @@ export function CreateCharacter({
           languages: gather(raceLangs.known, pickedLangs),
           tools: gather(classTools.known, pickedTools),
           baseScores,
-          classSkills,
+          // The race's own skill counts as a proficiency like any other.
+          classSkills: [...new Set([...classSkills, ...raceSkills])],
           level,
-          improvements: earnedLevels.map((l) => improvements[l] ?? {}),
+          /*
+           * A variant human's feat is taken at level ONE, before any
+           * improvement — so it rides at the front of the same list rather
+           * than needing a second channel to the sheet.
+           */
+          improvements: [
+            ...(raceFeat ? [{ feat: raceFeat }] : []),
+            ...earnedLevels.map((l) => improvements[l] ?? {}),
+          ],
           picks: classChoices
             .filter((c) => classPicks[c.of])
             .map((c) => ({ of: c.of, name: classPicks[c.of]! })),
@@ -481,6 +512,10 @@ export function CreateCharacter({
 
   const gaps = [
     ...missing(choices ?? {}),
+    // A racial choice half-made is a character two points short of the book.
+    ...(freeSpent === freeOwed ? [] : [`${freeOwed - freeSpent} racial ability points`]),
+    ...(raceSkills.length >= freeSkills ? [] : [`${freeSkills} racial skill`]),
+    ...(!offersFeat || raceFeat ? [] : ["your level-one feat"]),
     ...(gearMode === "kit" ? unpicked : []),
     ...(improvementsDone ? [] : ["your improvements"]),
     ...(picksDone ? [] : classChoices.filter((c) => !classPicks[c.of]).map((c) => c.of.toLowerCase())),
@@ -531,7 +566,15 @@ export function CreateCharacter({
   const steps: { readonly id: string; readonly label: string; readonly done: boolean }[] = [
     { id: "class", label: "Class", done: klass !== undefined },
     { id: "skills", label: "Skills", done: classSkills.length === skillsNeeded },
-    { id: "race", label: "Race", done: race !== undefined },
+    {
+      id: "race",
+      label: "Race",
+      done:
+        race !== undefined &&
+        freeSpent === freeOwed &&
+        raceSkills.length >= freeSkills &&
+        (!offersFeat || raceFeat !== null),
+    },
     {
       id: "abilities",
       label: "Scores",
@@ -878,6 +921,96 @@ export function CreateCharacter({
                 ))}
               </select>
             )}
+
+            {/*
+              * The half the race leaves to you.
+              *
+              * A half-elf gets +2 Charisma and two more points of their own
+              * choosing; a variant human gets nothing fixed, two free points,
+              * a skill and a feat. The builder applied the fixed half and
+              * dropped the rest, so a half-elf arrived two points short of
+              * what the book says — on the one screen whose whole job is
+              * showing consequences.
+              */}
+            {race && freeBonus && (
+              <>
+                <div className="cnt" style={{ marginTop: 16 }}>
+                  <span>
+                    {race.name} leaves {freeBonus.count} point
+                    {freeBonus.count === 1 ? "" : "s"} to you
+                  </span>
+                  <b>{freeSpent} of {freeOwed}</b>
+                </div>
+                <div className="chips">
+                  {ABILITIES.map((a) => {
+                    const got = freeBonuses[a] ?? 0;
+                    return (
+                      <button
+                        key={a}
+                        className={`chip${got > 0 ? " on" : ""}`}
+                        aria-pressed={got > 0}
+                        aria-label={`Raise ${a}`}
+                        disabled={got === 0 && freeSpent >= freeOwed}
+                        onClick={() =>
+                          setFreeBonuses((cur) => {
+                            if ((cur[a] ?? 0) > 0) {
+                              const next = { ...cur };
+                              delete next[a];
+                              return next;
+                            }
+                            // Different abilities, so one each rather than
+                            // stacking — which is what the rules say.
+                            return { ...cur, [a]: freeBonus.each };
+                          })
+                        }
+                      >
+                        {a} {got > 0 ? `+${got}` : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {freeSkills > 0 && (
+              <>
+                <div className="cnt" style={{ marginTop: 16 }}>
+                  <span>and {freeSkills} skill{freeSkills === 1 ? "" : "s"} of your choice</span>
+                  <b>{raceSkills.length} of {freeSkills}</b>
+                </div>
+                <div className="chips">
+                  {SKILL_IDS.map((sk) => {
+                    const on = raceSkills.includes(sk);
+                    return (
+                      <button
+                        key={sk}
+                        className={`chip${on ? " on" : ""}`}
+                        aria-pressed={on}
+                        aria-label={`Race skill ${spaced(sk)}`}
+                        onClick={() => setRaceSkills(toggle(raceSkills, sk, freeSkills))}
+                      >
+                        {spaced(sk)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {offersFeat && (
+              <>
+                <div className="cnt" style={{ marginTop: 16 }}>
+                  <span>and a feat, at level one</span>
+                  <b>{raceFeat ? "taken" : "0 of 1"}</b>
+                </div>
+                <FeatPick
+                  feats={featList}
+                  who={aspirant}
+                  {...(raceFeat ? { taken: raceFeat.id } : {})}
+                  onPick={(f) => setRaceFeat(f ? { id: f.id, name: f.name } : null)}
+                />
+              </>
+            )}
           </div>
         )}
       </section>
@@ -972,7 +1105,15 @@ export function CreateCharacter({
 
               {ABILITIES.map((a) => {
                 const base = method === "pointBuy" ? buy[a] : assigned[a];
-                const bonus = (raceChoice?.abilityBonuses[a] ?? 0) + (raceChoice?.subraceBonuses?.[a] ?? 0);
+                /*
+                 * Every racial term, not just the fixed ones. A half-elf who
+                 * spent their two free points and saw no change here would
+                 * reasonably conclude the app had lost them.
+                 */
+                const bonus =
+                  (raceChoice?.abilityBonuses[a] ?? 0) +
+                  (raceChoice?.subraceBonuses?.[a] ?? 0) +
+                  (raceChoice?.freeBonuses?.[a] ?? 0);
                 return (
                   <div className={`cr-ab${base === undefined ? " empty" : ""}`} key={a}>
                     <button

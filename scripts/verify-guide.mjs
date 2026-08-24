@@ -202,10 +202,16 @@ await atStep(b.page, "Race");
 const raceBlurbs = await b.page.locator(".cr-blurb").allInnerTexts();
 ok("a shipped race says what it is",
   raceBlurbs.some((t) => /little of everything/i.test(t)), true);
-// The SRD human has no traits at all, so there is nothing to offer and the
-// button correctly does not appear. A halfling has three.
-ok("a race with nothing to list offers no list",
-  await b.page.getByRole("button", { name: "What does this give me?" }).count(), 0);
+/* This used to check that the SRD human offered nothing, because the shipped
+   entry carried no traits at all. That thinness was the bug — the two ability
+   points a variant human is owed lived in a trait the app never read — so the
+   shipped nine are filled from the compendium now, and the human has traits
+   like everyone else. What is still true is that the list is CLOSED until
+   asked for. */
+ok("a race's traits are offered rather than dumped",
+  await b.page.getByRole("button", { name: "What does this give me?" }).count(), 1);
+ok("and stay closed until asked",
+  await b.page.locator(".cr-abils-help").count(), 0);
 
 await atStep(b.page, "Race");
 await b.page.locator('input[aria-label="Filter races"]').fill("halfling");

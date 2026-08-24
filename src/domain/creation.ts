@@ -30,6 +30,12 @@ export interface RaceChoice {
   readonly abilityBonuses: Readonly<Partial<Record<Ability, number>>>;
   readonly subraceName?: string;
   readonly subraceBonuses?: Readonly<Partial<Record<Ability, number>>>;
+  /**
+   * The half the race leaves to you — a half-elf's two points, a variant
+   * human's. Applied on top of the fixed bonuses above, which the file
+   * already carries structurally.
+   */
+  readonly freeBonuses?: Readonly<Partial<Record<Ability, number>>>;
 }
 
 export interface ClassChoice {
@@ -94,7 +100,11 @@ export function finalScores(
 ): Record<Ability, number> {
   const out = { ...base } as Record<Ability, number>;
   for (const a of ABILITIES) {
-    out[a] = base[a] + (race.abilityBonuses[a] ?? 0) + (race.subraceBonuses?.[a] ?? 0);
+    out[a] =
+      base[a] +
+      (race.abilityBonuses[a] ?? 0) +
+      (race.subraceBonuses?.[a] ?? 0) +
+      (race.freeBonuses?.[a] ?? 0);
   }
   return out;
 }

@@ -151,8 +151,22 @@ export function consolidateRaces(
     }
     const shapedSubs = (race.subraces ?? []).map((s) => ({ ...s, name: trim(s.name, race.name) }));
     const seen = new Set(shapedSubs.map((s) => slug(s.name)));
+    /*
+     * The shipped nine win on everything they state, but they predate the
+     * traits being read for anything mechanical and carry a shorter list. The
+     * SRD half-elf has no "Ability Score Increase" trait at all, so the two
+     * points the book leaves to the player were invisible — the same rule as
+     * everywhere else here: a thinner file must not delete what a richer one
+     * knew.
+     */
+    const shapedTraitNames = new Set((race.traits ?? []).map((t) => t.name.toLowerCase()));
+    const traits = [
+      ...(race.traits ?? []),
+      ...(existing.traits ?? []).filter((t) => !shapedTraitNames.has(t.name.toLowerCase())),
+    ];
     out.set(race.id, {
       ...race,
+      ...(traits.length > 0 ? { traits } : {}),
       subraces: [
         ...shapedSubs,
         ...(existing.subraces ?? [])
@@ -168,4 +182,71 @@ export function consolidateRaces(
     ...all.filter((r) => !r.extra).sort(byName),
     ...all.filter((r) => r.extra).sort(byName),
   ];
+}
+
+
+/**
+ * Racial bonuses the race does not decide for you.
+ *
+ * A half-elf gets +2 Charisma and "two different ability scores of your
+ * choice increase by 1"; a variant human gets nothing fixed and two free
+ * points. The builder applied the fixed half and silently dropped the rest,
+ * so a half-elf arrived two points short of what the book says — on the one
+ * screen whose whole job is showing consequences.
+ *
+ * The phrasing is near-boilerplate, which is what makes reading it safe, and
+ * anything unrecognised yields no choice rather than a guessed one.
+ */
+export interface FreeBonus {
+  /** How many abilities they raise. */
+  readonly count: number;
+  /** By how much, each. Always 1 in the rules as written. */
+  readonly each: number;
+  /** Whether they must be different abilities. They always are, in practice. */
+  readonly distinct: boolean;
+}
+
+const WORDS: Record<string, number> = { one: 1, two: 2, three: 3 };
+
+export function freeBonusFrom(traits: readonly { name: string; desc?: string; text?: string }[] | undefined): FreeBonus | null {
+  for (const t of traits ?? []) {
+    if (!/ability score increase/i.test(t.name ?? "")) continue;
+    const text = t.desc ?? t.text ?? "";
+    /*
+     * "Two different ability scores of your choice increase by 1."
+     * The trait also states the FIXED half in the same sentence, which the
+     * file already carries structurally — so only the "of your choice" clause
+     * is read here, and the fixed part is never double-counted.
+     */
+    const m = /\b(one|two|three)\b\s+(different\s+)?abilit(?:y|ies)[^.]{0,40}?of your choice[^.]{0,30}?by\s+(\d)/i
+      .exec(text);
+    if (m) {
+      return {
+        count: WORDS[m[1]!.toLowerCase()] ?? 1,
+        each: Number(m[3]) || 1,
+        distinct: Boolean(m[2]),
+      };
+    }
+  }
+  return null;
+}
+
+/** A skill the race lets them choose — variant human, half-elf's two. */
+export function freeSkillsFrom(traits: readonly { name: string; desc?: string; text?: string }[] | undefined): number {
+  for (const t of traits ?? []) {
+    const name = (t.name ?? "").toLowerCase();
+    if (!/^skills?$|skill versatility/.test(name)) continue;
+    const text = t.desc ?? t.text ?? "";
+    const m = /\b(one|two|three)\b\s+skills?\b/i.exec(text);
+    if (m) return WORDS[m[1]!.toLowerCase()] ?? 1;
+  }
+  return 0;
+}
+
+/** A feat the race grants at level 1 — variant human, custom lineage. */
+export function grantsFeatFrom(traits: readonly { name: string; desc?: string; text?: string }[] | undefined): boolean {
+  return (traits ?? []).some((t) => {
+    const text = `${t.name ?? ""} ${t.desc ?? t.text ?? ""}`;
+    return /you gain one feat of your choice|gain a feat of your choice/i.test(text);
+  });
 }

@@ -59,11 +59,7 @@ Ordered by how many characters meet them.
    BUILDING one from scratch: the builder still starts you in one class.
 3. **You cannot get the character out.** *Creation & Progression.* Import
    exists; export does not. No printable sheet, no file, no link.
-4. **Racial ability choices.** *Creation & Progression.* Half-elf's "+1 to two
-   of your choice" and every flexible bonus. Subrace bonuses are fixed only.
-5. **A feat at level 1.** *Creation & Progression.* Variant human and custom
-   lineage get one; feats are offered only at improvement levels.
-6. **Trait-granted spells go nowhere.** *Spellcasting.* A Drow's Faerie Fire,
+4. **Trait-granted spells go nowhere.** *Spellcasting.* A Drow's Faerie Fire,
    a Tiefling's Thaumaturgy — the trait is shown, the spell never reaches the
    spell list.
 7. **Nothing about who the character is.** *Guidance.* No alignment, ideals,
