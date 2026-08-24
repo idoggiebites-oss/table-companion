@@ -44,6 +44,7 @@ await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(600);
 await atStep(page, "Class");
 for (const s of ["Athletics", "Perception"]) {
+  await atStep(page, "Skills");
   const b = page.getByRole("button", { name: `Train ${s.toLowerCase()}` });
   if (await b.count()) await b.first().click();
 }

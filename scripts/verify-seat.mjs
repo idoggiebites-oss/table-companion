@@ -92,6 +92,7 @@ await dm.page.getByRole("button", { name: "Fighter", exact: true }).click();
 await dm.page.waitForTimeout(300);
 await atStep(dm.page, "Class");
 for (const s of ["Athletics", "Perception"]) {
+  await atStep(dm.page, "Skills");
   await dm.page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await atStep(dm.page, "Race");

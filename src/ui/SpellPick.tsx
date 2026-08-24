@@ -13,6 +13,9 @@
 import { useState } from "react";
 import type { CompendiumSpell } from "../import/compendium.js";
 import { levelLabel } from "../domain/spells.js";
+import {
+  primaryRole, rolesOf, ROLE_LABEL, ROLE_ORDER, type SpellRole,
+} from "../domain/spellrole.js";
 
 /** The line under the name: what it costs to cast and how far it reaches. */
 export function spellLine(s: CompendiumSpell): string {
@@ -36,18 +39,56 @@ export function SpellPick({
   onPick: (s: CompendiumSpell) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [role, setRole] = useState<SpellRole | null>(null);
 
-  if (spells.length === 0) {
-    return (
-      <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
-        Nothing matches.
-      </p>
-    );
+  /*
+   * What a spell is FOR, before you read a word of it.
+   *
+   * "Faerie Fire" and "Fog Cloud" mean nothing to somebody choosing their
+   * first cantrips, and reading twenty descriptions to find the one that does
+   * damage is homework rather than a choice. The tag says which pile it is
+   * in; the chips let you see one pile at a time.
+   */
+  const counts = new Map<SpellRole, number>();
+  for (const sp of spells) {
+    for (const r of rolesOf(sp)) counts.set(r, (counts.get(r) ?? 0) + 1);
   }
+  const shown = role === null ? spells : spells.filter((sp) => rolesOf(sp).includes(role));
 
   return (
+    <div className="spick">
+      {/* Only where there is a choice to make between them. */}
+      {counts.size > 1 && (
+        <div className="roles">
+          <button
+            className={`role${role === null ? " on" : ""}`}
+            aria-pressed={role === null}
+            onClick={() => setRole(null)}
+          >
+            All <span className="n">{spells.length}</span>
+          </button>
+          {ROLE_ORDER.filter((r) => (counts.get(r) ?? 0) > 0).map((r) => (
+            <button
+              key={r}
+              className={`role r-${r}${role === r ? " on" : ""}`}
+              aria-pressed={role === r}
+              aria-label={`Only ${ROLE_LABEL[r]}`}
+              onClick={() => setRole(role === r ? null : r)}
+            >
+              {ROLE_LABEL[r]} <span className="n">{counts.get(r)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {shown.length === 0 && (
+        <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
+          Nothing matches.
+        </p>
+      )}
+
     <div className="menu">
-      {spells.map((s) => {
+      {shown.map((s) => {
         const why = disabled?.(s) ?? null;
         const shown = open === s.id;
         return (
@@ -59,6 +100,7 @@ export function SpellPick({
               onClick={() => setOpen(shown ? null : s.id)}
             >
               <span className="nm">{s.name}</span>
+              <span className={`role r-${primaryRole(s)}`}>{ROLE_LABEL[primaryRole(s)]}</span>
               <span className="cost">{s.level === 0 ? "cantrip" : s.level}</span>
             </button>
             {shown && (
@@ -97,6 +139,7 @@ export function SpellPick({
           </div>
         );
       })}
+    </div>
     </div>
   );
 }

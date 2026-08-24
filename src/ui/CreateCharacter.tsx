@@ -63,7 +63,7 @@ import {
   byBookOrder, castableBy, isClassFeature, levelLabel, toKnown, type KnownSpell,
 } from "../domain/spells.js";
 import {
-  ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, describePriority,
+  ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, CLASS_HUE, describePriority,
   featureOf, mechanicalTraits, shapeOf,
 } from "../domain/guidance.js";
 import { FeatPick } from "./FeatPick.js";
@@ -526,7 +526,8 @@ export function CreateCharacter({
    * and a linear flow that forbids it is worse than the scroll was.
    */
   const steps: { readonly id: string; readonly label: string; readonly done: boolean }[] = [
-    { id: "class", label: "Class", done: klass !== undefined && classSkills.length === skillsNeeded },
+    { id: "class", label: "Class", done: klass !== undefined },
+    { id: "skills", label: "Skills", done: classSkills.length === skillsNeeded },
     { id: "race", label: "Race", done: race !== undefined },
     {
       id: "abilities",
@@ -613,7 +614,12 @@ export function CreateCharacter({
                     aria-label={c.name}
                     onClick={() => { setClassId(c.id); setClassSkills([]); }}
                   >
-                    <span className="kg">{shape?.glyph ?? "\u25C7"}</span>
+                    <span
+                      className="kg"
+                      style={shape ? { color: CLASS_HUE[c.id] ?? "inherit" } : undefined}
+                    >
+                      {shape?.glyph ?? "\u25C7"}
+                    </span>
                     <span className="kbody">
                       <span className="nm">{c.name}</span>
                       <span className="kdesc">{CLASS_BLURB[c.id] ?? ""}</span>
@@ -682,6 +688,27 @@ export function CreateCharacter({
                   {klass.saves.map((s) => s.toUpperCase()).join(" and ")}
                   {klass.spellcasting ? " · casts from level 1" : ""}
                 </p>
+              </>
+            )}
+
+          </div>
+        )}
+
+        {/*
+          * Skills, on their own.
+          *
+          * They lived inside the class step, under the class's own facts —
+          * which made choosing a class and choosing what it trains in look
+          * like one question when they are two, and put a sixteen-row table
+          * beneath a card you were still reading.
+          */}
+        {races && classes && at("skills") && klass && (
+          <div className="card-body">
+            <span className="label cr-step">2 · Skills</span>
+            <p className="cr-blurb" style={{ marginTop: 6 }}>
+              What a {klass.name.toLowerCase()} trains in. Your background adds
+              two more, at the story step.
+            </p>
                 {klass.skillChoices && (
                   <>
                     {/*
@@ -759,9 +786,6 @@ export function CreateCharacter({
                     </div>
                   </>
                 )}
-              </>
-            )}
-
           </div>
         )}
 

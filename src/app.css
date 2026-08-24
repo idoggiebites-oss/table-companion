@@ -1152,7 +1152,17 @@ html, body { overscroll-behavior-y: none; }
 .who-ct { font-family: var(--mono); font-size: 0.6rem; color: var(--faint); }
 
 /* ---- class as a card rather than a line in a dropdown ---- */
-.klass-cards { display: flex; flex-direction: column; gap: 8px; }
+/*
+ * The cards scroll inside their own box rather than moving the page. Twelve
+ * of them is taller than a phone, and scrolling the page took the rail and
+ * the running total off the top of the screen — the two things that say where
+ * you are and what you are building.
+ */
+.klass-cards {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 62vh; overflow-y: auto; overscroll-behavior: contain;
+  padding-right: 4px;
+}
 .klass {
   display: flex; gap: 12px; align-items: flex-start; width: 100%;
   padding: 13px; text-align: left;
@@ -1165,6 +1175,8 @@ html, body { overscroll-behavior-y: none; }
   width: 34px; height: 34px; flex: 0 0 auto; border-radius: 8px;
   border: 1px solid var(--rule); background: var(--ground);
   display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
+  /* The hue is on the mark and nowhere else — see CLASS_HUE. */
+  color: var(--ink-dim);
 }
 .kbody { display: block; min-width: 0; }
 .klass .nm { display: block; color: var(--ink); font-size: 0.98rem; }
@@ -1342,3 +1354,30 @@ html, body { overscroll-behavior-y: none; }
 .hb-toggle.on { color: var(--ink-dim); border-color: var(--steel); }
 .hb-toggle.on i { border-color: var(--steel); }
 .hb-toggle.on i::after { left: 11px; background: var(--steel); }
+
+/* ---- what a spell is for, before you read a word of it ---- */
+.spick { display: flex; flex-direction: column; gap: 10px; }
+.roles { display: flex; gap: 5px; flex-wrap: wrap; }
+.role {
+  padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--rule); background: transparent; color: var(--muted);
+  font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.08em;
+  text-transform: uppercase; min-width: 0;
+}
+.role .n { color: var(--faint); margin-left: 3px; }
+/*
+ * A hue per pile, held to the four the app already owns — damage is the
+ * damage colour, healing the healing one. A fifth hue invented here would
+ * mean something different on this screen than everywhere else.
+ */
+.role.r-damage { border-color: var(--damage); color: var(--damage); }
+.role.r-healing { border-color: var(--heal); color: var(--heal); }
+.role.r-control { border-color: var(--conc); color: var(--conc); }
+.role.r-utility { border-color: var(--steel); color: var(--steel); }
+.role.on { background: var(--raised); color: var(--ink); }
+
+/* On a row it is a label, not a control: no border, just the hue. */
+.menu-hd .role {
+  border-color: transparent; padding: 0 6px; letter-spacing: 0.06em;
+  margin-left: auto;
+}

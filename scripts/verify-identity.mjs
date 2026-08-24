@@ -70,6 +70,7 @@ ok("and the flow can move on",
 // --- who they are ---------------------------------------------------------
 await atStep(page, "Class");
 for (const s of ["Athletics", "Perception"]) {
+  await atStep(page, "Skills");
   await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await atStep(page, "Race");

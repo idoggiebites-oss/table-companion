@@ -87,6 +87,7 @@ ok("a compendium-only class derives its saves from the one proficiency line",
   /saves in DEX and INT/i.test(await page.locator(".cr-note").first().innerText()), true);
 // Skills are a table now — a compendium-only class still fills one.
 await atStep(page, "Class");
+await atStep(page, "Skills");
 ok("and its skill choices",
   (await page.locator(".skl tr:not(.shut)").count()) > 5, true);
 
@@ -287,6 +288,7 @@ await page.waitForTimeout(400);
 
 await atStep(page, "Class");
 for (const s of ["Arcana", "History"]) {
+  await atStep(page, "Skills");
   await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await atStep(page, "Scores");

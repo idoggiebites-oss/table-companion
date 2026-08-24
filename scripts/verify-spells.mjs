@@ -55,6 +55,7 @@ await atStep(page, "Class");
 await page.locator('input[aria-label="Starting level"]').fill("5");
 await atStep(page, "Class");
 for (const s of ["Arcana", "History"]) {
+  await atStep(page, "Skills");
   await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await atStep(page, "Race");

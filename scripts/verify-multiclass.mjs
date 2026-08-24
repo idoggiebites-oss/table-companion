@@ -62,6 +62,7 @@ await page.locator('input[aria-label="Starting level"]').fill("3");
 await page.waitForTimeout(400);
 await atStep(page, "Class");
 for (const s of ["Medicine", "Religion"]) {
+  await atStep(page, "Skills");
   const b = page.getByRole("button", { name: `Train ${s.toLowerCase()}` });
   if (await b.count()) await b.first().click();
 }

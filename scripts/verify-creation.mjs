@@ -90,7 +90,7 @@ ok("class is asked first", await player.page.locator(".cr-step").first().innerTe
 ok("race is not offered until then",
   await player.page.locator('select[aria-label="Race"]').count(), 0);
 ok("but the flow says it is coming",
-  await player.page.getByRole("button", { name: /^Step 2, Race$/ }).count(), 1);
+  await player.page.getByRole("button", { name: /^Step \d+, Race$/ }).count(), 1);
 
 await atStep(player.page, "Class");
 await player.page.getByRole("button", { name: "Ranger", exact: true }).click();
@@ -102,15 +102,15 @@ ok("and its saves", note.includes("STR and DEX"), true);
 ok("ranger does not claim to cast at level 1", note.includes("casts from level 1"), false);
 
 // class skills: three from a list of eight
-await atStep(player.page, "Class");
+await atStep(player.page, "Skills");
 await player.page.getByRole("button", { name: "Train stealth" }).click();
-await atStep(player.page, "Class");
+await atStep(player.page, "Skills");
 await player.page.getByRole("button", { name: "Train perception" }).click();
-await atStep(player.page, "Class");
+await atStep(player.page, "Skills");
 await player.page.getByRole("button", { name: "Train survival" }).click();
 // Chips became a table: the consequence of taking a skill is a number, so
 // the number is what is checked.
-await atStep(player.page, "Class");
+await atStep(player.page, "Skills");
 ok("three class skills taken", await player.page.locator(".skl tr.on").count(), 3);
 /* The point of the table: the total is the ability plus proficiency, and it
    moves when you take the skill. Parsed with the real minus sign the app

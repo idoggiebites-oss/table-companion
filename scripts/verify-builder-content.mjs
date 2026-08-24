@@ -110,6 +110,7 @@ await page.screenshot({ path: `${OUT}/60-imported-race.png`, fullPage: true });
 // Backgrounds: 270 imported, where the SRD ships one.
 await atStep(page, "Class");
 for (const s of ["Athletics", "Perception"]) {
+  await atStep(page, "Skills");
   await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await atStep(page, "Scores");

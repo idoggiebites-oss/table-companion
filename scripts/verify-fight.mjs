@@ -80,6 +80,7 @@ async function build(page, name, klass, skills) {
   // same class, so picking positionally chose the wrong ones and left the
   // class-skill count unsatisfied.
   for (const s of skills) {
+    await atStep(page, "Skills");
     await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).first().click();
   }
   await atStep(page, "Race");

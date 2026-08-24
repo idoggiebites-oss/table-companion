@@ -138,6 +138,7 @@ await player.page.getByRole("button", { name: "Fighter", exact: true }).click();
 await player.page.waitForTimeout(300);
 await atStep(player.page, "Class");
 for (const s of ["Athletics", "Perception"]) {
+  await atStep(player.page, "Skills");
   await player.page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await atStep(player.page, "Race");

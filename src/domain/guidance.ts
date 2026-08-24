@@ -35,6 +35,27 @@ export interface ClassShape {
   readonly glyph: string;
 }
 
+/**
+ * A hue per class, for the glyph only.
+ *
+ * Twelve identical cards are twelve things to read; twelve marks in twelve
+ * colours are something you learn the shape of and then recognise. It tints
+ * the mark and nothing else — the text stays in the ink colours it shares
+ * with every other screen, because a name in a class colour would be a
+ * different kind of thing from a name anywhere else in the app.
+ *
+ * Drawn from the four the app already owns rather than a new palette, and
+ * grouped so the colour says something: martial classes warm, casters cool,
+ * the half-and-half ones in between.
+ */
+export const CLASS_HUE: Readonly<Record<string, string>> = {
+  barbarian: "var(--damage)", fighter: "var(--damage)", monk: "var(--bloodied)",
+  rogue: "var(--bloodied)", ranger: "var(--unharmed)", druid: "var(--unharmed)",
+  paladin: "var(--steel)", cleric: "var(--steel)", artificer: "var(--steel)",
+  bard: "var(--conc)", sorcerer: "var(--conc)", warlock: "var(--conc)",
+  wizard: "var(--conc)",
+};
+
 export const CLASS_SHAPE: Readonly<Record<string, ClassShape>> = {
   barbarian: { tags: ["Martial", "Tank"], complexity: 1, glyph: "\u2694" },
   bard: { tags: ["Spellcaster", "Support"], complexity: 4, glyph: "\u266A" },

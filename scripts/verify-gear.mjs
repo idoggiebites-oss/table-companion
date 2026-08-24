@@ -63,6 +63,7 @@ await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(400);
 await atStep(page, "Class");
 for (const s of ["Athletics", "Perception"]) {
+  await atStep(page, "Skills");
   await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).click();
 }
 await atStep(page, "Race");
@@ -151,6 +152,7 @@ await page.waitForTimeout(400);
 // gives "ACROBATICS" while the accessible name is still "Acrobatics".
 await atStep(page, "Class");
 for (const s of ["Acrobatics", "Stealth"]) {
+  await atStep(page, "Skills");
   await page.getByRole("button", { name: `Train ${s.toLowerCase()}` }).first().click();
 }
 await atStep(page, "Race");
