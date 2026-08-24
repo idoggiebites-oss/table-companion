@@ -86,6 +86,13 @@ Ordered by how many characters meet them.
 - **A passphrase on the deployment.** Built, reverted, left dormant — the site
   does not need to be private.
 
+## Noted, for when combat comes round again
+
+- **Damage is not halved on a successful save.** Sacred Flame hands the DM the
+  full roll and they apply what they rule; there is no "half on save" control
+  on the claim. A small addition to the queue, and the only place the app
+  makes the DM do arithmetic it could do itself.
+
 ## Known and unfixed
 
 - **Help is untested end to end.** The sample campaign has one character, so
