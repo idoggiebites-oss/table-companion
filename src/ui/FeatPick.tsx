@@ -13,8 +13,10 @@
  */
 
 import { useState } from "react";
-import { blocked, byFeatOrder, meets, type Aspirant, type FeatSource } from "../domain/feats.js";
-import { nameMark } from "../domain/marks.js";
+import { blocked, meets, type Aspirant, type FeatSource } from "../domain/feats.js";
+import {
+  baseName, effectsOf, featMark, groupVariants, hasChoice,
+} from "../domain/featvariants.js";
 
 export function FeatPick({
   feats, who, taken, onPick,
@@ -38,10 +40,22 @@ export function FeatPick({
    * out at F, and Sentinel — one of the four feats a new player has actually
    * heard of — was unreachable without knowing to search for it.
    */
+  /*
+   * Grouped, because the compendium ships the choice already made: not
+   * "Resilient" with a dropdown but six entries, one per ability. Collapsing
+   * them back into one row is what turns the file's shape into a choice
+   * somebody can make.
+   *
+   * Unfiltered this is the game's own feats. An ability or a damage type in
+   * parentheses is an axis rather than a source — reading "(Constitution)"
+   * the way "(HB)" is read hid Resilient, Observant, Athlete, Weapon Master
+   * and Elemental Adept from the list entirely.
+   */
   const q = filter.trim().toLowerCase();
-  const rows = feats
-    .filter((f) => (q ? f.name.toLowerCase().includes(q) : nameMark(f.name) === null))
-    .sort(byFeatOrder)
+  const rows = groupVariants(
+    feats.filter((f) => (q ? f.name.toLowerCase().includes(q) : featMark(f.name) === null)),
+  )
+    .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, q ? 60 : 200);
 
   const chosen = taken ? feats.find((f) => f.id === taken) : undefined;
@@ -77,20 +91,25 @@ export function FeatPick({
         onChange={(e) => setFilter(e.target.value)}
       />
       <div className="menu feat-scroll">
-        {rows.map((f) => {
-          const v = meets(f.prerequisite, who);
+        {rows.map((g) => {
+          /* Every variant shares the prerequisite and the text; the first
+             stands for the group until one is picked. */
+          const head = g.variants[0]!;
+          const v = meets(head.prerequisite, who);
           const no = blocked(v);
-          const shown = open === f.id;
+          const shown = open === g.name;
           return (
-            <div className={`menu-row${no ? " off" : ""}`} key={f.id}>
+            <div className={`menu-row${no ? " off" : ""}`} key={g.name}>
               <button
                 className="menu-hd"
                 aria-expanded={shown}
-                aria-label={f.name}
-                onClick={() => setOpen(shown ? null : f.id)}
+                aria-label={g.name}
+                onClick={() => setOpen(shown ? null : g.name)}
               >
-                <span className="nm">{f.name}</span>
-                {f.prerequisite && <span className="cost">{f.prerequisite}</span>}
+                <span className="nm">{g.name}</span>
+                <span className="cost">
+                  {head.prerequisite || (hasChoice(g) ? `${g.variants.length} to choose from` : "")}
+                </span>
               </button>
               {shown && (
                 <div className="menu-more">
@@ -98,12 +117,32 @@ export function FeatPick({
                   {!no && "unverified" in v && v.unverified && (
                     <p className="what">Requires {v.unverified} — the DM decides.</p>
                   )}
-                  <p className="then">{f.text}</p>
-                  {!no && (
+                  <p className="then">{head.text}</p>
+                  {!no && hasChoice(g) && (
+                    <>
+                      <p className="what">Which one?</p>
+                      <div className="chips">
+                        {g.variants.map((x) => (
+                          <button
+                            key={x.id}
+                            className="chip"
+                            aria-label={`Take ${x.name}`}
+                            onClick={() => {
+                              onPick(x);
+                              setOpen(null);
+                            }}
+                          >
+                            {x.name.slice(g.name.length).replace(/[()]/g, "").trim()}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {!no && !hasChoice(g) && (
                     <button
                       className="menu-take"
                       onClick={() => {
-                        onPick(f);
+                        onPick(head);
                         setOpen(null);
                       }}
                     >

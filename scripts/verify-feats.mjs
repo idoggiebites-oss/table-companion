@@ -55,6 +55,17 @@ ok("and it opens on the game's own, not somebody's homebrew",
 ok("with the ones people have heard of actually in it",
   ["Alert", "Sentinel", "Lucky", "War Caster"].every((n) =>
     names.some((x) => x.toLowerCase() === n.toLowerCase())), true);
+/* And the ones the compendium ships pre-split by their own choice.
+
+   These were invisible: "Resilient (Constitution)" reads as marked content
+   under the same rule that sorts "(HB)" to the back, so five of the
+   most-taken feats in the game were missing from the list unless you knew to
+   search for them. An ability in parentheses is an axis, not a source. */
+ok("including the ones split into variants, collapsed back to one row",
+  ["Resilient", "Observant", "Athlete", "Weapon Master", "Elemental Adept"].every((n) =>
+    names.some((x) => x.toLowerCase() === n.toLowerCase())), true);
+ok("listed once each, not six times",
+  names.filter((x) => /^resilient/i.test(x)).length, 1);
 ok("nothing is explained until you point at one",
   await picker.locator(".menu-more").count(), 0);
 
@@ -105,6 +116,25 @@ ok("taking one shows what you took, not an empty box",
   /alert/i.test(await page.locator(".feat-took").first().innerText()), true);
 ok("with a way back out of it",
   await page.getByRole("button", { name: "Choose something else" }).count(), 1);
+
+/* A feat the compendium split by its own choice asks which — and the one it
+   moves actually moves. Resilient is taken FOR the saving throw; leaving it
+   unapplied would make the sheet quietly wrong about the number. */
+await page.getByRole("button", { name: "Choose something else" }).click();
+await page.waitForTimeout(400);
+await page.locator('input[aria-label="Filter feats"]').first().fill("resilient");
+await page.waitForTimeout(500);
+const res = picker.locator(".menu-row").first();
+await res.locator(".menu-hd").click();
+await page.waitForTimeout(300);
+ok("a split feat asks which one", /which one/i.test(await res.innerText()), true);
+const axes = await res.locator(".chips button").allInnerTexts();
+ok("offering the six the file ships", axes.length, 6);
+const wisBefore = await page.locator(".cr-ab", { hasText: "wis" }).first().innerText();
+await res.getByRole("button", { name: "Take Resilient (Wisdom)" }).click();
+await page.waitForTimeout(500);
+ok("and taking one raises the ability it named",
+  (await page.locator(".cr-ab", { hasText: "wis" }).first().innerText()) !== wisBefore, true);
 
 // Finish the character so the level-up can be reached.
 await page.getByRole("button", { name: "nature", exact: true }).click();

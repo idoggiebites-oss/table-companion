@@ -18,6 +18,7 @@ import { ABILITIES, formatModifier, type Ability } from "../domain/abilities.js"
 import type { CompendiumFeat } from "../import/compendium.js";
 import { loadClassLevels, loadFeats, type ClassLevels } from "../store/srd.js";
 import { FeatPick } from "./FeatPick.js";
+import { effectsOf } from "../domain/featvariants.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
 import type { ClassId } from "../domain/resources.js";
@@ -85,8 +86,21 @@ export function LevelUp({
       classId,
       hpGain: Math.max(1, rolled + conMod),
       ...(grantsChoice && route === "asi" ? { abilities: bumps } : {}),
+      /*
+       * A half-feat's +1 goes through the same field an improvement does, so
+       * the sheet moves. The feat itself stays recorded rather than
+       * mechanised — this is the one number it is fair to be sure about.
+       */
       ...(grantsChoice && route === "feat" && chosenFeat
-        ? { feat: { id: chosenFeat.id, name: chosenFeat.name } }
+        ? {
+            feat: { id: chosenFeat.id, name: chosenFeat.name },
+            ...(effectsOf(chosenFeat).increase
+              ? { abilities: { [effectsOf(chosenFeat).increase!]: 1 } }
+              : {}),
+            ...(effectsOf(chosenFeat).saveProficiency
+              ? { save: effectsOf(chosenFeat).saveProficiency }
+              : {}),
+          }
         : {}),
     });
     setOpen(false);

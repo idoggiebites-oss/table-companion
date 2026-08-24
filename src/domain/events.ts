@@ -151,6 +151,8 @@ export type DomainEvent = Meta &
         readonly abilities?: Partial<Record<Ability, number>>;
         /** Taken instead of the improvement. */
         readonly feat?: { readonly id: string; readonly name: string };
+        /** Resilient: a saving throw the feat handed over. */
+        readonly save?: Ability;
       }
     /** Prep that survives contact: built on a laptop, opened at the table. */
     | { readonly type: "encounterSaved"; readonly encounter: Encounter }

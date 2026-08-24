@@ -24,7 +24,7 @@ import {
 } from "../domain/abilities.js";
 import type { Character } from "../domain/build.js";
 import {
-  asiPoints, assemble, finalScores, hpAtLevel, missing,
+  asiPoints, assemble, finalScores, hpAtLevel, missing, withImprovements,
   type BackgroundChoice, type ClassChoice, type RaceChoice, type ScoreMethod,
 } from "../domain/creation.js";
 import {
@@ -33,6 +33,7 @@ import {
 import {
   gather, isMundaneTool, languagesFromTrait, toolsFromClass, ALL_LANGUAGES,
 } from "../domain/proficiencies.js";
+import { effectsOf } from "../domain/featvariants.js";
 import type { ClassId, DieSize } from "../domain/resources.js";
 import {
   loadBackgrounds, loadClasses, loadClassLevels, loadEquipment, loadFeats,
@@ -118,7 +119,15 @@ export function CreateCharacter({
   const [whatDo, setWhatDo] = useState(false);
   const [raceWhat, setRaceWhat] = useState(false);
   const [improvements, setImprovements] = useState<
-    Record<number, { abilities?: Partial<Record<Ability, number>>; feat?: { id: string; name: string } }>
+    Record<
+      number,
+      {
+        abilities?: Partial<Record<Ability, number>>;
+        feat?: { id: string; name: string };
+        /** Resilient, and only Resilient: a save this feat made you good at. */
+        save?: Ability;
+      }
+    >
   >({});
   const [featList, setFeatList] = useState<CompendiumFeat[]>([]);
   const [classPicks, setClassPicks] = useState<Record<string, string>>({});
@@ -187,7 +196,20 @@ export function CreateCharacter({
     ) as Record<Ability, number>;
   }, [method, buy, assigned]);
 
-  const scores = raceChoice ? finalScores(baseScores, raceChoice) : baseScores;
+  const raced = raceChoice ? finalScores(baseScores, raceChoice) : baseScores;
+  /*
+   * Improvements count towards what is shown, not only towards what is saved.
+   *
+   * A character built at 8 has passed two of them, and the panel that exists
+   * to show consequences was showing the scores they had at level 1 — so a
+   * +2 to Dexterity moved the armour class on the finished sheet and nowhere
+   * on the screen where it was chosen. A half-feat's +1 had the same problem
+   * and no chip to hide behind.
+   */
+  const scores = withImprovements(
+    raced,
+    Object.values(improvements).filter((i) => i.abilities),
+  );
   const mods = Object.fromEntries(
     ABILITIES.map((a) => [a, abilityModifier(scores[a])]),
   ) as Record<Ability, number>;
@@ -1197,7 +1219,8 @@ export function CreateCharacter({
                     <div className="lv-abils">
                       {ABILITIES.map((a) => {
                         const added = at.abilities?.[a] ?? 0;
-                        const total = scores[a] + added;
+                        // Already counted in `scores`, so this IS the total.
+                        const total = scores[a];
                         return (
                           <button
                             key={a}
@@ -1228,7 +1251,23 @@ export function CreateCharacter({
                       onPick={(f) =>
                         setImprovements((cur) => ({
                           ...cur,
-                          [lvl]: f ? { feat: { id: f.id, name: f.name } } : {},
+                          /*
+                           * A half-feat's +1 is applied here, through the same
+                           * path an ability improvement uses — the feat itself
+                           * stays recorded rather than mechanised, and the one
+                           * number it moves actually moves.
+                           */
+                          [lvl]: f
+                            ? {
+                                feat: { id: f.id, name: f.name },
+                                ...(effectsOf(f).increase
+                                  ? { abilities: { [effectsOf(f).increase!]: 1 } }
+                                  : {}),
+                                ...(effectsOf(f).saveProficiency
+                                  ? { save: effectsOf(f).saveProficiency }
+                                  : {}),
+                              }
+                            : {},
                         }))
                       }
                     />

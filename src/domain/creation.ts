@@ -65,6 +65,8 @@ export interface CreationChoices {
   readonly improvements?: readonly {
     readonly abilities?: Partial<Record<Ability, number>>;
     readonly feat?: { readonly id: string; readonly name: string };
+    /** Resilient, and only Resilient: a save the feat made them good at. */
+    readonly save?: Ability;
   }[];
   /** Everything they ended up speaking, from every source, already merged. */
   readonly languages?: readonly string[];
@@ -183,7 +185,18 @@ export function assemble(choices: CreationChoices, id = `c${Date.now().toString(
         }
       : {}),
     ...(choices.picks?.length ? { choices: choices.picks } : {}),
-    saveProficiencies: choices.klass.saves,
+    /*
+     * A feat can hand over a saving throw. Resilient is the only one in the
+     * game that does, and it is the reason anybody takes it — leaving it
+     * unapplied would make the sheet quietly wrong about the number the
+     * player took the feat FOR.
+     */
+    saveProficiencies: [
+      ...new Set([
+        ...choices.klass.saves,
+        ...(choices.improvements ?? []).flatMap((i) => (i.save ? [i.save] : [])),
+      ]),
+    ],
     skillProficiencies: skills,
     // Race, class and background all hand these out, and Common arrives from
     // more than one of them.

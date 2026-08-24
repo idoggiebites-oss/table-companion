@@ -95,6 +95,8 @@ export interface BuildDelta {
   readonly abilities?: Partial<Record<Ability, number>>;
   /** A feat taken instead of the improvement. Named, never mechanised. */
   readonly feat?: { readonly id: string; readonly name: string };
+  /** Except this: Resilient hands over a saving throw, and only Resilient. */
+  readonly save?: Ability;
   readonly at: string;
 }
 
@@ -161,11 +163,17 @@ function applyDeltas(base: BuildBase, deltas: readonly BuildDelta[]): BuildBase 
         ) as AbilityScores)
       : out.abilities;
     const feats = d.feat ? [...(out.feats ?? []), d.feat] : out.feats;
+    // Resilient, taken at a level, hands over a saving throw the class never
+    // had. It is the only feat in the game that does.
+    const saves = d.save && !out.saveProficiencies.includes(d.save)
+      ? [...out.saveProficiencies, d.save]
+      : out.saveProficiencies;
     out = {
       ...out,
       classes,
       maxHp: out.maxHp + d.hpGain,
       abilities,
+      saveProficiencies: saves,
       ...(feats ? { feats } : {}),
     };
   }
@@ -301,6 +309,7 @@ export function appendLevel(
   choice?: {
     readonly abilities?: Partial<Record<Ability, number>>;
     readonly feat?: { readonly id: string; readonly name: string };
+    readonly save?: Ability;
   },
 ): Character {
   const current = effectiveBuild(character).totalLevel;
@@ -316,6 +325,7 @@ export function appendLevel(
         at,
         ...(choice?.abilities ? { abilities: choice.abilities } : {}),
         ...(choice?.feat ? { feat: choice.feat } : {}),
+        ...(choice?.save ? { save: choice.save } : {}),
       },
     ],
   };
