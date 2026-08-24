@@ -54,3 +54,21 @@ describe("against the files the switch exists for", () => {
     expect(races.length).toBeLessThan(140);
   });
 });
+
+describe("parentheses that are not a source", () => {
+  it("never reads a rarity as provenance", () => {
+    /*
+     * The trap this exists for: 1,499 magic items are named "(Rare)",
+     * "(Very Rare)", "(Legendary)". Pointing the switch at equipment without
+     * this would hide every magic item in the game — and it would look
+     * exactly like the switch working.
+     */
+    for (const r of ["Rare", "Very Rare", "Uncommon", "Legendary", "Common", "Artifact"]) {
+      expect(sourceMark(`Bag of Holding (${r})`), r).toBe(null);
+    }
+  });
+
+  it("but still reads a real source beside one", () => {
+    expect(sourceMark("Blade of Wonder (Rare) (HB)")).toBe("HB");
+  });
+});

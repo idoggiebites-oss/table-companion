@@ -22,6 +22,9 @@ import {
 import { multiclassBlock } from "../domain/multiclass.js";
 import { FeatPick } from "./FeatPick.js";
 import { SpellPick } from "./SpellPick.js";
+import { useHomebrew } from "./useHomebrew.js";
+import { HomebrewToggle } from "./HomebrewToggle.js";
+import { isCore } from "../domain/marks.js";
 import { useSpellbook } from "./useCasting.js";
 import type { CharacterState } from "../domain/project.js";
 import { choicesBy, findChoices, ownerOf } from "../domain/subclass.js";
@@ -55,6 +58,7 @@ export function LevelUp({
   const [pick, setPick] = useState<Record<string, string>>({});
   const [learned, setLearned] = useState<KnownSpell[]>([]);
   const [classList, setClassList] = useState<ClassEntry[] | null>(null);
+  const [homebrew, setHomebrew] = useHomebrew();
   const book = useSpellbook(true);
 
   useEffect(() => {
@@ -141,6 +145,8 @@ export function LevelUp({
   const offerable = (book ?? []).filter(
     (sp) =>
       !have.has(sp.id) &&
+      // Same switch as the builder: this list is drawn from the same file.
+      (homebrew || isCore(sp.name)) &&
       !isClassFeature(sp) &&
       classIds.some((c) => castableBy(sp, c)) &&
       (learned.filter((x) => x.level === 0).length < newCantrips
@@ -388,6 +394,15 @@ export function LevelUp({
                   ? "cantrips"
                   : "spells"}
               </span>
+              {(book ?? []).some((sp) => !isCore(sp.name)) && (
+                <div className="row" style={{ marginBottom: 8 }}>
+                  <HomebrewToggle
+                    on={homebrew}
+                    hidden={(book ?? []).filter((sp) => !isCore(sp.name)).length}
+                    onChange={setHomebrew}
+                  />
+                </div>
+              )}
               {book === null ? (
                 <p className="faint" style={{ fontSize: ".84rem", margin: "6px 0 0" }}>
                   Looking up what you can learn…

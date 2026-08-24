@@ -23,17 +23,24 @@ export function nameMarks(name: string): string[] {
 }
 
 /**
- * Parentheses that are a CHOICE rather than a source.
+ * Parentheses that are NOT a source.
  *
- * Feats are the only list where this happens, and it happens a lot: the file
- * ships "Resilient (Constitution)" rather than Resilient with a dropdown. An
- * ability or a damage type in brackets is an axis; everything else is where
- * the thing came from.
+ * Two kinds, and both would be wrong to read as provenance.
+ *
+ * A choice the file made for you: feats ship as "Resilient (Constitution)"
+ * rather than Resilient with a dropdown, 331 times.
+ *
+ * And a property of the thing itself. The item file is the one that matters
+ * here — 1,499 of its magic items are named "(Rare)", "(Very Rare)",
+ * "(Uncommon)", "(Legendary)". Reading those as provenance would hide every
+ * magic item in the game the moment anybody pointed this rule at equipment,
+ * and it would look exactly like the switch working.
  */
 const AXES = new Set([
   "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma",
   "acid", "cold", "fire", "lightning", "thunder", "necrotic", "radiant",
   "poison", "psychic", "force", "proficient", "proficient in both",
+  "common", "uncommon", "rare", "very rare", "legendary", "artifact", "epic",
 ]);
 
 export function isAxis(mark: string): boolean {

@@ -400,6 +400,9 @@ export function CreateCharacter({
     return book
       .filter((s) => {
         if (have.has(s.id) || isClassFeature(s)) return false;
+        // The switch governs every list drawn from a compendium, and this is
+        // the one a new player meets first.
+        if (!homebrew && !isCore(s.name)) return false;
         if (!castableBy(s, klass.id)) return false;
         // Nothing you could not cast: a spell above your best slot is not a
         // choice, it is a tease.
@@ -408,7 +411,7 @@ export function CreateCharacter({
         return true;
       })
       .sort(byBookOrder);
-  }, [book, klass, castsAtAll, spellFilter, chosenSpells, atLevel]);
+  }, [book, klass, castsAtAll, spellFilter, chosenSpells, atLevel, homebrew]);
 
   /**
    * What the class asks about itself. A cleric without a domain is not a
@@ -1565,6 +1568,15 @@ export function CreateCharacter({
               </p>
             ) : (
               <>
+                {book.some((sp) => !isCore(sp.name)) && (
+                  <div className="row" style={{ marginBottom: 10 }}>
+                    <HomebrewToggle
+                      on={homebrew}
+                      hidden={book.filter((sp) => !isCore(sp.name)).length}
+                      onChange={setHomebrew}
+                    />
+                  </div>
+                )}
                 {chosenSpells.length > 0 && (
                   <div className="chips" style={{ marginBottom: 10 }}>
                     {chosenSpells.map((sp) => (

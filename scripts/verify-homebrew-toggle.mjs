@@ -88,6 +88,43 @@ await page.waitForTimeout(600);
 ok("a chosen race stays listed when the switch goes off",
   await page.locator('select[aria-label="Race"]').inputValue() !== "", true);
 
+
+/* --- the spell pickers, which is where this was reported ----------------
+   The Spells TAB honoured the switch and the two pickers that actually
+   matter during creation did not: a first-time wizard choosing cantrips met
+   two thirds somebody else's. */
+await atStep(page, "Class");
+await page.getByRole("button", { name: "Wizard", exact: true }).click();
+await page.waitForTimeout(500);
+for (const s of ["arcana", "history"]) {
+  const t = page.getByRole("button", { name: `Train ${s}` });
+  if (await t.count()) await t.click();
+}
+await atStep(page, "Race");
+await page.selectOption('select[aria-label="Race"]', { index: 1 });
+await page.waitForTimeout(600);
+await atStep(page, "Spells");
+await page.waitForTimeout(1500);
+
+const cantrips = page.getByRole("button", { name: /^Cantrips,/ }).first();
+await cantrips.click();
+await page.waitForTimeout(1200);
+const offered = () => page.locator(".chooser-list .menu-hd .nm").allInnerTexts();
+const quietSpells = await offered();
+ok("the builder's cantrips are the game's own",
+  quietSpells.length > 0 && quietSpells.every((n) => !/\((?:HB|TP|UA|Alt)\)/i.test(n)), true);
+
+const spellToggle = page.locator(".chooser").locator("..")
+  .getByRole("button", { name: "Show homebrew and third-party content" }).first();
+ok("with a switch of their own", await spellToggle.count(), 1);
+await spellToggle.click();
+await page.waitForTimeout(900);
+const loudSpells = await offered();
+ok("that brings the rest when asked", loudSpells.length >= quietSpells.length, true);
+ok("including somebody else's",
+  loudSpells.some((n) => /\((?:HB|TP|UA|Alt)\)/i.test(n)), true);
+await page.screenshot({ path: `${OUT}/C2-spell-toggle.png`, fullPage: true });
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();
