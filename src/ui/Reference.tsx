@@ -16,6 +16,10 @@ import {
   type Statblock, type StatblockAction,
 } from "../domain/statblock.js";
 import { loadMonsters } from "../store/srd.js";
+import {
+  crBand, creatureKind, CR_BANDS, CR_LABEL, CREATURE_KINDS,
+  type CrBand, type CreatureKind,
+} from "../domain/creature.js";
 
 const ABILITY_ORDER = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const mod = (score: number) => Math.floor((score - 10) / 2);
@@ -80,6 +84,8 @@ export function Reference({ homebrew }: { homebrew: Readonly<Record<string, Stat
   const [error, setError] = useState(false);
   const [text, setText] = useState("");
   const [maxCr, setMaxCr] = useState<number | "">("");
+  const [kind, setKind] = useState<CreatureKind | null>(null);
+  const [band, setBand] = useState<CrBand | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [shown, setShown] = useState(false);
 
@@ -93,13 +99,36 @@ export function Reference({ homebrew }: { homebrew: Readonly<Record<string, Stat
     [all, homebrew],
   );
 
+  /*
+   * Which pile it is in, before anybody reads it.
+   *
+   * A complete compendium ships 6,633 monsters under 416 distinct type
+   * strings, because the files keep the subtype inside the type. The rulebook
+   * has fourteen kinds, and "is this a fair fight" is a band rather than a
+   * decimal — the two questions a DM is actually asking of this list.
+   */
+  const counts = useMemo(() => {
+    const kinds = new Map<CreatureKind, number>();
+    const bands = new Map<CrBand, number>();
+    for (const m of catalogue ?? []) {
+      const k = creatureKind(m.type);
+      if (k) kinds.set(k, (kinds.get(k) ?? 0) + 1);
+      const b = crBand(m.cr);
+      bands.set(b, (bands.get(b) ?? 0) + 1);
+    }
+    return { kinds, bands };
+  }, [catalogue]);
+
   const results = useMemo(() => {
     if (!catalogue) return [];
     return searchStatblocks(catalogue, {
       ...(text ? { text } : {}),
       ...(maxCr === "" ? {} : { maxCr }),
-    }).slice(0, 60);
-  }, [catalogue, text, maxCr]);
+    })
+      .filter((m) => kind === null || creatureKind(m.type) === kind)
+      .filter((m) => band === null || crBand(m.cr) === band)
+      .slice(0, 60);
+  }, [catalogue, text, maxCr, kind, band]);
 
   return (
     <section className="card">
@@ -133,6 +162,33 @@ export function Reference({ homebrew }: { homebrew: Readonly<Record<string, Stat
                   style={{ flex: "0 0 96px", width: "auto" }}
                   onChange={(e) => setMaxCr(e.target.value === "" ? "" : Math.max(0, +e.target.value))}
                 />
+              </div>
+              {/* Kind, then difficulty — the order a DM asks them in. */}
+              <div className="roles" style={{ marginTop: 10 }}>
+                {CREATURE_KINDS.filter((k) => (counts.kinds.get(k) ?? 0) > 0).map((k) => (
+                  <button
+                    key={k}
+                    className={`role${kind === k ? " on" : ""}`}
+                    aria-pressed={kind === k}
+                    aria-label={`Only ${k}`}
+                    onClick={() => setKind(kind === k ? null : k)}
+                  >
+                    {k} <span className="n">{counts.kinds.get(k)}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="roles" style={{ marginTop: 6 }}>
+                {CR_BANDS.filter((b) => (counts.bands.get(b) ?? 0) > 0).map((b) => (
+                  <button
+                    key={b}
+                    className={`role cr-${b}${band === b ? " on" : ""}`}
+                    aria-pressed={band === b}
+                    aria-label={`Only ${CR_LABEL[b]}`}
+                    onClick={() => setBand(band === b ? null : b)}
+                  >
+                    {CR_LABEL[b]} <span className="n">{counts.bands.get(b)}</span>
+                  </button>
+                ))}
               </div>
               <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
                 {results.length} of {catalogue?.length ?? 0}

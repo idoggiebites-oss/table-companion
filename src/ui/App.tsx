@@ -26,6 +26,7 @@ import { Sheet } from "./Sheet.js";
 import { AnswerCheck } from "./AnswerCheck.js";
 import { AskCheck } from "./AskCheck.js";
 import { Sources } from "./Sources.js";
+import { SpellLookup } from "./SpellLookup.js";
 import { Spells } from "./Spells.js";
 import { Boundary } from "./Boundary.js";
 import { Tabs, type TabDef } from "./Tabs.js";
@@ -504,6 +505,9 @@ export function App() {
               {current === "book" && (
                 <>
                   <Reference homebrew={state.homebrew} />
+                  {/* A player casts Hold Person and the table looks at the
+                      DM — who had the whole bestiary and not one spell. */}
+                  <SpellLookup />
                   <Sources />
                 </>
               )}

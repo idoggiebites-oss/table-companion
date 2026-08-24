@@ -1381,3 +1381,16 @@ html, body { overscroll-behavior-y: none; }
   border-color: transparent; padding: 0 6px; letter-spacing: 0.06em;
   margin-left: auto;
 }
+
+/* ---- looking something up: the list scrolls, the filters stay ---- */
+.ref-scroll {
+  max-height: 58vh; overflow-y: auto; overscroll-behavior: contain;
+  margin-top: 8px;
+}
+/* The CR bands read as difficulty, using the health ramp the app already
+   owns — a fifth palette here would mean something different from the same
+   colours everywhere else. */
+.role.cr-fodder { border-color: var(--unharmed); color: var(--unharmed); }
+.role.cr-standard { border-color: var(--injured); color: var(--injured); }
+.role.cr-deadly { border-color: var(--bloodied); color: var(--bloodied); }
+.role.cr-legendary { border-color: var(--near); color: var(--near); }
