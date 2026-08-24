@@ -31,6 +31,9 @@ import type { Stance, StanceReason } from "../domain/stance.js";
 import { costOf } from "../domain/spellcast.js";
 import { AimSpell } from "./AimSpell.js";
 import { useCasting } from "./useCasting.js";
+import { useHomebrew } from "./useHomebrew.js";
+import { HomebrewToggle } from "./HomebrewToggle.js";
+import { isCore } from "../domain/marks.js";
 import { SpellPick } from "./SpellPick.js";
 
 export function Spells({
@@ -56,6 +59,7 @@ export function Spells({
   const [text, setText] = useState("");
   const [onlyMine, setOnlyMine] = useState(true);
   const [showFeatures, setShowFeatures] = useState(false);
+  const [homebrew, setHomebrew] = useHomebrew();
   const [casting, setCasting] = useState<KnownSpell | null>(null);
   const [aiming, setAiming] = useState<
     { spell: KnownSpell; atLevel: number; ritual: boolean } | null
@@ -82,6 +86,8 @@ export function Spells({
     return book
       .filter((s) => {
         if (have.has(s.id)) return false;
+        // Two thirds of a complete compendium's spells are somebody else's.
+        if (!homebrew && !isCore(s.name)) return false;
         if (!showFeatures && isClassFeature(s)) return false;
         if (q && !s.name.toLowerCase().includes(q)) return false;
         if (onlyMine && !classIds.some((c) => castableBy(s, c))) return false;
@@ -89,7 +95,7 @@ export function Spells({
       })
       .sort(byBookOrder)
       .slice(0, 60);
-  }, [book, text, onlyMine, showFeatures, known, classIds]);
+  }, [book, text, onlyMine, showFeatures, known, classIds, homebrew]);
 
   /*
    * In a fight, casting is not finished until it has been pointed at
@@ -175,6 +181,15 @@ export function Spells({
                 {/* Compendiums file invocations, maneuvers and the like under
                     spells. Hidden rather than dropped — somebody tracks them,
                     just not from here. */}
+                {book && (
+                  <div className="row" style={{ marginTop: 10 }}>
+                    <HomebrewToggle
+                      on={homebrew}
+                      hidden={book.filter((sp) => !isCore(sp.name)).length}
+                      onChange={setHomebrew}
+                    />
+                  </div>
+                )}
                 {hiddenFeatures > 0 && (
                   <button
                     className={`chip${showFeatures ? " on" : ""}`}

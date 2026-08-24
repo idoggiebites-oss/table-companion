@@ -13,6 +13,8 @@
  */
 
 import { useState } from "react";
+import { useHomebrew } from "./useHomebrew.js";
+import { HomebrewToggle } from "./HomebrewToggle.js";
 import { blocked, meets, type Aspirant, type FeatSource } from "../domain/feats.js";
 import {
   baseName, effectsOf, featMark, groupVariants, hasChoice,
@@ -27,6 +29,7 @@ export function FeatPick({
   taken?: string;
   onPick: (f: FeatSource | null) => void;
 }) {
+  const [homebrew, setHomebrew] = useHomebrew();
   const [open, setOpen] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
 
@@ -51,10 +54,15 @@ export function FeatPick({
    * the way "(HB)" is read hid Resilient, Observant, Athlete, Weapon Master
    * and Elemental Adept from the list entirely.
    */
+  /*
+   * The switch decides what is in the list; the filter searches what the
+   * switch let in. It used to hide marked feats only while unfiltered, which
+   * made searching a different list from browsing — and left somebody
+   * wondering why a feat they could see yesterday was gone.
+   */
   const q = filter.trim().toLowerCase();
-  const rows = groupVariants(
-    feats.filter((f) => (q ? f.name.toLowerCase().includes(q) : featMark(f.name) === null)),
-  )
+  const allowed = feats.filter((f) => homebrew || featMark(f.name) === null);
+  const rows = groupVariants(allowed.filter((f) => !q || f.name.toLowerCase().includes(q)))
     .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, q ? 60 : 200);
 
@@ -87,8 +95,13 @@ export function FeatPick({
       <input
         value={filter}
         aria-label="Filter feats"
-        placeholder={`filter ${feats.length} feats…`}
+        placeholder={`filter ${allowed.length} feats…`}
         onChange={(e) => setFilter(e.target.value)}
+      />
+      <HomebrewToggle
+        on={homebrew}
+        hidden={feats.length - allowed.length}
+        onChange={setHomebrew}
       />
       <div className="menu feat-scroll">
         {rows.map((g) => {
@@ -160,12 +173,6 @@ export function FeatPick({
           </p>
         )}
       </div>
-      {q === "" && feats.length > rows.length && (
-        <p className="faint" style={{ margin: 0, fontSize: ".78rem" }}>
-          {feats.length - rows.length} more from imported content — type to
-          search those too.
-        </p>
-      )}
     </div>
   );
 }

@@ -34,6 +34,9 @@ import {
   gather, isMundaneTool, languagesFromTrait, toolsFromClass, ALL_LANGUAGES,
 } from "../domain/proficiencies.js";
 import { effectsOf } from "../domain/featvariants.js";
+import { isCore } from "../domain/marks.js";
+import { useHomebrew } from "./useHomebrew.js";
+import { HomebrewToggle } from "./HomebrewToggle.js";
 import type { ClassId, DieSize } from "../domain/resources.js";
 import type { Identity } from "../domain/build.js";
 
@@ -160,6 +163,8 @@ export function CreateCharacter({
   const [identity, setIdentity] = useState<Identity>({});
   /** Which question is in front of you. */
   const [step, setStep] = useState(0);
+  /** Whether other people's material is in the lists. Device-local. */
+  const [homebrew, setHomebrew] = useHomebrew();
   const [pickedTools, setPickedTools] = useState<string[]>([]);
   const [bgId, setBgId] = useState("");
   const [bgFilter, setBgFilter] = useState("");
@@ -176,19 +181,38 @@ export function CreateCharacter({
   }, []);
 
   /** Keeps the chosen race listed even when it falls out of the filter. */
+  /*
+   * Imported material is kept out until it is asked for. Four fifths of the
+   * races in a complete compendium carry a provenance marker, and scrolling
+   * past three hundred of them to reach Elf is not a choice, it is a search.
+   *
+   * Whatever is already chosen stays listed either way: a switch must never
+   * silently un-choose something.
+   */
+  const raceable = useMemo(
+    () => (races ?? []).filter((r) => homebrew || isCore(r.name) || r.id === raceId),
+    [races, homebrew, raceId],
+  );
+  const hiddenRaces = (races?.length ?? 0) - raceable.length;
+
   const shownRaces = useMemo(() => {
-    const list = races ?? [];
     const q = raceFilter.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter((r) => r.name.toLowerCase().includes(q) || r.id === raceId);
-  }, [races, raceFilter, raceId]);
+    if (!q) return raceable;
+    return raceable.filter((r) => r.name.toLowerCase().includes(q) || r.id === raceId);
+  }, [raceable, raceFilter, raceId]);
+
+  const backgroundable = useMemo(
+    () => backgrounds.filter((b) => homebrew || isCore(b.name) || b.id === bgId),
+    [backgrounds, homebrew, bgId],
+  );
+  const hiddenBackgrounds = backgrounds.length - backgroundable.length;
 
   const shownBackgrounds = useMemo(() => {
     const q = bgFilter.trim().toLowerCase();
     return q
-      ? backgrounds.filter((b) => b.name.toLowerCase().includes(q) || b.id === bgId)
-      : backgrounds;
-  }, [backgrounds, bgFilter, bgId]);
+      ? backgroundable.filter((b) => b.name.toLowerCase().includes(q) || b.id === bgId)
+      : backgroundable;
+  }, [backgroundable, bgFilter, bgId]);
 
   const klass = classes?.find((c) => c.id === classId);
   const race = races?.find((r) => r.id === raceId);
@@ -610,18 +634,24 @@ export function CreateCharacter({
 
             {classes.some((c) => c.extra) && (
               <div className="row" style={{ marginTop: 12 }}>
-                <span className="label">Or from your compendium</span>
-                <select
-                  aria-label="Class"
-                  value={classes.find((c) => c.id === classId)?.extra ? classId : ""}
-                  style={{ width: "auto", flex: "1 1 160px" }}
-                  onChange={(e) => { setClassId(e.target.value); setClassSkills([]); }}
-                >
-                  <option value="">{classes.filter((c) => c.extra).length} more…</option>
-                  {classes.filter((c) => c.extra).map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <HomebrewToggle
+                  on={homebrew}
+                  hidden={classes.filter((c) => c.extra).length}
+                  onChange={setHomebrew}
+                />
+                {homebrew && (
+                  <select
+                    aria-label="Class"
+                    value={classes.find((c) => c.id === classId)?.extra ? classId : ""}
+                    style={{ width: "auto", flex: "1 1 160px" }}
+                    onChange={(e) => { setClassId(e.target.value); setClassSkills([]); }}
+                  >
+                    <option value="">{classes.filter((c) => c.extra).length} more…</option>
+                    {classes.filter((c) => c.extra).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             )}
 
@@ -737,6 +767,11 @@ export function CreateCharacter({
             {/* A shipped SRD list is nine long; an imported one is six hundred.
                 The filter appears only when the list is long enough to need
                 it, so the common case stays a single control. */}
+            {hiddenRaces > 0 || homebrew ? (
+              <div className="row" style={{ marginBottom: 10 }}>
+                <HomebrewToggle on={homebrew} hidden={hiddenRaces} onChange={setHomebrew} />
+              </div>
+            ) : null}
             {races.length > 20 && (
               <input
                 value={raceFilter}
@@ -1007,6 +1042,11 @@ export function CreateCharacter({
             {/* Imported backgrounds fill in the name and the skills; the
                 custom route stays underneath, because a table invents one
                 more often than it looks one up. */}
+            {(hiddenBackgrounds > 0 || homebrew) && (
+              <div className="row" style={{ marginBottom: 10 }}>
+                <HomebrewToggle on={homebrew} hidden={hiddenBackgrounds} onChange={setHomebrew} />
+              </div>
+            )}
             {backgrounds.length > 0 && (
               <>
                 <input

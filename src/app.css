@@ -1321,3 +1321,24 @@ html, body { overscroll-behavior-y: none; }
 .rv-abils em { display: block; font-family: var(--mono); font-size: 0.62rem; font-style: normal; color: var(--unharmed); }
 .rv-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-top: 14px; }
 .rv-cols p { margin: 4px 0 0; font-size: 0.86rem; color: var(--ink-dim); text-transform: capitalize; }
+
+/* ---- one switch for other people's material ---- */
+.hb-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 11px; border-radius: 999px;
+  border: 1px solid var(--rule); background: transparent;
+  color: var(--muted); font-family: var(--mono);
+  font-size: 0.58rem; letter-spacing: 0.09em; text-transform: uppercase;
+}
+.hb-toggle i {
+  width: 22px; height: 12px; border-radius: 999px; flex: 0 0 auto;
+  border: 1px solid var(--rule); background: var(--ground); position: relative;
+}
+.hb-toggle i::after {
+  content: ""; position: absolute; top: 1px; left: 1px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--faint);
+  transition: left 0.12s, background 0.12s;
+}
+.hb-toggle.on { color: var(--ink-dim); border-color: var(--steel); }
+.hb-toggle.on i { border-color: var(--steel); }
+.hb-toggle.on i::after { left: 11px; background: var(--steel); }

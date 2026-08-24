@@ -65,8 +65,14 @@ await atStep(page, "Class");
 ok("and how much it asks of you",
   await page.locator(".klass").first().locator(".kcx i.f").count() > 0, true);
 
+/* Other people's classes are behind the switch, not gone — this suite is
+   about what a shipped compendium BRINGS, so it asks for them. */
+const hbToggle = page.getByRole("button", { name: "Show homebrew and third-party content" });
+ok("and the rest are behind a switch rather than in the list", await hbToggle.count(), 1);
+await hbToggle.first().click();
+await page.waitForTimeout(600);
 const extra = (await page.locator('select[aria-label="Class"] option').allInnerTexts()).slice(1);
-ok("the compendium's are underneath", extra.length > 40, true);
+ok("which brings them", extra.length > 40, true);
 const classNames = [...core, ...extra];
 ok("and none is listed twice",
   new Set(classNames.map((n) => n.toLowerCase())).size, classNames.length);

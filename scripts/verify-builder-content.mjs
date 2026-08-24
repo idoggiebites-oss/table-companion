@@ -48,6 +48,14 @@ await page.waitForSelector(".klass-cards", { timeout: 20000 });
 const raceCount = async () => {
   // The rail only exists once the builder is open; race is its own step.
   await atStep(page, "Race");
+  /* This suite is about what an import BRINGS, so it counts the whole list.
+     The builder hides other people's material until it is asked for — see
+     verify-homebrew-toggle — so ask for it. */
+  const toggle = page.getByRole("button", { name: "Show homebrew and third-party content" });
+  if ((await toggle.count()) && !/homebrew shown/i.test(await toggle.first().innerText())) {
+    await toggle.first().click();
+    await page.waitForTimeout(500);
+  }
   return (await page.locator('select[aria-label="Race"] option').count()) - 1;
 };
 // A deployment built WITHOUT a compendium ships nine SRD races; one built

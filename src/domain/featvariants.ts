@@ -21,6 +21,7 @@
  */
 
 import { ABILITIES, type Ability } from "./abilities.js";
+import { isAxis, nameMarks, sourceMark } from "./marks.js";
 
 const ABILITY_BY_NAME: Record<string, Ability> = {
   strength: "str", dexterity: "dex", constitution: "con",
@@ -33,35 +34,14 @@ const DAMAGE_TYPES = [
 ];
 
 /** The axes a feat is legitimately split along. */
-export function isVariantAxis(mark: string): boolean {
-  const m = mark.trim().toLowerCase();
-  return (
-    m in ABILITY_BY_NAME ||
-    DAMAGE_TYPES.includes(m) ||
-    m === "proficient" ||
-    m === "proficient in both"
-  );
-}
+export const isVariantAxis = isAxis;
 
 /**
- * Every parenthetical in the name, in order.
- *
- * A feat name can carry two — "Aereni Halflife (Wisdom) (TP)" — and 248 of
- * them do. Reading only the first said the entry was a variant of something
- * core; reading only the last said it was homebrew. Both are true of
- * different halves of the same name, so both get read.
+ * The provenance marker, or null. The rule is shared with every other list —
+ * see marks.ts — because "is this somebody else's material" is one question
+ * however it is asked.
  */
-function marks(name: string): string[] {
-  return [...(name ?? "").matchAll(/\(([^()]{1,30})\)/g)].map((m) => m[1]!);
-}
-
-/**
- * The provenance marker, or null — the same question `nameMark` answers for
- * spells, minus the parentheses that are a choice rather than a source.
- */
-export function featMark(name: string): string | null {
-  return marks(name).find((m) => !isVariantAxis(m)) ?? null;
-}
+export const featMark = sourceMark;
 
 /** The feat's own name, with any variant axis taken off the end. */
 export function baseName(name: string): string {
@@ -77,7 +57,7 @@ export function baseName(name: string): string {
 
 /** The ability a variant names, when it names one. */
 export function variantAbility(name: string): Ability | null {
-  for (const m of marks(name)) {
+  for (const m of nameMarks(name)) {
     const hit = ABILITY_BY_NAME[m.trim().toLowerCase()];
     if (hit) return hit;
   }
