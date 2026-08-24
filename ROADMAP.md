@@ -53,8 +53,6 @@ Ordered by how many characters meet them.
    3** — build at 1, level to 3, and nothing prompts you. It does not say
    which **spells** you learn or name the **features** you gained. Every
    character meets this.
-2. **You cannot get the character out.** *Creation & Progression.* Import
-   exists; export does not. No printable sheet, no file, no link.
 7. **Nothing about who the character is.** *Guidance.* No alignment, ideals,
    bonds, flaws, appearance or backstory. Mechanically irrelevant, and the
    part that makes a build somebody's character rather than a stat block.
@@ -65,6 +63,13 @@ Ordered by how many characters meet them.
    rather than closing a gap in one.
 
 ## Parked, on purpose
+
+- **Export.** Import exists; export does not. Parked with the decision still
+  open, because the three forms are different work and only one is small:
+  a printable sheet (smallest), Fight Club XML that round-trips back in
+  (medium, and the import side already exists to test against), or a share
+  link (medium, and a full spell list raises a size question). Nothing else
+  in the module depends on it.
 
 - **Reach, range and cover.** Needs positions, and the positions are on the
   table. The DM says these out loud; the app states what it can see and never

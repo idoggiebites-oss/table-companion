@@ -100,7 +100,7 @@ Contested shoves carried across when only half the contest is knowable.
 
 # III. The character
 
-## 7. Creation & Progression — *player* · **Working**
+## 7. Creation & Progression — *player* · **Solid**
 
 Class first, then race, background, abilities, skills, subclass, spells, feats
 and equipment — at level 1 or joining mid-campaign at any level, with
@@ -111,8 +111,12 @@ or feat, and subclass choices read out of the compendium.
 `classes-from-compendium.ts` `CreateCharacter.tsx` `LevelUp.tsx` `FeatPick.tsx`
 · suites: `creation` `level` `progression` `feats` `builder-content`
 
-**Weakest point:** two gaps. Languages and tool proficiencies are parsed and
-then dropped. Multiclassing cannot be built or levelled, only imported.
+**Weakest point:** nothing mechanical. Everything a character has is asked
+for — languages, tools, feats and their own choices, subclasses, racial
+ability choices, a level-one feat, trait-granted spells, senses, identity, and
+multiclassing at creation as well as at the table. What is missing is a way to
+get the character back OUT: no printable sheet, no file, no link. That is
+parked with the decision open rather than forgotten.
 
 ## 8. The Sheet — *player* · **Solid**
 
@@ -181,7 +185,7 @@ Nine of twelve are solid. Every gap in the app right now sits in one of four:
 
 | Module | Gap |
 |---|---|
-| Creation & Progression | languages and tools; multiclassing |
+| Creation & Progression | export — parked, decision open |
 | Spellcasting | 4MB loaded at the worst moment |
 | Guidance | nothing between sessions |
 | Content | provenance is a trap for the next list added |
