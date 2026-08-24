@@ -59,9 +59,6 @@ Ordered by how many characters meet them.
    BUILDING one from scratch: the builder still starts you in one class.
 3. **You cannot get the character out.** *Creation & Progression.* Import
    exists; export does not. No printable sheet, no file, no link.
-4. **Trait-granted spells go nowhere.** *Spellcasting.* A Drow's Faerie Fire,
-   a Tiefling's Thaumaturgy — the trait is shown, the spell never reaches the
-   spell list.
 7. **Nothing about who the character is.** *Guidance.* No alignment, ideals,
    bonds, flaws, appearance or backstory. Mechanically irrelevant, and the
    part that makes a build somebody's character rather than a stat block.

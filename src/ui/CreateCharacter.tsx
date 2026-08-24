@@ -36,6 +36,7 @@ import {
 import { effectsOf } from "../domain/featvariants.js";
 import { sensesFrom } from "../domain/senses.js";
 import { freeBonusFrom, freeSkillsFrom, grantsFeatFrom } from "../domain/races.js";
+import { hasInnate, innateAt, innateFrom } from "../domain/innate.js";
 import { isCore } from "../domain/marks.js";
 import { useHomebrew } from "./useHomebrew.js";
 import { HomebrewToggle } from "./HomebrewToggle.js";
@@ -255,6 +256,25 @@ export function CreateCharacter({
    * arrived two points short of the book — on the one screen whose whole job
    * is showing consequences.
    */
+  /*
+   * Spells the race hands over. A tiefling knows Thaumaturgy and a drow knows
+   * Dancing Lights; the trait said so and the spell never reached the spell
+   * list, so they arrived unable to cast the one thing their race is known
+   * for.
+   *
+   * Matched against the spellbook by name, because the trait writes "faerie
+   * fire" and the file writes "Faerie Fire" — and a spell this app cannot
+   * find is not added rather than invented.
+   */
+  const innate = useMemo(() => innateFrom(race?.traits), [race]);
+  const innateSpells = useMemo(() => {
+    if (book.length === 0) return [];
+    const byName = new Map(book.map((sp) => [sp.name.toLowerCase(), sp]));
+    return innateAt(innate, level)
+      .map((g) => byName.get(g.name.toLowerCase()))
+      .filter((sp): sp is CompendiumSpell => sp !== undefined);
+  }, [innate, book, level]);
+
   const freeBonus = useMemo(() => freeBonusFrom(race?.traits), [race]);
   const freeSkills = useMemo(() => freeSkillsFrom(race?.traits), [race]);
   const offersFeat = useMemo(() => grantsFeatFrom(race?.traits), [race]);
@@ -932,6 +952,34 @@ export function CreateCharacter({
               * what the book says — on the one screen whose whole job is
               * showing consequences.
               */}
+            {/* What the race casts. Stated where it is granted, because a
+                spell appearing on the sheet from nowhere is a mystery. */}
+            {race && hasInnate(innate) && (
+              <div className="cnt" style={{ marginTop: 16, display: "block" }}>
+                <span className="label">{race.name} casts</span>
+                <p className="cr-note" style={{ margin: "6px 0 0" }}>
+                  {innateAt(innate, level).map((g) => g.name).join(", ") || "nothing yet"}
+                  {innate.spells.some((g) => g.level > level) && (
+                    <>
+                      {" · later: "}
+                      {innate.spells
+                        .filter((g) => g.level > level)
+                        .map((g) => `${g.name} at ${g.level}`)
+                        .join(", ")}
+                    </>
+                  )}
+                  {innate.choices.length > 0 && (
+                    <>
+                      {" · and "}
+                      {innate.choices
+                        .map((c) => `${c.count} ${c.list} cantrip${c.count === 1 ? "" : "s"} of your choice, under Spells`)
+                        .join("; ")}
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+
             {race && freeBonus && (
               <>
                 <div className="cnt" style={{ marginTop: 16 }}>
@@ -1922,7 +1970,26 @@ export function CreateCharacter({
             <div className="row" style={{ marginTop: 14 }}>
               <button
                 disabled={gaps.length > 0 || !choices}
-                onClick={() => choices && onCreate({ base: assemble(choices), deltas: [] }, { ...starting, spells: chosenSpells })}
+                onClick={() =>
+                  choices &&
+                  onCreate(
+                    { base: assemble(choices), deltas: [] },
+                    {
+                      ...starting,
+                      /*
+                       * What the race gave, alongside what the class chose.
+                       * Deduped by id — a high elf whose free cantrip is one
+                       * their class also offers should know it once.
+                       */
+                      spells: [
+                        ...chosenSpells,
+                        ...innateSpells
+                          .filter((sp) => !chosenSpells.some((x) => x.id === sp.id))
+                          .map((sp) => toKnown(sp)),
+                      ],
+                    },
+                  )
+                }
               >
                 Create character
               </button>
