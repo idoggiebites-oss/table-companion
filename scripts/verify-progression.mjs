@@ -18,7 +18,7 @@ const ok = (label, got, want) => {
 /* A level now asks for what it opens — a subclass, the spells it grants —
    before the hit-point roll is offered. Answer whatever is there. */
 const answerWhatTheLevelOpens = async (page) => {
-  for (const chips of await page.locator(".lv-choice .chips").all()) {
+  for (const chips of await page.locator(".lv-choice .picks").all()) {
     const first = chips.locator("button").first();
     if (await first.count()) { await first.click(); await page.waitForTimeout(300); }
   }

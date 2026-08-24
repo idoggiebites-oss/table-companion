@@ -32,6 +32,14 @@
   --faint: #4c554f;
 
   --steel: #6e8fa8;
+  /*
+   * Warm accent, for the things you are about to COMMIT to — a confirm, the
+   * step you are on, the frame around a decision. Deliberately not used for
+   * health or damage: those colours mean something, and a gold that also
+   * meant "fine" would break them.
+   */
+  --gold: #c9a227;
+  --gold-dim: #8a7220;
 
   /* Reserved ramp — never stands in for a category or a creature. */
   --unharmed: #4fa97a;
@@ -44,6 +52,13 @@
   --conc: #9887c9;
 
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /*
+   * A stack rather than a download: no webfont means nothing to block, fail,
+   * or add to a 30MB payload. Headings only — the numbers stay mono, because
+   * a sheet is read in columns.
+   */
+  --display: "Iowan Old Style", "Hoefler Text", "Palatino Linotype", Palatino,
+    Georgia, serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   color-scheme: dark;
@@ -908,13 +923,22 @@ html, body { overscroll-behavior-y: none; }
 .prog-acts { border-top: 0; }
 
 /* ---- level up ---- */
-.lv { border-color: var(--steel); }
+/* The level-up is a decision, so it carries the accent and the flourish. */
+.lv { border-color: var(--gold-dim); position: relative; }
+.lv::before, .lv::after {
+  content: ""; position: absolute; width: 11px; height: 11px;
+  border: 1px solid var(--gold); opacity: 0.5; pointer-events: none;
+}
+.lv::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
+.lv::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
 .lv-head { padding: 18px 16px 14px; border-bottom: 1px solid var(--rule); }
 .lv-k {
   display: block; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.16em; font-size: 0.62rem; color: var(--steel);
+  letter-spacing: 0.16em; font-size: 0.62rem; color: var(--gold);
 }
+/* A name, not a label — so it wears the display face. */
 .lv-n {
+  font-family: var(--display); letter-spacing: -0.005em; text-transform: none;
   display: block; font-weight: 500; text-transform: uppercase;
   letter-spacing: 0.13em; font-size: 1.4rem; color: #fff; margin-top: 9px;
 }
@@ -1188,7 +1212,10 @@ html, body { overscroll-behavior-y: none; }
   color: var(--ink-dim);
 }
 .kbody { display: block; min-width: 0; }
-.klass .nm { display: block; color: var(--ink); font-size: 0.98rem; }
+.klass .nm {
+  display: block; color: var(--ink); font-size: 1.02rem;
+  font-family: var(--display); letter-spacing: -0.005em;
+}
 .kdesc { display: block; margin-top: 3px; font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
 .ktags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
 .ktag {
@@ -1309,13 +1336,24 @@ html, body { overscroll-behavior-y: none; }
 }
 .cr-node.done .cr-dot { border-color: var(--unharmed); color: var(--unharmed); }
 .cr-node.on { border-color: var(--rule); background: var(--raised); color: var(--ink); }
-.cr-node.on .cr-dot { border-color: var(--steel); color: var(--ink); }
+/* Gold marks the step you are ON — the decision in front of you. */
+.cr-node.on .cr-dot { border-color: var(--gold); color: var(--gold); }
 
 .cr-nav { display: flex; gap: 8px; margin-top: 12px; }
 .cr-nav button { flex: 0 0 auto; }
-.cr-nav .cr-on { flex: 1; }
+/* And the button that commits to it. */
+.cr-nav .cr-on { flex: 1; border-color: var(--gold-dim); color: var(--gold); }
 
 /* ---- the review: a character, not a form you filled in ---- */
+/* A drawn flourish: ornament without an image to ship. */
+.cr-review { position: relative; }
+.cr-review::before, .cr-review::after {
+  content: ""; position: absolute; width: 11px; height: 11px;
+  border: 1px solid var(--gold); opacity: 0.5; pointer-events: none;
+}
+.cr-review::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
+.cr-review::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
+.cr-review .rv-nm { font-family: var(--display); text-transform: none; }
 .cr-review .rv-who { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
 .rv-crest {
   width: 44px; height: 44px; flex: 0 0 auto; border-radius: 10px;
@@ -1412,3 +1450,39 @@ html, body { overscroll-behavior-y: none; }
   padding: 8px 0; border-top: 1px solid var(--rule);
 }
 .mc-row .nm { flex: 1; color: var(--ink-dim); text-transform: capitalize; }
+
+/* ---- a level-up is a diff, so show the diff ---- */
+.ba {
+  display: grid; grid-template-columns: 1fr 22px 1fr;
+  align-items: stretch; gap: 6px; margin: 0 0 14px;
+}
+.ba-col {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 11px; border-radius: 8px;
+  background: var(--raised); border: 1px solid var(--rule);
+}
+.ba-col.to { border-color: var(--gold-dim); }
+.ba-r {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-size: 0.78rem; color: var(--muted);
+}
+.ba-r > span:first-child { white-space: nowrap; }
+.ba-r b {
+  font-family: var(--mono); font-size: 0.82rem; color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+/* Only what actually moved is lit. A screen where everything is highlighted
+   highlights nothing. */
+.ba-r.moved b { color: var(--unharmed); }
+.ba-arrow {
+  align-self: center; text-align: center;
+  color: var(--gold); font-size: 1.1rem;
+}
+
+
+.cr-review::before, .lv::before {
+  top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0;
+}
+.cr-review::after, .lv::after {
+  bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 10px 0;
+}

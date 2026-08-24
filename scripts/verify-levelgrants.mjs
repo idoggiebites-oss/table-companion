@@ -128,7 +128,7 @@ ok("by name", /martial archetype/i.test(said), true);
 ok("and the hit-point roll waits until it is answered",
   await card.locator(".lv-pad button").first().isDisabled(), true);
 
-const option = card.locator(".lv-choice .chips button").first();
+const option = card.locator(".lv-choice .pick").first();
 const chosen = await option.innerText();
 await option.click();
 await page.waitForTimeout(400);
@@ -141,6 +141,51 @@ await page.waitForTimeout(1200);
 await go(page, "sheet");
 const sheet = (await page.locator(".app").innerText()).replace(/\s+/g, " ");
 ok("and it reaches the sheet", sheet.toLowerCase().includes(chosen.toLowerCase()), true);
+
+
+// --- what changes, before what to choose ---------------------------------
+// The level above was taken, so grant another to have one to look at.
+await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForTimeout(600);
+await go(page, "party");
+await page.getByRole("button", { name: "Level the party" }).click();
+await page.waitForTimeout(900);
+await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await page.waitForTimeout(700);
+await go(page, "sheet");
+await page.getByRole("button", { name: "Resolve it" }).first().click();
+await page.waitForTimeout(1500);
+
+/* A level-up IS a diff, and the screen used to open with a class dropdown and
+   a wall of options — so the one thing a player wants to know was the one
+   thing it did not say. */
+const ba = page.locator(".ba").first();
+ok("the level says what changes, side by side", await ba.count(), 1);
+const cols = await ba.locator(".ba-col .label").allInnerTexts();
+ok("naming the level you are and the one you are becoming",
+  cols.length, 2);
+ok("which are different", cols[0] !== cols[1], true);
+ok("and lights only what actually moved",
+  (await ba.locator(".ba-r.moved").count()) > 0, true);
+ok("rather than everything, which would light nothing",
+  (await ba.locator(".ba-r.moved").count()) < (await ba.locator(".ba-r").count()), true);
+
+// --- and the wall is gone -------------------------------------------------
+/* Thirty fighting styles and forty archetypes were shown at once, and the
+   homebrew switch that reaches spells, feats, races and classes never reached
+   here — so three quarters of what was on screen was somebody else's. */
+const choice = page.locator(".lv-choice").first();
+if (await choice.count()) {
+  const cards = await choice.locator(".pick").count();
+  ok("a subclass is a handful of cards, not a wall", cards <= 6, true);
+  ok("with the rest one tap away",
+    await choice.getByRole("button", { name: /^Browse all/ }).count() > 0
+      || cards === (await choice.locator(".pick").count()), true);
+  const marked = await choice.locator(".pick .nm").allInnerTexts();
+  ok("and none of them somebody else's by default",
+    marked.some((n) => /\((?:HB|TP|UA)\)/i.test(n)), false);
+}
+await page.screenshot({ path: `${OUT}/J1-levelup-now.png`, fullPage: true });
 
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;

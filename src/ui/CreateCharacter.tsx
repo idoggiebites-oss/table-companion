@@ -1641,8 +1641,16 @@ export function CreateCharacter({
           </div>
           <div className="card-body">
             {classChoices.map((c) => {
+              /*
+               * The switch reaches here too. Three quarters of the archetypes
+               * a complete compendium offers are somebody else's, and a
+               * builder that hides them everywhere except the one dropdown
+               * where you choose your subclass is not hiding them.
+               */
               const q = (pickFilter[c.of] ?? "").trim().toLowerCase();
-              const shown = c.options.filter((o) => !q || o.name.toLowerCase().includes(q));
+              const allowed = c.options.filter((o) => homebrew || isCore(o.name));
+              const shown = (allowed.length > 0 ? allowed : c.options)
+                .filter((o) => !q || o.name.toLowerCase().includes(q));
               return (
                 <div className="chooser" key={c.of}>
                   <div className="chooser-hd" style={{ cursor: "default" }}>
@@ -1659,6 +1667,15 @@ export function CreateCharacter({
                           setPickFilter((f) => ({ ...f, [c.of]: e.target.value }))
                         }
                       />
+                    )}
+                    {c.options.length - allowed.length > 0 && (
+                      <div className="row" style={{ marginTop: 8 }}>
+                        <HomebrewToggle
+                          on={homebrew}
+                          hidden={c.options.length - allowed.length}
+                          onChange={setHomebrew}
+                        />
+                      </div>
                     )}
                     <select
                       aria-label={c.of}

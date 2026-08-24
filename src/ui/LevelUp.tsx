@@ -59,6 +59,8 @@ export function LevelUp({
   const [learned, setLearned] = useState<KnownSpell[]>([]);
   const [classList, setClassList] = useState<ClassEntry[] | null>(null);
   const [homebrew, setHomebrew] = useHomebrew();
+  /** Which choices the player asked to see in full. */
+  const [openAll, setOpenAll] = useState<Record<string, boolean>>({});
   const book = useSpellbook(true);
 
   useEffect(() => {
@@ -355,36 +357,117 @@ export function LevelUp({
             * was never asked for a subclass, learned spells nobody mentioned,
             * and gained features that appeared silently on the sheet.
             */}
+          {/*
+            * What changes, before what to choose.
+            *
+            * A level-up IS a diff, and the screen opened with a class
+            * dropdown and a wall of options — so the one thing a player
+            * actually wants to know, "what do I get", was the one thing it
+            * did not say. Both rows are already in the class table; only the
+            * arithmetic between them is new.
+            */}
+          {row && (
+            <div className="ba">
+              <div className="ba-col">
+                <span className="label">{classId} {nextLevel}</span>
+                <span className="ba-r"><span>Hit points</span><b>{build.maxHp}</b></span>
+                <span className="ba-r">
+                  <span>Proficiency</span><b>{formatModifier(previous?.profBonus ?? build.proficiencyBonus)}</b>
+                </span>
+                {(previous?.slots ?? []).some((n) => n > 0) && (
+                  <span className="ba-r">
+                    <span>Slots</span>
+                    <b>{(previous?.slots ?? []).filter((n) => n > 0).join("/")}</b>
+                  </span>
+                )}
+              </div>
+              <span className="ba-arrow" aria-hidden="true">›</span>
+              <div className="ba-col to">
+                <span className="label">{classId} {nextLevel + 1}</span>
+                {/* They have not rolled yet, so the average is the only
+                    honest number to show — and it is the one most people
+                    take. */}
+                <span className="ba-r moved">
+                  <span>Hit points</span><b>+{average} avg</b>
+                </span>
+                <span className={`ba-r${(row.profBonus ?? 0) !== (previous?.profBonus ?? 0) ? " moved" : ""}`}>
+                  <span>Proficiency</span><b>{formatModifier(row.profBonus)}</b>
+                </span>
+                {row.slots.some((n) => n > 0) && (
+                  <span
+                    className={`ba-r${
+                      row.slots.join("/") !== (previous?.slots ?? []).join("/") ? " moved" : ""
+                    }`}
+                  >
+                    <span>Slots</span><b>{row.slots.filter((n) => n > 0).join("/")}</b>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {gained.length > 0 && (
             <p className="lv-gains">
               <span className="label">You gain</span> {gained.join(" · ")}
             </p>
           )}
 
-          {opening.map((c) => (
-            <div className="lv-choice" key={c.of}>
-              <span className="label">{c.of}</span>
-              <div className="chips">
-                {c.options.map((o) => (
-                  <button
-                    key={o.name}
-                    className={`chip${pick[c.of] === o.name ? " on" : ""}`}
-                    aria-pressed={pick[c.of] === o.name}
-                    aria-label={`${c.of}: ${o.name}`}
-                    onClick={() => setPick({ ...pick, [c.of]: o.name })}
-                  >
-                    {o.name}
-                  </button>
-                ))}
+          {/*
+            * A choice, not a wall.
+            *
+            * This was thirty fighting styles and forty archetypes as chips,
+            * every one of them shown at once — and the homebrew switch that
+            * reaches spells, feats, races and classes never reached here, so
+            * three quarters of what was on screen was somebody else's. The
+            * game's own are cards; everything else is behind a tap.
+            */}
+          {opening.map((c) => {
+            const core = c.options.filter((o) => isCore(o.name));
+            const shown = (homebrew || core.length === 0 ? c.options : core)
+              .slice(0, openAll[c.of] ? 200 : 6);
+            const hidden = (homebrew ? c.options.length : core.length) - shown.length;
+            const marked = c.options.length - core.length;
+            return (
+              <div className="lv-choice" key={c.of}>
+                <span className="label">{c.of}</span>
+                <div className="picks">
+                  {shown.map((o) => (
+                    <button
+                      key={o.name}
+                      className={`pick${pick[c.of] === o.name ? " on" : ""}`}
+                      aria-pressed={pick[c.of] === o.name}
+                      aria-label={`${c.of}: ${o.name}`}
+                      onClick={() => setPick({ ...pick, [c.of]: o.name })}
+                    >
+                      <span className="nm">{o.name}</span>
+                      {o.text && (
+                        <span className="faint">{o.text.slice(0, 90)}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="row" style={{ marginTop: 8 }}>
+                  {hidden > 0 && (
+                    <button
+                      aria-label={`Browse all ${c.of}`}
+                      onClick={() => setOpenAll({ ...openAll, [c.of]: !openAll[c.of] })}
+                    >
+                      {openAll[c.of] ? "Show fewer" : `Browse all ${hidden + shown.length}`}
+                    </button>
+                  )}
+                  {marked > 0 && (
+                    <HomebrewToggle on={homebrew} hidden={marked} onChange={setHomebrew} />
+                  )}
+                </div>
+                {pick[c.of] && (
+                  <p className="faint" style={{ fontSize: ".82rem", margin: "8px 0 0" }}>
+                    {c.options.find((o) => o.name === pick[c.of])?.text?.slice(0, 220) ??
+                      "Chosen. The features it grants are on your sheet."}
+                  </p>
+                )}
               </div>
-              {pick[c.of] && (
-                <p className="faint" style={{ fontSize: ".82rem", margin: "6px 0 0" }}>
-                  {c.options.find((o) => o.name === pick[c.of])?.text?.slice(0, 220) ??
-                    "Chosen. The features it grants are on your sheet."}
-                </p>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {owedSpells > 0 && (
             <div className="lv-choice">

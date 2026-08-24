@@ -29,7 +29,7 @@ const go = async (page, tab) => {
   await page.waitForTimeout(300);
 };
 const answerLevel = async (page) => {
-  for (const chips of await page.locator(".lv-choice .chips").all()) {
+  for (const chips of await page.locator(".lv-choice .picks").all()) {
     const first = chips.locator("button").first();
     if (await first.count()) { await first.click(); await page.waitForTimeout(300); }
   }
