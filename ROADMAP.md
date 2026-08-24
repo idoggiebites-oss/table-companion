@@ -7,6 +7,10 @@ place to look for what exists, what is next, and what was parked on purpose.
 Kept current with the work — if a commit changes what is true here, it changes
 this file too.
 
+What the app is *for*, broken into twelve modules, is in
+[MODULES.md](MODULES.md). Everything below is ordered by which module it
+strengthens rather than by what surfaced most recently.
+
 ---
 
 ## Built
@@ -42,17 +46,22 @@ real build on two devices.
 
 Proposed order, not decided — reorder freely.
 
-1. **Languages and tool proficiencies in the builder.** Parsed out of the
-   compendium already and then dropped on the floor. The only outright gap
-   left in a character sheet.
-2. **Multiclassing.** The builder edits one class; an imported multiclass
-   character survives but cannot be built or levelled as one.
-3. **Feats that carry their own choice.** Resilient picks a save, half-feats
-   grant +1 somewhere. Recorded by name today.
-4. **Session recap.** The log holds everything that happened; nothing turns it
-   into something a table can read at the start of the next session.
-5. **Prefetch the spellbook when a fight starts.** Casting now happens in the
-   turn, so the first cast of a session can pause while 4MB arrives.
+1. **Languages and tool proficiencies in the builder.**
+   *Creation & Progression.* Parsed out of the compendium already and then
+   dropped on the floor. The only outright gap left in a character sheet.
+2. **Prefetch the spellbook when a fight starts.**
+   *Spellcasting.* Small. Casting moved into the turn, so the first cast of a
+   session can pause while 4MB arrives — at the worst possible moment.
+3. **Session recap.**
+   *Guidance.* The log holds everything that happened and nothing turns it
+   into something a table can read when they sit back down. This is the only
+   item that opens a module rather than closing a gap in one.
+4. **Multiclassing.**
+   *Creation & Progression.* The builder edits one class; an imported
+   multiclass character survives but cannot be built or levelled as one.
+5. **Feats that carry their own choice.**
+   *Creation & Progression.* Resilient picks a save, half-feats grant +1
+   somewhere. Recorded by name today.
 
 ## Parked, on purpose
 
