@@ -405,6 +405,30 @@ export function Sheet({
         </section>
       )}
 
+      {/* Nothing to roll, so it sits below what is rollable — but it was
+          missing entirely, which made a finished character mute. */}
+      {(build.languages.length > 0 || build.toolProficiencies.length > 0) && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label">Languages &amp; tools</span>
+          </div>
+          <div className="card-body prof-lists">
+            {build.languages.length > 0 && (
+              <p className="prof-line">
+                <span className="label">Speaks</span>
+                <span>{build.languages.join(", ")}</span>
+              </p>
+            )}
+            {build.toolProficiencies.length > 0 && (
+              <p className="prof-line">
+                <span className="label">Uses</span>
+                <span>{build.toolProficiencies.join(", ")}</span>
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="card">
         <div className="card-hd"><span className="label">Saving throws</span></div>
         <div className="card-body">

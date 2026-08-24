@@ -45,6 +45,8 @@ export interface DerivedClass {
   /** "4d4x10" — the only starting resource a compendium class has. */
   readonly wealth?: string;
   readonly saves: readonly Ability[];
+  /** The class's tool line, verbatim: "Thieves' Tools", "None". */
+  readonly tools?: string;
   readonly proficiencies: readonly string[];
   readonly skillChoices?: { readonly choose: number; readonly from: readonly string[] };
   readonly equipment: readonly string[];
@@ -107,6 +109,10 @@ export function deriveClass(c: CompendiumClassLike): DerivedClass {
     hitDie: c.hitDie,
     ...(c.wealth ? { wealth: c.wealth } : {}),
     saves,
+    // Kept apart from armour and weapons: a tool proficiency is something a
+    // player chooses and the sheet lists, and flattened in with the rest it
+    // was indistinguishable from "Light Armor".
+    ...(c.tools && c.tools.toLowerCase() !== "none" ? { tools: c.tools } : {}),
     proficiencies: profs,
     ...(skills.length > 0
       ? { skillChoices: { choose: Math.max(0, c.numSkills), from: skills } }

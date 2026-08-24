@@ -209,7 +209,11 @@ await b.page.locator('input[aria-label="Filter backgrounds"]').fill("Acolyte");
 await b.page.waitForTimeout(400);
 await b.page.selectOption('select[aria-label="Background"]', { label: "Acolyte" });
 await b.page.waitForTimeout(700);
-const bgText = (await b.page.locator(".card", { hasText: "Background" }).innerText()).replace(/\s+/g, " ");
+// The card, not every card that says the word — the languages step mentions
+// backgrounds too, because a background is two languages or tools.
+const bgText = (await b.page
+  .locator(".card", { has: b.page.locator('select[aria-label="Background"]') })
+  .innerText()).replace(/\s+/g, " ");
 ok("a background shows the feature it grants", /Feature: Shelter of the Faithful/i.test(bgText), true);
 
 await b.page.screenshot({ path: `${OUT}/68-builder-guidance.png`, fullPage: true });

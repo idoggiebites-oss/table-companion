@@ -63,6 +63,13 @@ export interface BuildBase {
   readonly choices?: readonly { readonly of: string; readonly name: string }[];
   readonly saveProficiencies: readonly Ability[];
   readonly skillProficiencies: readonly SkillId[];
+  /**
+   * What they speak and what they can use. Free text on purpose: a compendium
+   * ships languages the rulebook never named and tools nobody indexed, and a
+   * closed list would quietly drop a table's own content.
+   */
+  readonly languages?: readonly string[];
+  readonly toolProficiencies?: readonly string[];
   /** Max slots by spell level; index 0 is 1st level. Empty for non-casters. */
   readonly spellSlots: readonly number[];
   /** Warlock pact slots, which recharge on a short rest. */
@@ -123,6 +130,8 @@ export interface EffectiveBuild {
   readonly saveMods: Record<Ability, number>;
   readonly skillMods: Record<SkillId, number>;
   readonly passivePerception: number;
+  readonly languages: readonly string[];
+  readonly toolProficiencies: readonly string[];
   readonly spellSlots: readonly number[];
   readonly resources: readonly ResolvedResource[];
   readonly attacks: readonly ResolvedAttack[];
@@ -252,6 +261,8 @@ export function effectiveBuild(character: Character): EffectiveBuild {
     saveMods,
     skillMods,
     passivePerception: 10 + skillMods.perception,
+    languages: b.languages ?? [],
+    toolProficiencies: b.toolProficiencies ?? [],
     spellSlots: b.spellSlots,
     resources,
     attacks: b.attacks.map((a) => resolveAttack(a, abilityMods, pb)),

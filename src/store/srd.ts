@@ -59,6 +59,8 @@ export interface ClassEntry {
   readonly saves: readonly string[];
   readonly skillChoices?: { readonly choose: number; readonly from: readonly string[] };
   readonly proficiencies: readonly string[];
+  /** The tool line, kept apart from armour and weapons — a player picks these. */
+  readonly tools?: string;
   readonly equipment: readonly string[];
   readonly equipmentChoices: readonly string[];
   /** Compendium classes only: starting wealth, where there is no kit. */
@@ -169,9 +171,21 @@ export function loadClasses(): Promise<ClassEntry[]> {
   ]).then(([srd, extra]) => {
     const have = new Set(srd.map((c) => c.id));
     const byName = (a: ClassEntry, b: ClassEntry) => a.name.localeCompare(b.name);
+    /*
+     * The shipped twelve win, but they were written before tool proficiencies
+     * were modelled and do not carry the line. The compendium entry of the
+     * same name does — the same rule as everywhere else here: a thinner file
+     * must not be able to delete what a richer one knew.
+     */
+    const richer = new Map(extra.map((c) => [c.id, c]));
+    const filled = srd.map((c) => {
+      const from = richer.get(c.id);
+      const tools = c.tools ?? (from ? deriveClass(from).tools : undefined);
+      return tools ? ({ ...c, tools } as ClassEntry) : c;
+    });
     // Shipped first, each half alphabetical within itself.
     return [
-      ...[...srd].sort(byName),
+      ...[...filled].sort(byName),
       ...extra
         .filter((c) => !have.has(c.id))
         .map((c) => ({ ...deriveClass(c), extra: true }) as ClassEntry)

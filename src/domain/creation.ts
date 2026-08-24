@@ -17,6 +17,7 @@ import {
   ABILITIES, abilityModifier, type Ability, type AbilityScores, type SkillId,
 } from "./abilities.js";
 import type { BuildBase } from "./build.js";
+import { gather } from "./proficiencies.js";
 import type { ClassId, DieSize } from "./resources.js";
 
 export type ScoreMethod = "array" | "pointBuy" | "rolled";
@@ -43,6 +44,7 @@ export interface BackgroundChoice {
   readonly name: string;
   readonly skills: readonly SkillId[];
   readonly tools: readonly string[];
+  readonly languages?: readonly string[];
 }
 
 export interface CreationChoices {
@@ -64,6 +66,10 @@ export interface CreationChoices {
     readonly abilities?: Partial<Record<Ability, number>>;
     readonly feat?: { readonly id: string; readonly name: string };
   }[];
+  /** Everything they ended up speaking, from every source, already merged. */
+  readonly languages?: readonly string[];
+  /** Everything they can use, likewise. */
+  readonly tools?: readonly string[];
   readonly race: RaceChoice;
   readonly klass: ClassChoice;
   readonly background: BackgroundChoice;
@@ -179,6 +185,14 @@ export function assemble(choices: CreationChoices, id = `c${Date.now().toString(
     ...(choices.picks?.length ? { choices: choices.picks } : {}),
     saveProficiencies: choices.klass.saves,
     skillProficiencies: skills,
+    // Race, class and background all hand these out, and Common arrives from
+    // more than one of them.
+    ...(gather(choices.languages, choices.background.languages).length > 0
+      ? { languages: gather(choices.languages, choices.background.languages) }
+      : {}),
+    ...(gather(choices.tools, choices.background.tools).length > 0
+      ? { toolProficiencies: gather(choices.tools, choices.background.tools) }
+      : {}),
     spellSlots: choices.spellSlots ?? choices.klass.spellSlots,
     attacks: [],
   };

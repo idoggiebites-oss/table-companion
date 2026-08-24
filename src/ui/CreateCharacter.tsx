@@ -30,6 +30,9 @@ import {
 import {
   canAfford, POINT_BUY_BUDGET, POINT_BUY_MIN, pointsSpent, STANDARD_ARRAY,
 } from "../domain/non-srd.js";
+import {
+  gather, isMundaneTool, languagesFromTrait, toolsFromClass, ALL_LANGUAGES,
+} from "../domain/proficiencies.js";
 import type { ClassId, DieSize } from "../domain/resources.js";
 import {
   loadBackgrounds, loadClasses, loadClassLevels, loadEquipment, loadFeats,
@@ -129,6 +132,8 @@ export function CreateCharacter({
   const [rolled, setRolled] = useState<number[]>([]);
   const [bgName, setBgName] = useState("");
   const [bgSkills, setBgSkills] = useState<SkillId[]>([]);
+  const [pickedLangs, setPickedLangs] = useState<string[]>([]);
+  const [pickedTools, setPickedTools] = useState<string[]>([]);
   const [bgId, setBgId] = useState("");
   const [bgFilter, setBgFilter] = useState("");
   const [backgrounds, setBackgrounds] = useState<BackgroundEntry[]>([]);
@@ -186,6 +191,30 @@ export function CreateCharacter({
   const mods = Object.fromEntries(
     ABILITIES.map((a) => [a, abilityModifier(scores[a])]),
   ) as Record<Ability, number>;
+
+  /*
+   * Languages and tools, which the builder used to ask for and then throw
+   * away — a finished character who spoke nothing and could use nothing.
+   *
+   * Read from the same places a player reads them: the race's own Languages
+   * trait, the class's tool line, and a background, which is defined as two
+   * of either.
+   */
+  const raceLangTrait = (race?.traits ?? []).find((t) => /^language/i.test(t.name));
+  const raceLangs = raceLangTrait
+    ? languagesFromTrait(raceLangTrait.desc)
+    : { known: race?.languages ?? [], choose: 0 };
+  const classTools = toolsFromClass(klass?.tools ?? "");
+  /** Race extra + class choice + a background's two, in one pool. */
+  const langPicks = raceLangs.choose;
+  const toolPicks = classTools.choose;
+  const BACKGROUND_PICKS = 2;
+  const toolOptions = useMemo(
+    () =>
+      [...new Set((gear ?? []).filter((i) => isMundaneTool(i.detail)).map((i) => i.name))]
+        .sort((a, b) => a.localeCompare(b)),
+    [gear],
+  );
 
   const table = klass && levels ? levels[klass.id] : undefined;
   const atLevel = table?.[level - 1];
@@ -356,6 +385,10 @@ export function CreateCharacter({
           background: {
             name: bgName, skills: bgSkills, tools: [],
           } satisfies BackgroundChoice,
+          // Granted and chosen, merged — Common arrives from more than one
+          // source and should appear on the sheet once.
+          languages: gather(raceLangs.known, pickedLangs),
+          tools: gather(classTools.known, pickedTools),
           baseScores,
           classSkills,
           level,
@@ -862,6 +895,106 @@ export function CreateCharacter({
               style={{ marginTop: 12 }}
               onChange={(e) => setBgName(e.target.value)}
             />
+          </div>
+        </section>
+      )}
+
+      {/*
+        * Languages and tools. The builder asked for everything else and then
+        * produced a character who spoke nothing and could use nothing — the
+        * data was read out of the compendium and dropped on the floor.
+        *
+        * What the race and class hand over is shown as given, not as a
+        * choice; only what is actually chosen is offered. A background is
+        * two of either, which is the rule and also why they share one card.
+        */}
+      {klass && race && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label">5 · Languages &amp; tools</span>
+            <span className="faint" style={{ fontSize: ".78rem" }}>
+              {pickedLangs.length + pickedTools.length} of {langPicks + toolPicks + BACKGROUND_PICKS}
+            </span>
+          </div>
+          <div className="card-body">
+            {(raceLangs.known.length > 0 || classTools.known.length > 0) && (
+              <>
+                <p className="cr-note" style={{ marginTop: 0 }}>
+                  {race.name} gives you{" "}
+                  <b>{raceLangs.known.join(", ") || "no language"}</b>
+                  {classTools.known.length > 0 && (
+                    <> and a {klass.name.toLowerCase()} can use <b>{classTools.known.join(", ")}</b></>
+                  )}.
+                </p>
+              </>
+            )}
+            {raceLangs.stated && <p className="cr-note">{raceLangs.stated}</p>}
+
+            <p className="cr-blurb" style={{ marginTop: 10 }}>
+              {langPicks + toolPicks > 0
+                ? `Your race and class leave ${langPicks + toolPicks} to choose. `
+                : ""}
+              A background is two more of either — pick whichever suits the
+              story you gave it.
+            </p>
+
+            <span className="label">Languages</span>
+            <div className="chips">
+              {ALL_LANGUAGES.filter((l) => !raceLangs.known.includes(l)).map((l) => {
+                const on = pickedLangs.includes(l);
+                const full =
+                  pickedLangs.length + pickedTools.length >= langPicks + toolPicks + BACKGROUND_PICKS;
+                return (
+                  <button
+                    key={l}
+                    className={`chip${on ? " on" : ""}`}
+                    aria-pressed={on}
+                    aria-label={`Speak ${l}`}
+                    disabled={!on && full}
+                    onClick={() =>
+                      setPickedLangs(
+                        on ? pickedLangs.filter((x) => x !== l) : [...pickedLangs, l],
+                      )
+                    }
+                  >
+                    {l}
+                  </button>
+                );
+              })}
+            </div>
+
+            <span className="label" style={{ display: "block", marginTop: 14 }}>Tools</span>
+            {classTools.stated && (
+              <p className="cr-note" style={{ marginTop: 4 }}>{classTools.stated}</p>
+            )}
+            <div className="chips">
+              {toolOptions.map((t) => {
+                const on = pickedTools.includes(t);
+                const full =
+                  pickedLangs.length + pickedTools.length >= langPicks + toolPicks + BACKGROUND_PICKS;
+                return (
+                  <button
+                    key={t}
+                    className={`chip${on ? " on" : ""}`}
+                    aria-pressed={on}
+                    aria-label={`Use ${t}`}
+                    disabled={!on && full}
+                    onClick={() =>
+                      setPickedTools(
+                        on ? pickedTools.filter((x) => x !== t) : [...pickedTools, t],
+                      )
+                    }
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+              {toolOptions.length === 0 && (
+                <p className="faint" style={{ margin: 0, fontSize: ".82rem" }}>
+                  No tools on this device to choose from.
+                </p>
+              )}
+            </div>
           </div>
         </section>
       )}

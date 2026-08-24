@@ -1117,3 +1117,8 @@ html, body { overscroll-behavior-y: none; }
    push the rest of the level-up off the screen. */
 .feat-scroll { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
 .feat-took { margin-top: 8px; }
+
+/* ---- languages and tools: nothing to roll, but it has to be there ---- */
+.prof-lists { display: flex; flex-direction: column; gap: 10px; }
+.prof-line { margin: 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.prof-line > span:last-child { color: var(--ink-dim); font-size: 0.9rem; }

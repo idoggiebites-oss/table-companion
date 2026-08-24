@@ -21,6 +21,7 @@
  * above should still produce a usable, honestly-annotated character.
  */
 
+import { ALL_LANGUAGES, gather } from "../domain/proficiencies.js";
 import { ABILITIES, SKILL_IDS, type Ability, type SkillId } from "../domain/abilities.js";
 import type { BuildBase, ClassEntry } from "../domain/build.js";
 import { classIdFrom, HIT_DIE, SPELLCASTERS } from "../domain/classes.js";
@@ -178,7 +179,9 @@ export function parseFightClubXml(xml: string, id = `fc${Date.now().toString(36)
     issues.push({
       kind: "unmapped",
       field: "proficiencies",
-      detail: `Not skills or saves, so ignored: ${[...new Set(unmapped)].join(", ")}.`,
+      detail:
+        `Kept as languages and tools rather than scored: ` +
+        `${[...new Set(unmapped)].join(", ")}.`,
     });
   }
 
@@ -186,6 +189,18 @@ export function parseFightClubXml(xml: string, id = `fc${Date.now().toString(36)
   const hpMax = Number.parseInt(text(firstChild(character, "hpMax")), 10);
   const maxHp = Number.isFinite(hpMax) && hpMax > 0 ? hpMax : 1;
   if (!Number.isFinite(hpMax)) miss("maxHp", "No <hpMax>; set to 1 — fix before playing.");
+
+  /*
+   * What was neither a skill nor a save is a language or a tool. It used to
+   * be counted and discarded with a note saying so; the sheet has somewhere
+   * to put it now, so it goes there instead.
+   */
+  const spoken = gather(
+    unmapped.filter((p) => ALL_LANGUAGES.some((l) => l.toLowerCase() === p.toLowerCase())),
+  );
+  const usable = gather(
+    unmapped.filter((p) => !ALL_LANGUAGES.some((l) => l.toLowerCase() === p.toLowerCase())),
+  );
 
   const primary = classes[0]!;
   const hitDie: DieSize = HIT_DIE[primary.classId];
@@ -227,6 +242,8 @@ export function parseFightClubXml(xml: string, id = `fc${Date.now().toString(36)
     speed: 30,
     saveProficiencies: [...saveProficiencies],
     skillProficiencies: [...skillProficiencies],
+    ...(spoken.length > 0 ? { languages: spoken } : {}),
+    ...(usable.length > 0 ? { toolProficiencies: usable } : {}),
     spellSlots: [],
     attacks: [],
   };
