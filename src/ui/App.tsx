@@ -540,6 +540,7 @@ export function App() {
                               name: "you",
                               conditions: mineState.conditions,
                               tags: myTags,
+                              senses: mine.senses,
                             },
                             target: {
                               name: target.name,

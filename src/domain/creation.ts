@@ -17,6 +17,7 @@ import {
   ABILITIES, abilityModifier, type Ability, type AbilityScores, type SkillId,
 } from "./abilities.js";
 import type { BuildBase, Identity } from "./build.js";
+import { hasSenses, type Senses } from "./senses.js";
 import { gather } from "./proficiencies.js";
 import type { ClassId, DieSize } from "./resources.js";
 
@@ -68,6 +69,8 @@ export interface CreationChoices {
     /** Resilient, and only Resilient: a save the feat made them good at. */
     readonly save?: Ability;
   }[];
+  /** What the race lets them see. */
+  readonly senses?: Senses;
   /** Who they are. Never required — a blank one is a character too. */
   readonly identity?: Identity;
   /** Everything they ended up speaking, from every source, already merged. */
@@ -193,6 +196,7 @@ export function assemble(choices: CreationChoices, id = `c${Date.now().toString(
       : {}),
     ...(choices.picks?.length ? { choices: choices.picks } : {}),
     ...(hasAny(choices.identity) ? { identity: choices.identity } : {}),
+    ...(choices.senses && hasSenses(choices.senses) ? { senses: choices.senses } : {}),
     /*
      * A feat can hand over a saving throw. Resilient is the only one in the
      * game that does, and it is the reason anybody takes it — leaving it

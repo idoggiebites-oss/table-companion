@@ -84,3 +84,54 @@ describe("what it tells you to do", () => {
     expect(describeReasons("straight", [])).toBe(null);
   });
 });
+
+describe("how much light there is", () => {
+  const seeing = (dv: number, sun = false) =>
+    ({ name: "you", conditions: [], tags: [],
+       senses: { darkvision: dv, sunlightSensitivity: sun,
+                 blindsight: 0, tremorsense: 0, truesight: 0 } }) as never;
+
+  it("changes nothing until the DM says it does", () => {
+    expect(at(who("you"), who("the goblin")).stance).toBe("straight");
+  });
+
+  it("costs ordinary eyes their roll in the dark", () => {
+    const { stance, reasons } = stanceFor({
+      attacker: who("you"), target: who("the goblin"), range: "melee", light: "dark",
+    });
+    expect(stance).toBe("disadvantage");
+    expect(reasons[0]?.because).toBe("you cannot see in the dark");
+  });
+
+  it("and dim light too", () => {
+    expect(stanceFor({
+      attacker: who("you"), target: who("the goblin"), range: "melee", light: "dim",
+    }).stance).toBe("disadvantage");
+  });
+
+  it("but a dwarf reads dim light as bright", () => {
+    // The whole reason senses are tracked: two people in one corridor rolling
+    // differently, and neither having to remember which.
+    expect(stanceFor({
+      attacker: seeing(60), target: who("the goblin"), range: "melee", light: "dim",
+    }).stance).toBe("straight");
+  });
+
+  it("while darkness is still only dim to them", () => {
+    const { stance, reasons } = stanceFor({
+      attacker: seeing(60), target: who("the goblin"), range: "melee", light: "dark",
+    });
+    expect(stance).toBe("disadvantage");
+    expect(reasons[0]?.because).toContain("you see 60 ft");
+  });
+
+  it("and a drow is the one who suffers in daylight", () => {
+    expect(stanceFor({
+      attacker: seeing(120, true), target: who("the goblin"), range: "melee", light: "bright",
+    }).stance).toBe("disadvantage");
+    // In the dark, that same drow is fine relative to everyone else.
+    expect(stanceFor({
+      attacker: seeing(120, true), target: who("the goblin"), range: "melee", light: "dim",
+    }).stance).toBe("straight");
+  });
+});

@@ -7,6 +7,7 @@
  * ability check.
  */
 
+import { describeSenses, hasSenses } from "../domain/senses.js";
 import { useMemo, useState } from "react";
 import { formatModifier, SKILLS, SKILL_IDS, type Ability } from "../domain/abilities.js";
 import { describeAttack } from "../domain/attack.js";
@@ -451,7 +452,8 @@ export function Sheet({
 
       {/* Nothing to roll, so it sits below what is rollable — but it was
           missing entirely, which made a finished character mute. */}
-      {(build.languages.length > 0 || build.toolProficiencies.length > 0) && (
+      {(build.languages.length > 0 || build.toolProficiencies.length > 0
+        || hasSenses(build.senses)) && (
         <section className="card">
           <div className="card-hd">
             <span className="label">Languages &amp; tools</span>
@@ -467,6 +469,14 @@ export function Sheet({
               <p className="prof-line">
                 <span className="label">Uses</span>
                 <span>{build.toolProficiencies.join(", ")}</span>
+              </p>
+            )}
+            {/* What they can see, which the fight will ask about the moment a
+                DM says the room is dark. */}
+            {hasSenses(build.senses) && (
+              <p className="prof-line">
+                <span className="label">Sees</span>
+                <span>{describeSenses(build.senses)}</span>
               </p>
             )}
           </div>

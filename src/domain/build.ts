@@ -10,6 +10,7 @@
  */
 
 import { hitDicePool, isMulticlass, multiclassSlots, pactMagic } from "./multiclass.js";
+import { NO_SENSES, type Senses } from "./senses.js";
 import {
   ABILITIES,
   abilityModifier,
@@ -91,6 +92,12 @@ export interface BuildBase {
    * builder asked for every number and never once asked this.
    */
   readonly identity?: Identity;
+  /**
+   * What they can see. Carried on the build rather than re-read from the race
+   * every time — an imported sheet has no race entry to read, and a table
+   * that hand-edits one should be able to say "this one has darkvision".
+   */
+  readonly senses?: Senses;
   /** Max slots by spell level; index 0 is 1st level. Empty for non-casters. */
   readonly spellSlots: readonly number[];
   /** Warlock pact slots, which recharge on a short rest. */
@@ -181,6 +188,7 @@ export interface EffectiveBuild {
   readonly languages: readonly string[];
   readonly toolProficiencies: readonly string[];
   readonly identity: Identity;
+  readonly senses: Senses;
   readonly spellSlots: readonly number[];
   readonly resources: readonly ResolvedResource[];
   readonly attacks: readonly ResolvedAttack[];
@@ -364,6 +372,7 @@ export function effectiveBuild(character: Character): EffectiveBuild {
     languages: b.languages ?? [],
     toolProficiencies: b.toolProficiencies ?? [],
     identity: b.identity ?? {},
+    senses: b.senses ?? NO_SENSES,
     spellSlots: slots,
     resources,
     attacks: b.attacks.map((a) => resolveAttack(a, abilityMods, pb)),

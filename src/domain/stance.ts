@@ -27,6 +27,7 @@
 
 import type { ConditionId } from "./edition.js";
 import type { StanceTag } from "./combat.js";
+import type { Senses } from "./senses.js";
 
 export type Stance = "advantage" | "straight" | "disadvantage";
 
@@ -42,7 +43,23 @@ export interface Roller {
   readonly name: string;
   readonly conditions: readonly ConditionId[];
   readonly tags: readonly StanceTag[];
+  /** What they can see. Absent reads as ordinary eyes. */
+  readonly senses?: Senses;
 }
+
+/**
+ * How much light there is where the fight is.
+ *
+ * The one environmental fact that changes dice for everyone at once, and the
+ * reason senses are tracked at all: a dwarf and a human standing in the same
+ * dark corridor roll differently, and neither of them should have to remember
+ * that.
+ *
+ * "bright" is the default and means nothing has been said. The DM sets the
+ * others; the app never infers them, because it does not know where anybody
+ * is standing.
+ */
+export type Light = "bright" | "dim" | "dark";
 
 export type AttackRange = "melee" | "ranged";
 
@@ -71,11 +88,13 @@ const THE = (name: string) => (name.toLowerCase() === "you" ? "you are" : `${nam
  * the rules and asymmetric in every character sheet ever printed.
  */
 export function stanceFor({
-  attacker, target, range,
+  attacker, target, range, light = "bright",
 }: {
   attacker: Roller;
   target: Roller;
   range: AttackRange;
+  /** What the DM has said about the light. Bright unless they said otherwise. */
+  light?: Light;
 }): { stance: Stance; reasons: readonly StanceReason[] } {
   const reasons: StanceReason[] = [];
   const adv = (because: string) => reasons.push({ effect: "advantage", because });
@@ -103,6 +122,27 @@ export function stanceFor({
 
   if (attacker.tags.includes("helped")) adv("someone is helping you");
   if (target.tags.includes("dodging")) dis(`${THE(target.name)} dodging`);
+
+  /*
+   * The light, which changes the dice for everybody at once and differently.
+   *
+   * Darkvision turns darkness into dim light, and dim light is lightly
+   * obscured — disadvantage on sight. So a dwarf in a dark corridor rolls
+   * straight and the human beside them rolls at disadvantage, and neither
+   * should have to remember which. Distance is not modelled: darkvision has a
+   * range and the app does not know where anyone is standing, so it reads the
+   * sense as present or absent and lets the DM say otherwise.
+   */
+  const sees = attacker.senses?.darkvision ?? 0;
+  if (light === "dark") {
+    if (sees > 0) dis(`it is dark, though you see ${sees} ft`);
+    else dis("you cannot see in the dark");
+  } else if (light === "dim" && sees === 0) {
+    dis("the light is dim");
+  }
+  if (light === "bright" && attacker.senses?.sunlightSensitivity) {
+    dis(`${THE(attacker.name)} hurt by the light`);
+  }
 
   return { stance: combine(reasons), reasons };
 }

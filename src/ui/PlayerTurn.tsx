@@ -178,6 +178,9 @@ export function PlayerTurn({
     name: "you",
     conditions: character.conditions,
     tags: self ? (combat.tags[self.id] ?? []) : [],
+    // What they can see. The DM has no light control yet; when they do, it
+    // arrives here and this already knows what to do with it.
+    ...(build ? { senses: build.senses } : {}),
   };
   const stanceAt = (target: Combatant, attack?: ResolvedAttack) =>
     stanceFor({

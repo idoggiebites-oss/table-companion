@@ -88,6 +88,12 @@ Ordered by how many characters meet them.
 
 ## Noted, for when combat comes round again
 
+- **The DM's light control.** Bright / dim / dark on the fight, which is the
+  point of tracking senses at all. The domain already takes a `Light` and
+  works out who suffers — a dwarf reads dim as bright, a drow suffers in
+  daylight — and every character carries what they can see. What is missing is
+  the DM's switch and putting the light on the combat state so it syncs.
+
 - **Damage is not halved on a successful save.** Sacred Flame hands the DM the
   full roll and they apply what they rule; there is no "half on save" control
   on the claim. A small addition to the queue, and the only place the app

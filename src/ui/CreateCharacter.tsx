@@ -34,6 +34,7 @@ import {
   gather, isMundaneTool, languagesFromTrait, toolsFromClass, ALL_LANGUAGES,
 } from "../domain/proficiencies.js";
 import { effectsOf } from "../domain/featvariants.js";
+import { sensesFrom } from "../domain/senses.js";
 import { isCore } from "../domain/marks.js";
 import { useHomebrew } from "./useHomebrew.js";
 import { HomebrewToggle } from "./HomebrewToggle.js";
@@ -455,6 +456,8 @@ export function CreateCharacter({
           // Granted and chosen, merged — Common arrives from more than one
           // source and should appear on the sheet once.
           identity,
+          // Read off the race's own traits — see senses.ts.
+          senses: sensesFrom(race?.traits),
           languages: gather(raceLangs.known, pickedLangs),
           tools: gather(classTools.known, pickedTools),
           baseScores,
