@@ -44,41 +44,32 @@ real build on two devices.
 
 ## Next
 
-Judged as a character builder rather than as a session companion — a
-different bar, and the gaps are not where this list used to say they were.
-Ordered by how many characters meet them.
+The builder module is done bar its export, which is parked. What is left is
+spread across the other modules.
 
-1. **Level-up barely levels you up.** *Creation & Progression.* It asks for
-   hit points and an improvement and stops. It never asks for a **subclass at
-   3** — build at 1, level to 3, and nothing prompts you. It does not say
-   which **spells** you learn or name the **features** you gained. Every
-   character meets this.
-7. **Nothing about who the character is.** *Guidance.* No alignment, ideals,
-   bonds, flaws, appearance or backstory. Mechanically irrelevant, and the
-   part that makes a build somebody's character rather than a stat block.
-8. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
-   Casting moved into the turn, so the first cast of a session can pause while
-   4MB arrives.
-9. **Session recap.** *Guidance.* The only item here that opens a module
-   rather than closing a gap in one.
+1. **The DM's light control.** *Encounter · Guidance.* Bright / dim / dark on
+   the fight. The domain already takes a `Light` and works out who suffers,
+   and every character carries what they can see — what is missing is the
+   switch and putting the light on the combat state so it syncs.
+2. **Half damage on a successful save.** *Adjudication.* The only place the
+   app hands the DM arithmetic it could do itself.
+3. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
+   Casting happens in the turn now, so the first cast of a session can pause
+   while 4MB arrives.
+4. **Long lists are still chip walls in places.** *Guidance.* The story step is
+   3.6 screens tall with 86 chips. Tap targets are fixed; the control is still
+   wrong for 53 tools. The searchable scroll-box the spell and monster pickers
+   use is the answer.
+5. **Session recap.** *Guidance.* The log holds everything that happened and
+   nothing turns it into something a table can read when they sit back down.
+   The only item here that opens a module rather than closing a gap.
 
-## Parked, on purpose
+## Done since this list was written
 
-- **Export.** Import exists; export does not. Parked with the decision still
-  open, because the three forms are different work and only one is small:
-  a printable sheet (smallest), Fight Club XML that round-trips back in
-  (medium, and the import side already exists to test against), or a share
-  link (medium, and a full spell list raises a size question). Nothing else
-  in the module depends on it.
-
-- **Reach, range and cover.** Needs positions, and the positions are on the
-  table. The DM says these out loud; the app states what it can see and never
-  contradicts them.
-- **Rolling dice.** It asks for the number. This is the point, not a gap.
-- **Fillable-PDF and D&D Beyond import.** Fight Club XML is in; the others are
-  adapters with no demand behind them yet.
-- **A passphrase on the deployment.** Built, reverted, left dormant — the site
-  does not need to be private.
+Level-up completeness, identity, languages and tools, feats with their own
+choices, racial ability choices, a level-one feat, trait-granted spells,
+senses, multiclassing at creation and at the table, spell roles, the homebrew
+switch, the monster piles, and the DM's spell lookup.
 
 ## Noted, for when combat comes round again
 
