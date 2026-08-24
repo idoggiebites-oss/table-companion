@@ -253,84 +253,92 @@ export function PlayerTurn({
             <Pips who={who} character={character} kinds={ECONOMY} append={append} />
             {self && <Movement combat={combat} combatant={self} append={append} />}
             {picking === "menu" ? (
-              <div className="menu">
+              <div className="hotbar-wrap">
                 {/*
-                  * Names and costs only, until you point at one. Eleven
-                  * explanations at once is a rulebook, and a rulebook is what
-                  * a new player already could not read — the whole list has
-                  * to fit on the screen for the menu to be the teaching.
+                  * A grid of marks, not twelve rows of words.
+                  *
+                  * The old menu was a list you read: every option a sentence,
+                  * and a second sentence when you pointed at one. That is the
+                  * right shape for the first session and the wrong one for
+                  * every session after, when the turn is something you aim at
+                  * rather than something you study.
+                  *
+                  * Every mark keeps its name. An unlabelled icon is its own
+                  * kind of unreadable, and nobody here has played a session
+                  * yet — the labels come off when somebody says they can.
                   */}
-                {STANDARD_ACTIONS.map((a) => {
+                <div className="hotbar">
+                  {STANDARD_ACTIONS.map((a) => {
+                    const why = blockedBecause(
+                      a, character.economy, attacks.length > 0, castable.length > 0,
+                    );
+                    return (
+                      <button
+                        key={a.id}
+                        className={`hot${looking === a.id ? " on" : ""}`}
+                        data-cost={a.cost}
+                        disabled={why !== null}
+                        aria-label={a.name}
+                        title={why ?? a.what}
+                        onClick={() => setLooking(looking === a.id ? null : a.id)}
+                      >
+                        <span className="hg">{a.glyph}</span>
+                        <span className="ht">{a.name}</span>
+                        <i />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* One explanation, for the one you pointed at. */}
+                {looking && (() => {
+                  const a = STANDARD_ACTIONS.find((x) => x.id === looking)!;
                   const why = blockedBecause(
                     a, character.economy, attacks.length > 0, castable.length > 0,
                   );
-                  const shown = looking === a.id;
                   return (
-                    <div className={`menu-row${why ? " off" : ""}`} key={a.id}>
-                      <button
-                        className="menu-hd"
-                        aria-expanded={shown}
-                        aria-label={a.name}
-                        onClick={() => setLooking(shown ? null : a.id)}
-                      >
-                        <span className="nm">{a.name}</span>
-                        <span className="cost">{a.cost}</span>
-                      </button>
-                      {shown && (
-                        <div className="menu-more">
-                          <p className="what">{why ?? a.what}</p>
-                          {!why && a.then && <p className="then">{a.then}</p>}
-                          {!why && (
-                            <button
-                              className="menu-take"
-                              onClick={() => {
-                                if (a.id === "attack") return setPicking("attack");
-                                // Casting has its own screen; the menu's job
-                                // is to say it exists and take you there.
-                                if (a.id === "cast") return setPicking("cast");
-                                /*
-                                 * Actions that need somebody or something
-                                 * named get their own step. The rest used to
-                                 * all end here — the pip moved, a sentence
-                                 * appeared, and nothing in the app was any
-                                 * different afterwards, which is not what
-                                 * "you took the Dodge action" means.
-                                 */
-                                if (a.id === "help") return setPicking("help");
-                                if (a.id === "shove") return setPicking("shove");
-                                if (a.id === "ready") return setPicking("ready");
+                    <div className="hot-say">
+                      <div className="row" style={{ justifyContent: "space-between" }}>
+                        <span className="label">{a.name} · {a.cost}</span>
+                        {!why && (
+                          <button
+                            className="menu-take"
+                            onClick={() => {
+                              if (a.id === "attack") return setPicking("attack");
+                              if (a.id === "cast") return setPicking("cast");
+                              if (a.id === "help") return setPicking("help");
+                              if (a.id === "shove") return setPicking("shove");
+                              if (a.id === "ready") return setPicking("ready");
 
-                                append({ type: "economySpent", who, kind: a.cost });
-                                if (a.id === "dash" && self?.speed) {
-                                  append({
-                                    type: "movementSpent",
-                                    combatantId: self.id,
-                                    feet: -self.speed,
-                                  });
-                                }
-                                // Dodge and Hide change how the dice fall for
-                                // somebody — so they say so, rather than
-                                // leaving it to be remembered.
-                                if (self && (a.id === "dodge" || a.id === "hide")) {
-                                  append({
-                                    type: "stanceTagAdded",
-                                    combatantId: self.id,
-                                    tag: a.id === "dodge" ? "dodging" : "hidden",
-                                  });
-                                }
-                                setTook(a.id);
-                                setLooking(null);
-                                setPicking(null);
-                              }}
-                            >
-                              Do it
-                            </button>
-                          )}
-                        </div>
-                      )}
+                              append({ type: "economySpent", who, kind: a.cost });
+                              if (a.id === "dash" && self?.speed) {
+                                append({
+                                  type: "movementSpent",
+                                  combatantId: self.id,
+                                  feet: -self.speed,
+                                });
+                              }
+                              if (self && (a.id === "dodge" || a.id === "hide")) {
+                                append({
+                                  type: "stanceTagAdded",
+                                  combatantId: self.id,
+                                  tag: a.id === "dodge" ? "dodging" : "hidden",
+                                });
+                              }
+                              setTook(a.id);
+                              setLooking(null);
+                              setPicking(null);
+                            }}
+                          >
+                            Do it
+                          </button>
+                        )}
+                      </div>
+                      <p className="what">{why ?? a.what}</p>
+                      {!why && a.then && <p className="then">{a.then}</p>}
                     </div>
                   );
-                })}
+                })()}
                 <button onClick={() => setPicking(null)}>Back</button>
               </div>
             ) : picking === "help" ? (

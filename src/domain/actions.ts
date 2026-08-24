@@ -29,12 +29,22 @@ export interface StandardAction {
   readonly whenArmed?: boolean;
   /** Only for someone who has spells; the rest should not be taught them. */
   readonly whenCaster?: boolean;
+  /**
+   * A mark for the hotbar. Not decoration: twelve rows of words is a list you
+   * read, and a grid of marks is something you aim at — which is what a turn
+   * actually is after the first session.
+   *
+   * Every one keeps its name underneath. An unlabelled icon is its own kind
+   * of unreadable, and nobody at this table has played a session yet.
+   */
+  readonly glyph: string;
 }
 
 export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "attack",
     name: "Attack",
+    glyph: "\u2694",
     cost: "action",
     what: "Swing at something, or shoot it.",
     whenArmed: true,
@@ -42,6 +52,7 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "cast",
     name: "Cast a spell",
+    glyph: "\u2726",
     cost: "action",
     what: "Most spells cost your action. A few are a bonus action, and the list says which.",
     then: "Opens your spells.",
@@ -50,6 +61,7 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "dodge",
     name: "Dodge",
+    glyph: "\u26E8",
     cost: "action",
     what: "Attacks against you have disadvantage until your next turn.",
     then: "For when you are hurt and cannot get away.",
@@ -57,6 +69,7 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "disengage",
     name: "Disengage",
+    glyph: "\u21AA",
     cost: "action",
     what: "Move away without anyone getting a free swing at you.",
     then: "This is what stops the free hit when you walk off.",
@@ -64,12 +77,14 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "dash",
     name: "Dash",
+    glyph: "\u00BB",
     cost: "action",
     what: "Twice the movement this turn.",
   },
   {
     id: "hide",
     name: "Hide",
+    glyph: "\u25D1",
     cost: "action",
     what: "Roll Stealth. Unseen, your attacks have advantage.",
     then: "The DM will tell you what to beat.",
@@ -77,6 +92,7 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "help",
     name: "Help",
+    glyph: "\u2725",
     cost: "action",
     what: "Give an ally advantage on their next attack or check.",
     then: "Say who you are helping.",
@@ -84,6 +100,7 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "shove",
     name: "Shove",
+    glyph: "\u21A7",
     cost: "action",
     what: "Athletics against theirs. Win and they fall prone, or move five feet.",
     then: "Prone is often better than damage — everyone gets advantage on them.",
@@ -91,6 +108,7 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "ready",
     name: "Ready",
+    glyph: "\u23F1",
     cost: "action",
     what: "Name a trigger now; it happens later, using your reaction.",
     then: 'Say it out loud: "when the goblin comes through the door, I shoot it".',
@@ -98,18 +116,21 @@ export const STANDARD_ACTIONS: readonly StandardAction[] = [
   {
     id: "search",
     name: "Search",
+    glyph: "\u2315",
     cost: "action",
     what: "Look for something. The DM will ask for a roll.",
   },
   {
     id: "use",
     name: "Use an object",
+    glyph: "\u2692",
     cost: "action",
     what: "Drink a potion, pull a lever. Your first interaction each turn is free.",
   },
   {
     id: "offhand",
     name: "Off-hand attack",
+    glyph: "\u21BB",
     cost: "bonus",
     what: "A second swing with a light weapon. No ability modifier to damage.",
     whenArmed: true,

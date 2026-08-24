@@ -1223,3 +1223,36 @@ html, body { overscroll-behavior-y: none; }
 }
 .skl tr.on .mark { border-color: var(--unharmed); color: var(--unharmed); }
 .skl tr.shut .mark { border-style: dashed; color: var(--faint); }
+
+/* ---- the hotbar: a turn is something you aim at ---- */
+.hotbar-wrap { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.hotbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.hot {
+  position: relative; aspect-ratio: 1; padding: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: 1px solid var(--rule); border-radius: 10px;
+  background: var(--raised); color: var(--ink-dim);
+  letter-spacing: 0; text-transform: none;
+}
+.hot .hg { font-size: 1.2rem; line-height: 1; }
+.hot .ht {
+  font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--muted); text-align: center;
+  padding: 0 3px; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+/* What it costs, as a colour rather than a word. */
+.hot i {
+  position: absolute; top: 6px; right: 6px;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--unharmed);
+}
+.hot[data-cost="bonus"] i { background: var(--bloodied); }
+.hot[data-cost="reaction"] i { background: var(--steel); }
+.hot:disabled { opacity: 0.3; }
+.hot.on { border-color: var(--steel); background: var(--panel); }
+
+.hot-say {
+  padding: 11px 12px; border-radius: 9px;
+  background: var(--panel); border: 1px solid var(--rule);
+}
+.hot-say .what { margin: 8px 0 0; font-size: 0.9rem; color: var(--ink-dim); }
+.hot-say .then { margin: 6px 0 0; font-size: 0.82rem; color: var(--muted); }

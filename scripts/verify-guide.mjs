@@ -90,29 +90,36 @@ await dm.page.getByRole("button", { name: "Begin", exact: true }).click();
 await p1.page.waitForTimeout(1600);
 
 await p1.page.getByRole("button", { name: "What else can I do?" }).click();
-await p1.page.waitForSelector(".menu-row");
-const menu = (await p1.page.locator(".menu-hd .nm").allInnerTexts()).map((t) => t.toLowerCase());
+await p1.page.waitForSelector(".hotbar");
+const menu = (await p1.page.locator(".hot .ht").allInnerTexts()).map((t) => t.toLowerCase());
 // Nobody discovers these from a character sheet.
 for (const name of ["dodge", "disengage", "hide", "help", "shove", "ready"]) {
-  ok(`the menu offers ${name}`, menu.some((m) => m.includes(name)), true);
+  ok(`the turn offers ${name}`, menu.some((m) => m.includes(name)), true);
 }
-const rows = (await p1.page.locator(".menu-row").allInnerTexts()).map((t) => t.replace(/\s+/g, " "));
-ok("each says what it costs", rows.every((r) => /ACTION|BONUS|REACTION/i.test(r)), true);
-// Names and costs only until you point at one — eleven explanations at once
-// is a rulebook, which is the thing a new player already could not read.
-ok("and nothing is explained until asked", await p1.page.locator(".menu-more").count(), 0);
-ok("the whole list fits without scrolling past it", rows.length <= 12, true);
+/* Costs are a coloured dot, not the word "action" twelve times — but every
+   mark keeps its name, because an unlabelled icon is its own kind of
+   unreadable and this table has not played a session yet. */
+ok("every mark keeps its name", menu.every((m) => m.trim().length > 0), true);
+ok("and the whole turn fits on one screen",
+  await p1.page.locator(".hot").count() <= 12, true);
+ok("nothing is explained until asked", await p1.page.locator(".hot-say").count(), 0);
 
-await p1.page.locator(".menu-hd", { hasText: /Disengage/i }).click();
+await p1.page.getByRole("button", { name: "Disengage", exact: true }).click();
 await p1.page.waitForTimeout(300);
 ok("pointing at one explains it, and only it",
-  await p1.page.locator(".menu-more").count(), 1);
+  await p1.page.locator(".hot-say").count(), 1);
 ok("in play terms",
-  /without anyone getting a free swing/i.test(await p1.page.locator(".menu-more .what").innerText()),
+  /without anyone getting a free swing/i.test(await p1.page.locator(".hot-say .what").innerText()),
   true);
+/* The count that started this: twelve options used to arrive as twelve
+   sentences, with a thirteenth when you pointed at one. */
+const words = (await p1.page.locator(".pt.acting").innerText())
+  .split(/\s+/).filter((w) => /[a-z]{3,}/i.test(w)).length;
+console.log(`  (words on the turn screen: ${words})`);
+ok("the turn is marks and numbers, not paragraphs", words < 60, true);
 await p1.page.screenshot({ path: `${OUT}/67-menu.png`, fullPage: true });
 
-await p1.page.locator(".menu-hd", { hasText: /Dodge/i }).click();
+await p1.page.getByRole("button", { name: "Dodge", exact: true }).click();
 await p1.page.waitForTimeout(300);
 await p1.page.getByRole("button", { name: "Do it" }).click();
 await p1.page.waitForTimeout(700);
@@ -123,11 +130,17 @@ ok("and says what to tell the table",
 
 await p1.page.getByRole("button", { name: "What else can I do?" }).click();
 await p1.page.waitForTimeout(400);
-await p1.page.locator(".menu-hd", { hasText: /Dodge/i }).click();
-await p1.page.waitForTimeout(300);
-ok("and the rest now say why they cannot be taken",
-  /your action is gone/i.test(await p1.page.locator(".menu-more .what").innerText()), true);
-ok("with no way to take them", await p1.page.getByRole("button", { name: "Do it" }).count(), 0);
+/* Spent marks dim rather than disappear — a turn you cannot take is still
+   part of the turn. The reason rides on the mark itself rather than needing
+   a tap, because a control you cannot press cannot be asked. */
+ok("a spent action dims the marks that needed it",
+  (await p1.page.locator('.hot[data-cost="action"]:disabled').count()) > 5, true);
+ok("and each still says why",
+  /your action is gone/i.test(
+    await p1.page.locator('.hot[data-cost="action"]:disabled').first().getAttribute("title"),
+  ), true);
+ok("with no way to take them",
+  await p1.page.locator('.hot[data-cost="action"]:not(:disabled)').count(), 0);
 
 // --- the building half ----------------------------------------------------
 // "d10 hit die · saves in STR and DEX" tells a returning player what they

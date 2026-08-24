@@ -256,13 +256,14 @@ await page.waitForTimeout(700);
 // otherwise a new caster's turn offers them only a weapon they may not have.
 await go(page, "fight");
 await page.getByRole("button", { name: "What else can I do?" }).click();
-await page.waitForSelector(".menu-row");
-ok("the turn menu offers casting",
-  (await page.locator(".menu-hd .nm").allInnerTexts()).some((t) => /cast a spell/i.test(t)), true);
-await page.locator(".menu-hd", { hasText: /Cast a spell/i }).click();
+await page.waitForSelector(".hotbar");
+// The menu is a grid of marks now; every one still carries its name.
+ok("the turn offers casting",
+  (await page.locator(".hot .ht").allInnerTexts()).some((t) => /cast a spell/i.test(t)), true);
+await page.getByRole("button", { name: "Cast a spell", exact: true }).click();
 await page.waitForTimeout(300);
 ok("and says the cost varies rather than pretending it does not",
-  /bonus action/i.test(await page.locator(".menu-more .what").innerText()), true);
+  /bonus action/i.test(await page.locator(".hot-say .what").innerText()), true);
 await page.getByRole("button", { name: "Do it" }).click();
 await page.waitForTimeout(600);
 /* Casting happens HERE now, not two tabs away.
