@@ -44,24 +44,35 @@ real build on two devices.
 
 ## Next
 
-Proposed order, not decided — reorder freely.
+Judged as a character builder rather than as a session companion — a
+different bar, and the gaps are not where this list used to say they were.
+Ordered by how many characters meet them.
 
-1. **Languages and tool proficiencies in the builder.**
-   *Creation & Progression.* Parsed out of the compendium already and then
-   dropped on the floor. The only outright gap left in a character sheet.
-2. **Prefetch the spellbook when a fight starts.**
-   *Spellcasting.* Small. Casting moved into the turn, so the first cast of a
-   session can pause while 4MB arrives — at the worst possible moment.
-3. **Session recap.**
-   *Guidance.* The log holds everything that happened and nothing turns it
-   into something a table can read when they sit back down. This is the only
-   item that opens a module rather than closing a gap in one.
-4. **Multiclassing.**
-   *Creation & Progression.* The builder edits one class; an imported
-   multiclass character survives but cannot be built or levelled as one.
-5. **Feats that carry their own choice.**
-   *Creation & Progression.* Resilient picks a save, half-feats grant +1
-   somewhere. Recorded by name today.
+1. **Level-up barely levels you up.** *Creation & Progression.* It asks for
+   hit points and an improvement and stops. It never asks for a **subclass at
+   3** — build at 1, level to 3, and nothing prompts you. It does not say
+   which **spells** you learn or name the **features** you gained. Every
+   character meets this.
+2. **Multiclassing.** *Creation & Progression.* Decided: compute it —
+   prerequisites enforced, hit dice mixed, combined slots from the multiclass
+   caster table.
+3. **You cannot get the character out.** *Creation & Progression.* Import
+   exists; export does not. No printable sheet, no file, no link.
+4. **Racial ability choices.** *Creation & Progression.* Half-elf's "+1 to two
+   of your choice" and every flexible bonus. Subrace bonuses are fixed only.
+5. **A feat at level 1.** *Creation & Progression.* Variant human and custom
+   lineage get one; feats are offered only at improvement levels.
+6. **Trait-granted spells go nowhere.** *Spellcasting.* A Drow's Faerie Fire,
+   a Tiefling's Thaumaturgy — the trait is shown, the spell never reaches the
+   spell list.
+7. **Nothing about who the character is.** *Guidance.* No alignment, ideals,
+   bonds, flaws, appearance or backstory. Mechanically irrelevant, and the
+   part that makes a build somebody's character rather than a stat block.
+8. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
+   Casting moved into the turn, so the first cast of a session can pause while
+   4MB arrives.
+9. **Session recap.** *Guidance.* The only item here that opens a module
+   rather than closing a gap in one.
 
 ## Parked, on purpose
 
