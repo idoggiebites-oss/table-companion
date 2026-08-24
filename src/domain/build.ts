@@ -42,6 +42,15 @@ export interface ClassEntry {
 /** Where a base came from, so the UI can say what a re-import will replace. */
 export type BuildSource = "manual" | "fightclub" | "pdf" | "beyond" | "builder";
 
+/** None of it is required, and any of it can arrive at the table instead. */
+export interface Identity {
+  readonly alignment?: string;
+  readonly personality?: string;
+  readonly ideals?: string;
+  readonly bonds?: string;
+  readonly flaws?: string;
+}
+
 export interface BuildBase {
   readonly id: CharacterId;
   readonly name: string;
@@ -76,6 +85,12 @@ export interface BuildBase {
    */
   readonly languages?: readonly string[];
   readonly toolProficiencies?: readonly string[];
+  /**
+   * Who they are, as opposed to what they can do. Mechanically inert and the
+   * reason a build is somebody's character rather than a stat block — the
+   * builder asked for every number and never once asked this.
+   */
+  readonly identity?: Identity;
   /** Max slots by spell level; index 0 is 1st level. Empty for non-casters. */
   readonly spellSlots: readonly number[];
   /** Warlock pact slots, which recharge on a short rest. */
@@ -165,6 +180,7 @@ export interface EffectiveBuild {
   readonly multiclass: boolean;
   readonly languages: readonly string[];
   readonly toolProficiencies: readonly string[];
+  readonly identity: Identity;
   readonly spellSlots: readonly number[];
   readonly resources: readonly ResolvedResource[];
   readonly attacks: readonly ResolvedAttack[];
@@ -347,6 +363,7 @@ export function effectiveBuild(character: Character): EffectiveBuild {
     multiclass: isMulticlass(b.classes),
     languages: b.languages ?? [],
     toolProficiencies: b.toolProficiencies ?? [],
+    identity: b.identity ?? {},
     spellSlots: slots,
     resources,
     attacks: b.attacks.map((a) => resolveAttack(a, abilityMods, pb)),

@@ -1138,3 +1138,47 @@ html, body { overscroll-behavior-y: none; }
   background: var(--raised); border-left: 2px solid var(--damage);
   font-size: 0.86rem; color: var(--ink-dim);
 }
+
+/* ---- who they are: the only step with no numbers in it ---- */
+.who-say + .who-say { margin-top: 12px; }
+.who-say label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.who-say textarea {
+  width: 100%; min-height: 58px; resize: vertical;
+  padding: 9px 11px; border: 1px solid var(--rule); border-radius: 8px;
+  background: var(--ground); color: var(--ink);
+  font: inherit; font-size: 0.88rem; line-height: 1.45;
+}
+.who-say textarea::placeholder { color: var(--faint); }
+.who-ct { font-family: var(--mono); font-size: 0.6rem; color: var(--faint); }
+
+/* ---- class as a card rather than a line in a dropdown ---- */
+.klass-cards { display: flex; flex-direction: column; gap: 8px; }
+.klass {
+  display: flex; gap: 12px; align-items: flex-start; width: 100%;
+  padding: 13px; text-align: left;
+  border: 1px solid var(--rule); border-radius: 11px;
+  background: var(--panel); color: var(--ink-dim);
+  font: inherit; letter-spacing: 0; text-transform: none;
+}
+.klass.on { border-color: var(--steel); background: var(--raised); }
+.kg {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 8px;
+  border: 1px solid var(--rule); background: var(--ground);
+  display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
+}
+.kbody { display: block; min-width: 0; }
+.klass .nm { display: block; color: var(--ink); font-size: 0.98rem; }
+.kdesc { display: block; margin-top: 3px; font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
+.ktags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.ktag {
+  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
+.ktag.spellcaster { border-color: var(--conc); color: var(--conc); }
+.ktag.martial { border-color: var(--bloodied); color: var(--bloodied); }
+.ktag.tank { border-color: var(--steel); color: var(--steel); }
+/* Complexity: bookkeeping and decisions, never power. */
+.kcx { display: flex; gap: 3px; align-items: center; margin-left: auto; }
+.kcx i { width: 5px; height: 5px; border-radius: 50%; background: var(--faint); }
+.kcx i.f { background: var(--ink-dim); }

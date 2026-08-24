@@ -35,6 +35,21 @@ import {
 } from "../domain/proficiencies.js";
 import { effectsOf } from "../domain/featvariants.js";
 import type { ClassId, DieSize } from "../domain/resources.js";
+import type { Identity } from "../domain/build.js";
+
+/** The nine, in the order everybody lists them. */
+const ALIGNMENTS = [
+  "Lawful good", "Neutral good", "Chaotic good",
+  "Lawful neutral", "True neutral", "Chaotic neutral",
+  "Lawful evil", "Neutral evil", "Chaotic evil",
+] as const;
+
+const IDENTITY_FIELDS: readonly [keyof Identity, string, string][] = [
+  ["personality", "Personality", "I am calm under pressure and think three steps ahead."],
+  ["ideals", "Ideals", "Freedom. People should choose their own destiny."],
+  ["bonds", "Bonds", "I would do anything to protect my sister."],
+  ["flaws", "Flaws", "I struggle to trust anyone who hides what they want."],
+];
 import {
   loadBackgrounds, loadClasses, loadClassLevels, loadEquipment, loadFeats,
   loadRaces, loadSpells,
@@ -46,7 +61,7 @@ import {
 } from "../domain/spells.js";
 import {
   ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, describePriority,
-  featureOf, mechanicalTraits,
+  featureOf, mechanicalTraits, shapeOf,
 } from "../domain/guidance.js";
 import { FeatPick } from "./FeatPick.js";
 import { SpellPick } from "./SpellPick.js";
@@ -142,6 +157,7 @@ export function CreateCharacter({
   const [bgName, setBgName] = useState("");
   const [bgSkills, setBgSkills] = useState<SkillId[]>([]);
   const [pickedLangs, setPickedLangs] = useState<string[]>([]);
+  const [identity, setIdentity] = useState<Identity>({});
   const [pickedTools, setPickedTools] = useState<string[]>([]);
   const [bgId, setBgId] = useState("");
   const [bgFilter, setBgFilter] = useState("");
@@ -409,6 +425,7 @@ export function CreateCharacter({
           } satisfies BackgroundChoice,
           // Granted and chosen, merged — Common arrives from more than one
           // source and should appear on the sheet once.
+          identity,
           languages: gather(raceLangs.known, pickedLangs),
           tools: gather(classTools.known, pickedTools),
           baseScores,
@@ -483,33 +500,70 @@ export function CreateCharacter({
           <div className="card-body">
             {/* Class first: it is what lets every later step advise. */}
             <span className="label cr-step">1 · Class</span>
-            <select
-              aria-label="Class"
-              value={classId}
-              onChange={(e) => { setClassId(e.target.value); setClassSkills([]); }}
-            >
-              <option value="">choose a class…</option>
-              {/* Grouped rather than merely ordered: with sixty-odd classes a
-                  flat list gives no sign of where the familiar ones end. */}
-              {classes.some((c) => c.extra) ? (
-                <>
-                  <optgroup label="Core">
-                    {classes.filter((c) => !c.extra).map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="From your compendium">
-                    {classes.filter((c) => c.extra).map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </optgroup>
-                </>
-              ) : (
-                classes.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))
-              )}
-            </select>
+
+            {/*
+              * Cards, not a dropdown.
+              *
+              * A name told you nothing until you picked it and read the
+              * paragraph underneath — which is the wrong way round when the
+              * paragraph IS the choice. What it plays like and how much it
+              * asks of you are both on the card, in two tags and five dots,
+              * before you commit to anything.
+              *
+              * The twelve get cards; the fifty-odd a compendium adds stay in
+              * a list underneath, because sixty cards is a scroll, not a
+              * choice.
+              */}
+            <div className="klass-cards">
+              {classes.filter((c) => !c.extra).map((c) => {
+                const shape = shapeOf(c.id);
+                const on = classId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    className={`klass${on ? " on" : ""}`}
+                    aria-pressed={on}
+                    aria-label={c.name}
+                    onClick={() => { setClassId(c.id); setClassSkills([]); }}
+                  >
+                    <span className="kg">{shape?.glyph ?? "\u25C7"}</span>
+                    <span className="kbody">
+                      <span className="nm">{c.name}</span>
+                      <span className="kdesc">{CLASS_BLURB[c.id] ?? ""}</span>
+                      <span className="ktags">
+                        {(shape?.tags ?? []).map((t) => (
+                          <span className={`ktag ${t.toLowerCase()}`} key={t}>{t}</span>
+                        ))}
+                        {shape && (
+                          <span className="kcx" aria-label={`Complexity ${shape.complexity} of 5`}>
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <i className={n <= shape.complexity ? "f" : ""} key={n} />
+                            ))}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {classes.some((c) => c.extra) && (
+              <div className="row" style={{ marginTop: 12 }}>
+                <span className="label">Or from your compendium</span>
+                <select
+                  aria-label="Class"
+                  value={classes.find((c) => c.id === classId)?.extra ? classId : ""}
+                  style={{ width: "auto", flex: "1 1 160px" }}
+                  onChange={(e) => { setClassId(e.target.value); setClassSkills([]); }}
+                >
+                  <option value="">{classes.filter((c) => c.extra).length} more…</option>
+                  {classes.filter((c) => c.extra).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {klass && (
               <>
@@ -1017,6 +1071,55 @@ export function CreateCharacter({
                 </p>
               )}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/*
+        * Who they are, as opposed to what they can do.
+        *
+        * The builder asked for every number a character has and never once
+        * asked this — which is the difference between a build and somebody's
+        * character. None of it is required: a blank one is a character too,
+        * and these usually turn up at the table rather than before it.
+        */}
+      {klass && race && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label">6 · Who are they?</span>
+            <span className="faint" style={{ fontSize: ".78rem" }}>optional</span>
+          </div>
+          <div className="card-body">
+            <div className="row" style={{ marginBottom: 12 }}>
+              <span className="label">Alignment</span>
+              <select
+                aria-label="Alignment"
+                value={identity.alignment ?? ""}
+                style={{ width: "auto" }}
+                onChange={(e) => setIdentity({ ...identity, alignment: e.target.value })}
+              >
+                <option value="">not yet</option>
+                {ALIGNMENTS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+            {IDENTITY_FIELDS.map(([key, label, hint]) => {
+              const value = identity[key] ?? "";
+              return (
+                <div className="who-say" key={key}>
+                  <label>
+                    <span className="label">{label}</span>
+                    <span className="who-ct">{value.length} / 120</span>
+                  </label>
+                  <textarea
+                    aria-label={label}
+                    maxLength={120}
+                    placeholder={hint}
+                    value={value}
+                    onChange={(e) => setIdentity({ ...identity, [key]: e.target.value })}
+                  />
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

@@ -14,6 +14,48 @@
 import type { Ability } from "./abilities.js";
 
 /** One line on what playing it is actually like. */
+/**
+ * What a class is LIKE, at a glance.
+ *
+ * A dropdown of names told you nothing until you picked one and read a
+ * paragraph. Two things fix that without adding words: what it plays like,
+ * and how much bookkeeping it asks of you.
+ *
+ * Both are authored rather than derived. "Spellcaster" can be read off a slot
+ * table, but "Support" and "Control" are what the class is FOR, and how hard
+ * a class is to run is a judgement — a wizard has no more rules than a
+ * fighter, it just has three hundred more decisions.
+ */
+export interface ClassShape {
+  /** One or two, in the order they should read. */
+  readonly tags: readonly string[];
+  /** 1 easiest, 5 hardest. Bookkeeping and decisions, not power. */
+  readonly complexity: number;
+  /** A mark, not a picture: the app ships no images. */
+  readonly glyph: string;
+}
+
+export const CLASS_SHAPE: Readonly<Record<string, ClassShape>> = {
+  barbarian: { tags: ["Martial", "Tank"], complexity: 1, glyph: "\u2694" },
+  bard: { tags: ["Spellcaster", "Support"], complexity: 4, glyph: "\u266A" },
+  cleric: { tags: ["Spellcaster", "Support"], complexity: 3, glyph: "\u271D" },
+  druid: { tags: ["Spellcaster", "Control"], complexity: 5, glyph: "\u2766" },
+  fighter: { tags: ["Martial", "Tank"], complexity: 1, glyph: "\u2694" },
+  monk: { tags: ["Martial", "Mobile"], complexity: 3, glyph: "\u262F" },
+  paladin: { tags: ["Martial", "Support"], complexity: 3, glyph: "\u2720" },
+  ranger: { tags: ["Martial", "Skirmisher"], complexity: 3, glyph: "\u27B3" },
+  rogue: { tags: ["Martial", "Stealth"], complexity: 2, glyph: "\u25D1" },
+  sorcerer: { tags: ["Spellcaster", "Damage"], complexity: 4, glyph: "\u2726" },
+  warlock: { tags: ["Spellcaster", "Damage"], complexity: 3, glyph: "\u26E7" },
+  wizard: { tags: ["Spellcaster", "Control"], complexity: 5, glyph: "\u2728" },
+  artificer: { tags: ["Spellcaster", "Support"], complexity: 4, glyph: "\u2699" },
+};
+
+/** What the app knows about a class it has never heard of: nothing useful. */
+export function shapeOf(classId: string): ClassShape | null {
+  return CLASS_SHAPE[classId.toLowerCase()] ?? null;
+}
+
 export const CLASS_BLURB: Readonly<Record<string, string>> = {
   barbarian: "Wade in and take the hits. Rage makes you hard to hurt. The easiest to play.",
   bard: "Talk your way past trouble and make everyone else better at their job.",

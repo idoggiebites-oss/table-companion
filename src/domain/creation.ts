@@ -16,7 +16,7 @@
 import {
   ABILITIES, abilityModifier, type Ability, type AbilityScores, type SkillId,
 } from "./abilities.js";
-import type { BuildBase } from "./build.js";
+import type { BuildBase, Identity } from "./build.js";
 import { gather } from "./proficiencies.js";
 import type { ClassId, DieSize } from "./resources.js";
 
@@ -68,6 +68,8 @@ export interface CreationChoices {
     /** Resilient, and only Resilient: a save the feat made them good at. */
     readonly save?: Ability;
   }[];
+  /** Who they are. Never required — a blank one is a character too. */
+  readonly identity?: Identity;
   /** Everything they ended up speaking, from every source, already merged. */
   readonly languages?: readonly string[];
   /** Everything they can use, likewise. */
@@ -150,6 +152,11 @@ export function withImprovements(
   return out;
 }
 
+/** Whether anything was actually written, so an empty one is not stored. */
+function hasAny(id: Identity | undefined): id is Identity {
+  return id !== undefined && Object.values(id).some((v) => (v ?? "").trim() !== "");
+}
+
 export function assemble(choices: CreationChoices, id = `c${Date.now().toString(36)}`): BuildBase {
   const abilities = withImprovements(
     finalScores(choices.baseScores, choices.race),
@@ -185,6 +192,7 @@ export function assemble(choices: CreationChoices, id = `c${Date.now().toString(
         }
       : {}),
     ...(choices.picks?.length ? { choices: choices.picks } : {}),
+    ...(hasAny(choices.identity) ? { identity: choices.identity } : {}),
     /*
      * A feat can hand over a saving throw. Resilient is the only one in the
      * game that does, and it is the reason anybody takes it — leaving it

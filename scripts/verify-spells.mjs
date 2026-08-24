@@ -38,8 +38,8 @@ await page.goto(URL, { waitUntil: "networkidle" });
 
 // A wizard at level 5: slots 4/3/2.
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "wizard");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Wizard", exact: true }).click();
 await page.waitForTimeout(400);
 await page.locator('input[aria-label="Starting level"]').fill("5");
 for (const s of ["Arcana", "History"]) {

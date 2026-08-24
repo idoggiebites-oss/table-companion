@@ -30,8 +30,8 @@ await page.goto(URL, { waitUntil: "networkidle" });
 
 // A fighter at 4 — the first level that owes an improvement.
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "fighter");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(400);
 for (const s of ["Athletics", "Perception"]) {
   await page.getByRole("button", { name: s, exact: true }).click();

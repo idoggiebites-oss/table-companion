@@ -29,8 +29,8 @@ await page.goto(URL, { waitUntil: "networkidle" });
 
 // A rogue: the one core class whose tool line names something outright.
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "rogue");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Rogue", exact: true }).click();
 await page.waitForTimeout(500);
 for (const s of ["Stealth", "Perception", "Acrobatics", "Deception"]) {
   const b = page.getByRole("button", { name: s, exact: true });
@@ -95,6 +95,10 @@ ok("with Common listed once, though two sources gave it",
   (shown.match(/common/gi) ?? []).length, 1);
 await page.screenshot({ path: `${OUT}/81-tongues-sheet.png`, fullPage: true });
 
+
+// --- who they are ---------------------------------------------------------
+// The builder asked for every number a character has and never once asked
+// this. It is the difference between a build and somebody's character.
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

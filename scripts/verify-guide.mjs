@@ -134,11 +134,11 @@ ok("with no way to take them", await p1.page.getByRole("button", { name: "Do it"
 // need and a new one nothing at all.
 const b = await device("builder");
 await b.page.getByRole("button", { name: "Build a character" }).click();
-await b.page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
+await b.page.waitForSelector(".klass-cards", { timeout: 20000 });
 ok("nothing is explained before a class is chosen",
   await b.page.locator(".cr-blurb").count(), 0);
 
-await b.page.selectOption('select[aria-label="Class"]', "fighter");
+await b.page.getByRole("button", { name: "Fighter", exact: true }).click();
 await b.page.waitForTimeout(700);
 const blurb = await b.page.locator(".cr-blurb").first().innerText();
 ok("choosing one says what it is LIKE to play",

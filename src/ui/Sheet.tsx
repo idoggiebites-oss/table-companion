@@ -422,6 +422,33 @@ export function Sheet({
         </section>
       )}
 
+      {/* Who they are. Nothing here is mechanical, and it is the only part of
+          the sheet the player wrote themselves. */}
+      {(build.identity.alignment || build.identity.personality || build.identity.ideals
+        || build.identity.bonds || build.identity.flaws) && (
+        <section className="card">
+          <div className="card-hd">
+            <span className="label">Who they are</span>
+            {build.identity.alignment && (
+              <span className="label faint">{build.identity.alignment}</span>
+            )}
+          </div>
+          <div className="card-body prof-lists">
+            {([
+              ["personality", "Personality"], ["ideals", "Ideals"],
+              ["bonds", "Bonds"], ["flaws", "Flaws"],
+            ] as const).map(([key, label]) =>
+              build.identity[key] ? (
+                <p className="prof-line" key={key}>
+                  <span className="label">{label}</span>
+                  <span>{build.identity[key]}</span>
+                </p>
+              ) : null,
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Nothing to roll, so it sits below what is rollable — but it was
           missing entirely, which made a finished character mute. */}
       {(build.languages.length > 0 || build.toolProficiencies.length > 0) && (

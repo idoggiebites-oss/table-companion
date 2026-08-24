@@ -44,8 +44,8 @@ await page.goto(URL, { waitUntil: "networkidle" });
 
 // A cleric at 3 — a full caster, d8, Wisdom high enough to keep it and to dip.
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "cleric");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Cleric", exact: true }).click();
 await page.waitForTimeout(500);
 await page.locator('input[aria-label="Starting level"]').fill("3");
 await page.waitForTimeout(400);

@@ -57,8 +57,10 @@ async function device(name) {
 }
 async function build(page, name, klass, skills) {
   await page.getByRole("button", { name: "Build a character" }).click();
-  await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-  await page.selectOption('select[aria-label="Class"]', klass);
+  await page.waitForSelector(".klass-cards", { timeout: 20000 });
+  await page.getByRole("button", {
+    name: klass.charAt(0).toUpperCase() + klass.slice(1), exact: true,
+  }).click();
   await page.waitForTimeout(300);
   // Named rather than "the first few chips": the background list uses the
   // same class, so picking positionally chose the wrong ones and left the

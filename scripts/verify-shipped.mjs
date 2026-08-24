@@ -37,26 +37,25 @@ await page.goto(URL, { waitUntil: "networkidle" });
 
 // A brand new device, nothing imported.
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
 await page.waitForTimeout(1200);
 
 // --- classes -------------------------------------------------------------
 // Both sources describe the same twelve, so the merge has to dedupe them —
 // and the SRD entry has to win, because only it carries a starting kit.
-const classNames = (await page.locator('select[aria-label="Class"] option').allInnerTexts()).slice(1);
-ok("compendium classes are offered", classNames.length > 50, true);
+/* The twelve are cards; whatever a compendium adds stays in a list beneath
+   them, because sixty cards is a scroll rather than a choice. */
+const core = await page.locator(".klass .nm").allInnerTexts();
+ok("the familiar classes are cards", core.length, 12);
+ok("in alphabetical order", core[0].toLowerCase(), "barbarian");
+ok("each saying what it plays like",
+  await page.locator(".klass").first().locator(".ktag").count() > 0, true);
+ok("and how much it asks of you",
+  await page.locator(".klass").first().locator(".kcx i.f").count() > 0, true);
 
-// Alphabetical order buried Fighter under a wall of "Auxiliary Level: …".
-const classGroups = await page
-  .locator('select[aria-label="Class"] optgroup')
-  .evaluateAll((g) => g.map((x) => x.label));
-ok("the familiar classes are grouped first", classGroups[0], "Core");
-const core = await page
-  .locator('select[aria-label="Class"] optgroup')
-  .first().locator("option").allInnerTexts();
-ok("and it is the twelve of them", core.length, 12);
-ok("in alphabetical order", core[0], "Barbarian");
-ok("with the rest below", classGroups[1], "From your compendium");
+const extra = (await page.locator('select[aria-label="Class"] option').allInnerTexts()).slice(1);
+ok("the compendium's are underneath", extra.length > 40, true);
+const classNames = [...core, ...extra];
 ok("and none is listed twice",
   new Set(classNames.map((n) => n.toLowerCase())).size, classNames.length);
 ok("the SRD twelve appear once each",
@@ -91,7 +90,7 @@ await page.waitForTimeout(500);
 const humans = await page.locator('select[aria-label="Race"] option').allInnerTexts();
 await page.selectOption('select[aria-label="Race"]', { label: humans[1] });
 await page.locator('input[aria-label="Filter races"]').fill("");
-await page.selectOption('select[aria-label="Class"]', "cleric");
+await page.getByRole("button", { name: "Cleric", exact: true }).click();
 await page.waitForTimeout(1400);
 ok("a class with a level-1 subclass asks for it",
   await page.getByText("6 · Your class").count(), 1);
@@ -102,7 +101,7 @@ ok("with the options read out of its own feature list", domains > 10, true);
 ok("and a filter, because there are dozens",
   await page.locator('input[aria-label="Filter Divine Domain"]').count(), 1);
 
-await page.selectOption('select[aria-label="Class"]', "fighter");
+await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(1200);
 // The same reading finds Fighting Style, which is written the same way.
 ok("a fighter is asked for a fighting style at 1",
@@ -110,7 +109,7 @@ ok("a fighter is asked for a fighting style at 1",
 ok("but not for an archetype it has not reached",
   await page.locator('select[aria-label="Martial Archetype"]').count(), 0);
 
-await page.selectOption('select[aria-label="Class"]', "wizard");
+await page.getByRole("button", { name: "Wizard", exact: true }).click();
 await page.waitForTimeout(900);
 ok("a wizard at 1 is asked nothing — its tradition comes at 2",
   await page.getByText("6 · Your class").count(), 0);

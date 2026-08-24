@@ -42,8 +42,8 @@ page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 await page.goto(URL, { waitUntil: "networkidle" });
 
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "fighter");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(400);
 for (const s of ["Athletics", "Perception"]) {
   await page.getByRole("button", { name: s, exact: true }).click();
@@ -111,8 +111,8 @@ ok("the kit arrived as one line", (await page.locator(".feed").innerText()).toLo
 // --- buying your own instead --------------------------------------------
 await page.getByRole("button", { name: "Add character" }).click();
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "monk");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Monk", exact: true }).click();
 await page.waitForTimeout(400);
 // Named, not read off the page: .chip is uppercased in CSS, so innerText
 // gives "ACROBATICS" while the accessible name is still "Acrobatics".

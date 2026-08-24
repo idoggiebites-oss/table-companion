@@ -29,8 +29,8 @@ await page.goto(URL, { waitUntil: "networkidle" });
 
 // A cleric at 1 — a caster who owes a subclass at 2, spells all the way up.
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "fighter");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(600);
 for (const s of ["Athletics", "Perception"]) {
   const b = page.getByRole("button", { name: s, exact: true });

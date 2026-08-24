@@ -71,8 +71,8 @@ const code = await dm.page.locator(".rb-code").innerText();
 
 // A character has to exist before there is a seat bar at all.
 await dm.page.getByRole("button", { name: "Build a character" }).click();
-await dm.page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await dm.page.selectOption('select[aria-label="Class"]', "fighter");
+await dm.page.waitForSelector(".klass-cards", { timeout: 20000 });
+await dm.page.getByRole("button", { name: "Fighter", exact: true }).click();
 await dm.page.waitForTimeout(300);
 for (const s of ["Athletics", "Perception"]) {
   await dm.page.getByRole("button", { name: s, exact: true }).click();

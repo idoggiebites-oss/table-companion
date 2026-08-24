@@ -116,8 +116,8 @@ await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForSelector('button:has-text("Build a character")', { timeout: 20000 });
 await player.page.getByRole("button", { name: "Build a character" }).click();
-await player.page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await player.page.selectOption('select[aria-label="Class"]', "fighter");
+await player.page.waitForSelector(".klass-cards", { timeout: 20000 });
+await player.page.getByRole("button", { name: "Fighter", exact: true }).click();
 await player.page.waitForTimeout(300);
 for (const s of ["Athletics", "Perception"]) {
   await player.page.getByRole("button", { name: s, exact: true }).click();

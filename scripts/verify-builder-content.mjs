@@ -35,7 +35,7 @@ await page.goto(URL, { waitUntil: "networkidle" });
 
 // Before importing: the shipped SRD list only.
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
 const raceCount = async () => (await page.locator('select[aria-label="Race"] option').count()) - 1;
 // A deployment built WITHOUT a compendium ships nine SRD races; one built
 // with it already has hundreds. Both are valid, so this checks the shape
@@ -61,8 +61,8 @@ await page.waitForSelector(".src-row:nth-child(2)", { timeout: 300000 });
 
 await page.getByRole("button", { name: "Add character" }).click();
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "fighter");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(500);
 
 ok("imported races reach the builder", (await raceCount()) > 200, true);

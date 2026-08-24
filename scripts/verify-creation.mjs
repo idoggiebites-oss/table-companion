@@ -64,13 +64,13 @@ await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForTimeout(1200);
 
 await player.page.getByRole("button", { name: "Build a character" }).click();
-await player.page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
+await player.page.waitForSelector(".klass-cards", { timeout: 20000 });
 
 // class first — it is what lets everything after it advise
 ok("class is asked first", await player.page.locator(".cr-step").first().innerText(), "1 · CLASS");
 ok("race is not offered until then", await player.page.locator('select[aria-label="Race"]').count(), 1);
 
-await player.page.selectOption('select[aria-label="Class"]', "ranger");
+await player.page.getByRole("button", { name: "Ranger", exact: true }).click();
 await player.page.waitForTimeout(300);
 const note = await player.page.locator(".cr-note").first().innerText();
 ok("the class states its own facts", note.includes("d10 hit die"), true);

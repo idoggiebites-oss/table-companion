@@ -57,8 +57,8 @@ const addItem = async (name) => {
 // A human fighter under Recommend: str 16 (+3), dex 14 (+2), con 15 — human
 // adds +1 to everything, which is why these are one higher than the raw array.
 await page.getByRole("button", { name: "Build a character" }).click();
-await page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
-await page.selectOption('select[aria-label="Class"]', "fighter");
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(300);
 for (const s of ["Athletics", "Perception"]) {
   await page.getByRole("button", { name: s, exact: true }).click();

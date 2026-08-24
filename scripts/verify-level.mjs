@@ -86,12 +86,12 @@ await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForTimeout(1200);
 await player.page.getByRole("button", { name: "Build a character" }).click();
-await player.page.waitForSelector('select[aria-label="Class"]', { timeout: 20000 });
+await player.page.waitForSelector(".klass-cards", { timeout: 20000 });
 
 // The level control only means anything once a class is chosen, so it lives
 // with the class and not above it.
 ok("no level asked before a class", await player.page.locator('input[aria-label="Starting level"]').count(), 0);
-await player.page.selectOption('select[aria-label="Class"]', "ranger");
+await player.page.getByRole("button", { name: "Ranger", exact: true }).click();
 await player.page.waitForTimeout(400);
 const lvl = player.page.locator('input[aria-label="Starting level"]');
 ok("level appears with the class", await lvl.count(), 1);
