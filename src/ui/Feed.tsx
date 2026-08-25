@@ -17,6 +17,7 @@ import { levelLabel } from "../domain/spells.js";
 import { describeRoll, resolveRoll } from "../domain/roll.js";
 import type { Seat } from "../domain/combat.js";
 import { mayRevert, visibleInLog } from "../domain/visibility.js";
+import { describeScene } from "../domain/terrain.js";
 
 const time = (at: number) =>
   new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -185,6 +186,10 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return "Let it go";
     case "reactionOfferClosed":
       return null;
+    case "sceneSet":
+      return describeScene(e.scene) === ""
+        ? "Open ground"
+        : `The room: ${describeScene(e.scene)}`;
     case "shoveClaimed":
       return `${e.byName} shoves ${e.targetName} — Athletics ${e.total}`;
     case "shoveResolved":

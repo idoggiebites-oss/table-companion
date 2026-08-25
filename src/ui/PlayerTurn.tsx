@@ -19,6 +19,7 @@ import { AimSpell } from "./AimSpell.js";
 import { useCasting } from "./useCasting.js";
 import { blockedBecause, STANDARD_ACTIONS } from "../domain/actions.js";
 import { stanceFor } from "../domain/stance.js";
+import { describeScene, isOpenGround, movementCost } from "../domain/terrain.js";
 import { Swing } from "./Swing.js";
 import {
   activeCombatant, controls, ECONOMY, isSurprised, movementLeft, turnsUntil,
@@ -85,8 +86,15 @@ function Movement({
 }) {
   const left = movementLeft(combat, combatant);
   if (left === null) return null;
+  /*
+   * Difficult ground is the environmental rule everybody knows and nearly
+   * everybody forgets, because the DM says it on one screen and the number it
+   * touches lives on another. Here the buttons simply cost double, and say
+   * so — five feet of rubble spends ten.
+   */
+  const cost = movementCost(combat.scene);
   const spend = (feet: number) =>
-    append({ type: "movementSpent", combatantId: combatant.id, feet });
+    append({ type: "movementSpent", combatantId: combatant.id, feet: feet * cost });
 
   return (
     <div className="mv">
@@ -97,8 +105,20 @@ function Movement({
         <small>{left > (combatant.speed ?? 0) ? "ft · dashed" : `of ${combatant.speed} ft`}</small>
       </span>
       <div className="mv-acts">
-        <button aria-label="Move 5 feet" disabled={left < 5} onClick={() => spend(5)}>−5</button>
-        <button aria-label="Move 15 feet" disabled={left < 15} onClick={() => spend(15)}>−15</button>
+        <button
+          aria-label="Move 5 feet"
+          disabled={left < 5 * cost}
+          onClick={() => spend(5)}
+        >
+          −5{cost > 1 ? " ×2" : ""}
+        </button>
+        <button
+          aria-label="Move 15 feet"
+          disabled={left < 15 * cost}
+          onClick={() => spend(15)}
+        >
+          −15{cost > 1 ? " ×2" : ""}
+        </button>
         <button aria-label="Dash" onClick={() => spend(-(combatant.speed ?? 0))}>Dash</button>
         <button
           aria-label="Take back movement"
@@ -189,6 +209,7 @@ export function PlayerTurn({
       // A hand-typed attack says nothing about reach, and most of those are
       // melee. A spell aimed across the room is not.
       range: attack?.range ?? "melee",
+      scene: combat.scene,
     });
 
   /*
@@ -253,6 +274,14 @@ export function PlayerTurn({
         </div>
         {!surprised && (
           <>
+            {/* What the DM said about the room, where the person acting in
+                it will see it. */}
+            {!isOpenGround(combat.scene) && (
+              <p className="room-is">
+                <span className="label">The room</span>
+                {describeScene(combat.scene)}
+              </p>
+            )}
             <Pips who={who} character={character} kinds={ECONOMY} append={append} />
             {self && <Movement combat={combat} combatant={self} append={append} />}
             {picking === "menu" ? (

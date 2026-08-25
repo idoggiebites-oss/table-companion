@@ -28,6 +28,7 @@
 import type { ConditionId } from "./edition.js";
 import type { StanceTag } from "./combat.js";
 import type { Senses } from "./senses.js";
+import { sceneEffects, type Scene } from "./terrain.js";
 
 export type Stance = "advantage" | "straight" | "disadvantage";
 
@@ -88,13 +89,19 @@ const THE = (name: string) => (name.toLowerCase() === "you" ? "you are" : `${nam
  * the rules and asymmetric in every character sheet ever printed.
  */
 export function stanceFor({
-  attacker, target, range, light = "bright",
+  attacker, target, range, light = "bright", scene,
 }: {
   attacker: Roller;
   target: Roller;
   range: AttackRange;
   /** What the DM has said about the light. Bright unless they said otherwise. */
   light?: Light;
+  /**
+   * What the room is like. Carries its own light, which wins — the separate
+   * `light` argument is what existed before rooms did, and is kept so callers
+   * that only know about light keep working.
+   */
+  scene?: Scene;
 }): { stance: Stance; reasons: readonly StanceReason[] } {
   const reasons: StanceReason[] = [];
   const adv = (because: string) => reasons.push({ effect: "advantage", because });
@@ -133,15 +140,21 @@ export function stanceFor({
    * range and the app does not know where anyone is standing, so it reads the
    * sense as present or absent and lets the DM say otherwise.
    */
+  const lit = scene?.light ?? light;
   const sees = attacker.senses?.darkvision ?? 0;
-  if (light === "dark") {
+  if (lit === "dark") {
     if (sees > 0) dis(`it is dark, though you see ${sees} ft`);
     else dis("you cannot see in the dark");
-  } else if (light === "dim" && sees === 0) {
+  } else if (lit === "dim" && sees === 0) {
     dis("the light is dim");
   }
-  if (light === "bright" && attacker.senses?.sunlightSensitivity) {
+  if (lit === "bright" && attacker.senses?.sunlightSensitivity) {
     dis(`${THE(attacker.name)} hurt by the light`);
+  }
+
+  // And whatever else the DM said about the room.
+  for (const e of scene ? sceneEffects(scene, { range }) : []) {
+    reasons.push({ effect: e.effect, because: e.because });
   }
 
   return { stance: combine(reasons), reasons };

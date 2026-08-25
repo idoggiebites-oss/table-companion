@@ -13,6 +13,7 @@
  */
 
 import { ConditionStrip } from "./Conditions.js";
+import { SceneSet } from "./SceneSet.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { useEffect, useState } from "react";
 import {
@@ -572,6 +573,13 @@ export function Combat({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* The one thing the app cannot see and will not guess. */}
+      {seat.kind === "dm" && (
+        <div className="card-body" style={{ paddingBottom: 0 }}>
+          <SceneSet scene={combat.scene} append={append} />
         </div>
       )}
 

@@ -12,6 +12,7 @@
  */
 
 import type { ConditionId } from "./edition.js";
+import { OPEN_GROUND, type Scene } from "./terrain.js";
 import type { CharacterId } from "./build.js";
 
 /** Where a combatant's numbers live, which is also what kind of thing it is. */
@@ -120,6 +121,12 @@ export interface Combat {
    * the creature's — so it carries the number across and lets the DM say.
    */
   readonly shove: ShoveClaim | null;
+  /**
+   * What the room is like. On the fight rather than on anybody in it, because
+   * that is what it is — a fact about where everyone is standing, not about
+   * any one of them.
+   */
+  readonly scene: Scene;
 }
 
 export interface ShoveClaim {
@@ -189,6 +196,7 @@ export function stageCombat(order: readonly Combatant[]): Combat {
     offer: null,
     readied: {},
     shove: null,
+    scene: OPEN_GROUND,
   };
 }
 
@@ -207,6 +215,7 @@ export function startCombat(order: readonly Combatant[]): Combat {
     offer: null,
     readied: {},
     shove: null,
+    scene: OPEN_GROUND,
   };
 }
 
@@ -242,6 +251,7 @@ export function beginCombat(combat: Combat): Combat {
     offer: null,
     readied: {},
     shove: null,
+    scene: OPEN_GROUND,
   };
 }
 

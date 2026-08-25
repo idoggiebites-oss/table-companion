@@ -47,16 +47,12 @@ real build on two devices.
 The builder module is done bar its export, which is parked. What is left is
 spread across the other modules.
 
-1. **The DM's light control.** *Encounter · Guidance.* Bright / dim / dark on
-   the fight. The domain already takes a `Light` and works out who suffers,
-   and every character carries what they can see — what is missing is the
-   switch and putting the light on the combat state so it syncs.
-2. **Half damage on a successful save.** *Adjudication.* The only place the
+1. **Half damage on a successful save.** *Adjudication.* The only place the
    app hands the DM arithmetic it could do itself.
-3. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
+2. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
    Casting happens in the turn now, so the first cast of a session can pause
    while 4MB arrives.
-4. **Session recap.** *Guidance.* The log holds everything that happened and
+3. **Session recap.** *Guidance.* The log holds everything that happened and
    nothing turns it into something a table can read when they sit back down.
    The only item here that opens a module rather than closing a gap.
 
@@ -68,6 +64,14 @@ senses, multiclassing at creation and at the table, spell roles, the homebrew
 switch, the monster piles, and the DM's spell lookup.
 
 ## Noted, for when combat comes round again
+
+- **The room does not reach checks yet.** `checkEffects` knows that fog hides
+  you and wind drowns you out, and the DM's check panel does not ask it. A
+  Stealth roll in fog should say so.
+- **A hand-typed attack states no reach**, so the room treats it as melee —
+  which is why wind does not trouble the sample character's longbow. Correct
+  by the app's own rule and still worth a way for a player to say "this one is
+  ranged".
 
 - **The DM's light control.** Bright / dim / dark on the fight, which is the
   point of tracking senses at all. The domain already takes a `Light` and

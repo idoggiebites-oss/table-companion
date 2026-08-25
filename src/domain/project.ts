@@ -578,6 +578,10 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         combat: { ...state.combat, offer: done ? null : { ...offer, declined } },
       };
     }
+    case "sceneSet": {
+      if (state.combat === null) return state;
+      return { ...state, combat: { ...state.combat, scene: e.scene } };
+    }
     case "reactionOfferClosed": {
       if (state.combat === null) return state;
       return { ...state, combat: { ...state.combat, offer: null } };
