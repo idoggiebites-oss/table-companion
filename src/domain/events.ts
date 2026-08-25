@@ -24,7 +24,8 @@ import type { KnownSpell } from "./spells.js";
 import type { Npc } from "./npc.js";
 import type { Statblock } from "./statblock.js";
 import type { ConditionId } from "./edition.js";
-import type { Scene } from "./terrain.js";
+import type { Room } from "./terrain.js";
+import type { Scene } from "./scenes.js";
 import type { RollMode } from "./roll.js";
 
 export type EventId = string;
@@ -361,7 +362,14 @@ export type DomainEvent = Meta &
      * rather than one per fact, because a DM sets a room up in one breath and
      * undoing it should take the room back, not one detail of it.
      */
-    | { readonly type: "sceneSet"; readonly scene: Scene }
+    | { readonly type: "sceneSet"; readonly scene: Room }
+    /*
+     * A place, prepared. Saved like an NPC or an encounter — and hidden like
+     * one, because a player who reads "Saved the cellar · dark · a note" in
+     * their log has been told what is coming.
+     */
+    | { readonly type: "scenePrepared"; readonly scene: Scene }
+    | { readonly type: "sceneDeleted"; readonly sceneId: string }
     /*
      * Ready: a trigger named now, fired later. Held on the fight so the DM can
      * see what everyone is waiting for — the single most-forgotten thing at a

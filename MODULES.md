@@ -172,10 +172,18 @@ toward the parts of their sheet they have never used.
 ## 12. Prep — *DM* · **Solid**
 
 Encounters built ahead of time, NPCs kept, homebrew statblocks written, rules
-and creatures looked up mid-session without leaving the fight.
+and creatures looked up mid-session without leaving the fight. And places:
+a room, what is waiting in it, and the line to read when the door opens, all
+opened together in one press — the join between three saved things that
+nothing used to connect.
 
-`npc.ts` `encounter.ts` `statblock.ts` `EncounterBuilder.tsx` `Npcs.tsx`
-`Homebrew.tsx` `Reference.tsx` · suites: `encounter` `homebrew` `reference`
+`npc.ts` `encounter.ts` `statblock.ts` `scenes.ts` `terrain.ts` `stage.ts`
+`EncounterBuilder.tsx` `Npcs.tsx` `Homebrew.tsx` `Reference.tsx` `Scenes.tsx`
+· suites: `encounter` `homebrew` `reference` `scenes` `terrain`
+
+Deliberately not a map and not a sequence: places are a drawer to reach into,
+not a track the session runs along. A DM who prepared four rooms and had the
+party go somewhere else is the normal case, not the failure case.
 
 ---
 

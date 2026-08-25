@@ -15,6 +15,7 @@ import { Feed } from "./Feed.js";
 import { NewCharacter } from "./NewCharacter.js";
 import { Party } from "./Party.js";
 import { EncounterBuilder } from "./EncounterBuilder.js";
+import { Scenes } from "./Scenes.js";
 import { Homebrew } from "./Homebrew.js";
 import { LevelUp } from "./LevelUp.js";
 import { Npcs } from "./Npcs.js";
@@ -216,6 +217,14 @@ export function App() {
    * the players' side was always meant to have — on the transition only, so
    * it happens once per fight rather than fighting you for the screen.
    */
+  /*
+   * The place the DM last opened — device-local, and deliberately never an
+   * event. Its note is the one part of a scene written FOR the DM, and a
+   * player's log is the last place it belongs.
+   */
+  const [liveScene, setLiveScene] = useState<string | null>(null);
+  const said = liveScene ? state.scenes[liveScene]?.note : undefined;
+
   const inFight = state.combat !== null;
   const wasFighting = useRef(inFight);
   useEffect(() => {
@@ -453,6 +462,14 @@ export function App() {
         )
       ) : (
         <>
+          {/* The line the DM meant to read, following them out of prep and
+              into whatever tab opening the place threw them at. */}
+          {dmView && said && (
+            <p className="sc-said">
+              {said}
+              <button aria-label="Said it" onClick={() => setLiveScene(null)}>Said it</button>
+            </p>
+          )}
           {/* The fight is always the first tab, on both sides. */}
           {current === "fight" && (
             <Combat
@@ -496,6 +513,7 @@ export function App() {
 
               {current === "prep" && (
                 <>
+                  <Scenes state={state} append={append} onOpened={setLiveScene} />
                   <EncounterBuilder state={state} append={append} />
                   <Npcs state={state} append={append} />
                   <Homebrew state={state} append={append} />

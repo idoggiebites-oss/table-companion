@@ -9,6 +9,7 @@
  * it wrong.
  */
 
+import type { Scene } from "./scenes.js";
 import { abilityModifier } from "./abilities.js";
 import {
   appendLevel, effectiveBuild, reconcileImport,
@@ -75,6 +76,8 @@ export interface CampaignState {
   readonly combat: Combat | null;
   /** Saved prep, by encounter id. */
   readonly encounters: Readonly<Record<string, Encounter>>;
+  /** Places prepared before anybody sat down. Behind the screen, like NPCs. */
+  readonly scenes: Readonly<Record<string, Scene>>;
   /** The DM's own creatures, by statblock id. */
   readonly homebrew: Readonly<Record<string, Statblock>>;
   readonly npcs: Readonly<Record<string, Npc>>;
@@ -578,6 +581,13 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         combat: { ...state.combat, offer: done ? null : { ...offer, declined } },
       };
     }
+    case "scenePrepared":
+      return { ...state, scenes: { ...state.scenes, [e.scene.id]: e.scene } };
+    case "sceneDeleted": {
+      const scenes = { ...state.scenes };
+      delete scenes[e.sceneId];
+      return { ...state, scenes };
+    }
     case "sceneSet": {
       if (state.combat === null) return state;
       return { ...state, combat: { ...state.combat, scene: e.scene } };
@@ -898,7 +908,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
 
 export const EMPTY_STATE: CampaignState = {
   sources: {}, builds: {}, characters: {}, combat: null,
-  encounters: {}, homebrew: {}, progression: "xp",
+  encounters: {}, scenes: {}, homebrew: {}, progression: "xp",
   npcs: {}, openTrader: null, stash: { items: [], coins: 0 }, claims: [], checks: [],
 };
 

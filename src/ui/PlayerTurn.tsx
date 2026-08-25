@@ -19,7 +19,7 @@ import { AimSpell } from "./AimSpell.js";
 import { useCasting } from "./useCasting.js";
 import { blockedBecause, STANDARD_ACTIONS } from "../domain/actions.js";
 import { stanceFor } from "../domain/stance.js";
-import { describeScene, isOpenGround, movementCost } from "../domain/terrain.js";
+import { describeRoom, isOpenGround, movementCost } from "../domain/terrain.js";
 import { Swing } from "./Swing.js";
 import {
   activeCombatant, controls, ECONOMY, isSurprised, movementLeft, turnsUntil,
@@ -279,7 +279,7 @@ export function PlayerTurn({
             {!isOpenGround(combat.scene) && (
               <p className="room-is">
                 <span className="label">The room</span>
-                {describeScene(combat.scene)}
+                {describeRoom(combat.scene)}
               </p>
             )}
             <Pips who={who} character={character} kinds={ECONOMY} append={append} />

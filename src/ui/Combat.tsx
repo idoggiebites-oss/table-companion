@@ -16,9 +16,8 @@ import { ConditionStrip } from "./Conditions.js";
 import { SceneSet } from "./SceneSet.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { useEffect, useState } from "react";
-import {
-  instanceLabel, mergeStatblocks, rollHp, type Statblock,
-} from "../domain/statblock.js";
+import { mergeStatblocks, type Statblock } from "../domain/statblock.js";
+import { combatantsFor, creaturesFrom, type StagedCreature } from "../domain/stage.js";
 import { loadMonsters } from "../store/srd.js";
 import {
   activeCombatant, awaitingRolls, controls, DISCLOSURE, hasReaction, mayEndTurn,
@@ -76,14 +75,7 @@ function StartCombat({
   const [sittingOut, setSittingOut] = useState<string[]>([]);
   const inFight = characters.filter((b) => !sittingOut.includes(b.id)).map((b) => b.id);
   const [surprise, setSurprise] = useState<Surprise>("none");
-  const [creatures, setCreatures] = useState<
-    {
-      name: string;
-      maxHp: number;
-      ac?: number;
-      attacks?: readonly { name: string; toHit?: number; dice?: string; type?: string }[];
-    }[]
-  >([]);
+  const [creatures, setCreatures] = useState<readonly StagedCreature[]>([]);
   /**
    * Loaded whenever prep exists, not when a panel is opened. Dropping an
    * encounter in without the statblocks is how six goblins once arrived with
@@ -101,67 +93,18 @@ function StartCombat({
   function dropIn(encounterId: string) {
     const enc = state.encounters[encounterId];
     if (!enc) return;
-    const catalogue = mergeStatblocks(book ?? [], state.homebrew);
-    const added: { name: string; maxHp: number }[] = [];
-    for (const entry of enc.entries) {
-      const sb = catalogue.find((m) => m.id === entry.statblockId);
-      for (let i = 0; i < entry.count; i++) {
-        added.push({
-          name: instanceLabel(entry.name, i, entry.count),
-          // An unknown statblock lands as 1, which is visible as wrong rather
-          // than plausible — the same choice the encounter builder makes.
-          maxHp: sb ? (entry.hpMode === "rolled" ? rollHp(sb.hitDice) : sb.hp) : 1,
-          ...(sb ? { ac: sb.ac } : {}),
-          // Its actions come with it, so the DM taps rather than reads a
-          // statblock aloud and types the numbers off it.
-          ...(sb
-            ? {
-                attacks: sb.actions
-                  .filter((a) => a.attackBonus !== undefined || a.damage?.length)
-                  .map((a) => ({
-                    name: a.name,
-                    ...(a.attackBonus !== undefined ? { toHit: a.attackBonus } : {}),
-                    ...(a.damage?.[0]?.dice ? { dice: a.damage[0].dice } : {}),
-                    ...(a.damage?.[0]?.type ? { type: a.damage[0].type.toLowerCase() } : {}),
-                  })),
-              }
-            : {}),
-        });
-      }
-    }
-    setCreatures((c) => [...c, ...added]);
+    setCreatures((c) => [
+      ...c,
+      ...creaturesFrom(enc, mergeStatblocks(book ?? [], state.homebrew)),
+    ]);
   }
 
   function stage() {
-    const combatants: Combatant[] = [
-      ...characters
-        .filter((b) => inFight.includes(b.id))
-        .map((b) => ({
-          id: `pc-${b.id}`,
-          name: b.name,
-          initiative: null,
-          source: { kind: "character" as const, characterId: b.id },
-          controller: { kind: "player" as const, characterId: b.id },
-          disclosure: "exact" as const,
-          surprised: surprise === "players",
-          speed: b.speed,
-        })),
-      ...creatures.map((c, i) => ({
-        id: `cr-${Date.now().toString(36)}-${i}`,
-        name: c.name || `Creature ${i + 1}`,
-        initiative: null,
-        source: {
-          kind: "creature" as const,
-          maxHp: c.maxHp,
-          ...(c.ac ? { ac: c.ac } : {}),
-          ...(c.attacks?.length ? { attacks: c.attacks } : {}),
-        },
-        controller: { kind: "dm" as const },
-        disclosure: "vague" as const,
-        surprised: surprise === "monsters",
-        speed: 30,
-      })),
-    ];
+    const combatants = combatantsFor({
+      characters: characters.filter((b) => !sittingOut.includes(b.id)),
+      creatures,
+      surprise,
+    });
     if (combatants.length > 0) append({ type: "combatStaged", combatants });
   }
 

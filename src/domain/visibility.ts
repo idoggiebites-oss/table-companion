@@ -28,6 +28,13 @@ const BEHIND_THE_SCREEN = new Set<DomainEvent["type"]>([
   "homebrewDeleted",
   "encounterSaved",
   "encounterDeleted",
+  /*
+   * A player who reads "Prepared the cellar · dark · a note" has been told
+   * what is coming. Setting a room LIVE is public — the table can see it is
+   * dark — but preparing one is prep like any other.
+   */
+  "scenePrepared",
+  "sceneDeleted",
   "disclosureSet",
   "creatureDamaged",
 ]);

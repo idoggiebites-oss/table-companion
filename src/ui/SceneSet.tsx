@@ -15,20 +15,20 @@
 import { useState } from "react";
 import type { EventBody } from "../domain/events.js";
 import {
-  describeScene, isOpenGround, LIGHTS, OPEN_GROUND, TERRAIN,
-  type Scene, type TerrainTag,
+  describeRoom, isOpenGround, LIGHTS, OPEN_GROUND, TERRAIN,
+  type Room, type TerrainTag,
 } from "../domain/terrain.js";
 import type { Light } from "../domain/stance.js";
 
 export function SceneSet({
   scene, append,
 }: {
-  scene: Scene;
+  scene: Room;
   append: (body: EventBody) => void;
 }) {
   const [open, setOpen] = useState(false);
 
-  const set = (next: Scene) => append({ type: "sceneSet", scene: next });
+  const set = (next: Room) => append({ type: "sceneSet", scene: next });
   const toggle = (t: TerrainTag) =>
     set({
       ...scene,
@@ -47,7 +47,7 @@ export function SceneSet({
       >
         <span className="nm">The room</span>
         <span className="scene-said">
-          {isOpenGround(scene) ? "open ground" : describeScene(scene)}
+          {isOpenGround(scene) ? "open ground" : describeRoom(scene)}
         </span>
         <span className="scene-mark">{open ? "−" : "+"}</span>
       </button>

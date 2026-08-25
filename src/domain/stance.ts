@@ -28,7 +28,7 @@
 import type { ConditionId } from "./edition.js";
 import type { StanceTag } from "./combat.js";
 import type { Senses } from "./senses.js";
-import { sceneEffects, type Scene } from "./terrain.js";
+import { roomEffects, type Room } from "./terrain.js";
 
 export type Stance = "advantage" | "straight" | "disadvantage";
 
@@ -101,7 +101,7 @@ export function stanceFor({
    * `light` argument is what existed before rooms did, and is kept so callers
    * that only know about light keep working.
    */
-  scene?: Scene;
+  scene?: Room;
 }): { stance: Stance; reasons: readonly StanceReason[] } {
   const reasons: StanceReason[] = [];
   const adv = (because: string) => reasons.push({ effect: "advantage", because });
@@ -153,7 +153,7 @@ export function stanceFor({
   }
 
   // And whatever else the DM said about the room.
-  for (const e of scene ? sceneEffects(scene, { range }) : []) {
+  for (const e of scene ? roomEffects(scene, { range }) : []) {
     reasons.push({ effect: e.effect, because: e.because });
   }
 

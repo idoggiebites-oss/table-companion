@@ -34,12 +34,12 @@ export type TerrainTag =
   | "unstable"
   | "silence";
 
-export interface Scene {
+export interface Room {
   readonly light: Light;
   readonly terrain: readonly TerrainTag[];
 }
 
-export const OPEN_GROUND: Scene = { light: "bright", terrain: [] };
+export const OPEN_GROUND: Room = { light: "bright", terrain: [] };
 
 export const TERRAIN: readonly {
   readonly id: TerrainTag;
@@ -62,7 +62,7 @@ export const LIGHTS: readonly { readonly id: Light; readonly name: string }[] = 
 ];
 
 /** Whether anything has been said about this room at all. */
-export function isOpenGround(scene: Scene): boolean {
+export function isOpenGround(scene: Room): boolean {
   return scene.light === "bright" && scene.terrain.length === 0;
 }
 
@@ -73,12 +73,12 @@ export function isOpenGround(scene: Scene): boolean {
  * everybody forgets to apply, because it touches the number on a different
  * screen from the one where the DM said it.
  */
-export function movementCost(scene: Scene): number {
+export function movementCost(scene: Room): number {
   return scene.terrain.includes("difficult") || scene.terrain.includes("unstable") ? 2 : 1;
 }
 
 /** What the room does to a roll, in the words the turn will print. */
-export interface SceneEffect {
+export interface RoomEffect {
   readonly effect: "advantage" | "disadvantage";
   readonly because: string;
 }
@@ -92,11 +92,11 @@ export interface SceneEffect {
  * and not swords. An app that shrugged and applied disadvantage to everything
  * would be easier to write and wrong often enough to distrust.
  */
-export function sceneEffects(
-  scene: Scene,
+export function roomEffects(
+  scene: Room,
   { range }: { range: "melee" | "ranged" },
-): SceneEffect[] {
-  const out: SceneEffect[] = [];
+): RoomEffect[] {
+  const out: RoomEffect[] = [];
   const dis = (because: string) => out.push({ effect: "disadvantage", because });
 
   if (scene.terrain.includes("obscured")) dis("you cannot see through it");
@@ -112,8 +112,8 @@ export function sceneEffects(
  * What the room does to a check, which is a different question — wind and
  * silence trouble ears rather than arms.
  */
-export function checkEffects(scene: Scene, skill: string): SceneEffect[] {
-  const out: SceneEffect[] = [];
+export function checkEffects(scene: Room, skill: string): RoomEffect[] {
+  const out: RoomEffect[] = [];
   const s = skill.toLowerCase();
   if (/perception/.test(s)) {
     if (scene.terrain.includes("wind")) {
@@ -142,7 +142,7 @@ export function checkEffects(scene: Scene, skill: string): SceneEffect[] {
 }
 
 /** One line for the track, so the table can see what the room is. */
-export function describeScene(scene: Scene): string {
+export function describeRoom(scene: Room): string {
   const parts: string[] = [];
   if (scene.light !== "bright") parts.push(scene.light);
   for (const t of scene.terrain) {

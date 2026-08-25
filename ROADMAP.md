@@ -19,7 +19,10 @@ strengthens rather than by what surfaced most recently.
 Live sync, works offline and catches up. Every action is an event; anything
 can be undone. Device-local content and seats never enter the log.
 
-**The DM.** Encounter staging, initiative, turn order, damage and healing,
+**The DM.** Places prepared ahead of the session — a room, whatever is
+waiting in it, and the line to read when the door opens — opened live in one
+press. Terrain and light on the fight, which every roll then accounts for.
+Encounter staging, initiative, turn order, damage and healing,
 area damage, opportunity attacks, creature conditions, reaction offers,
 contested shoves. The disclosure ladder (hidden / present / vague / exact) per
 creature. A claim queue: players send rolls, the DM confirms. NPCs, homebrew
@@ -37,7 +40,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 521 unit tests, 33 browser suites, ~646 assertions, run against a
+**Proof.** 667 unit tests, 45 browser suites, ~834 assertions, run against a
 real build on two devices.
 
 ---
@@ -58,7 +61,8 @@ spread across the other modules.
 
 ## Done since this list was written
 
-Level-up completeness, identity, languages and tools, feats with their own
+Scenes — prepared places that carry their room, their encounter and the DM's
+line, opened in one press. Level-up completeness, identity, languages and tools, feats with their own
 choices, racial ability choices, a level-one feat, trait-granted spells,
 senses, multiclassing at creation and at the table, spell roles, the homebrew
 switch, the monster piles, and the DM's spell lookup.
@@ -73,11 +77,14 @@ switch, the monster piles, and the DM's spell lookup.
   by the app's own rule and still worth a way for a player to say "this one is
   ranged".
 
-- **The DM's light control.** Bright / dim / dark on the fight, which is the
-  point of tracking senses at all. The domain already takes a `Light` and
-  works out who suffers — a dwarf reads dim as bright, a drow suffers in
-  daylight — and every character carries what they can see. What is missing is
-  the DM's switch and putting the light on the combat state so it syncs.
+- **The room control appears only once the fight has begun.** Opening a place
+  during the initiative roll sets the room correctly and the DM cannot see or
+  change it until Begin. Found by scenes; the fix is where `SceneSet` renders,
+  not what it does.
+
+- **A player learns the room on their turn and not before.** The banner lives
+  in the turn panel, so a place opened in the dark is dark for the dice
+  immediately and unsaid on screen until you are up.
 
 - **Damage is not halved on a successful save.** Sacred Flame hands the DM the
   full roll and they apply what they rule; there is no "half on save" control

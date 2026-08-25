@@ -12,7 +12,7 @@
  */
 
 import type { ConditionId } from "./edition.js";
-import { OPEN_GROUND, type Scene } from "./terrain.js";
+import { OPEN_GROUND, type Room } from "./terrain.js";
 import type { CharacterId } from "./build.js";
 
 /** Where a combatant's numbers live, which is also what kind of thing it is. */
@@ -126,7 +126,7 @@ export interface Combat {
    * that is what it is — a fact about where everyone is standing, not about
    * any one of them.
    */
-  readonly scene: Scene;
+  readonly scene: Room;
 }
 
 export interface ShoveClaim {
@@ -236,6 +236,13 @@ export function awaitingRolls(combat: Combat): readonly Combatant[] {
  * position is worse than one that starts without them, and they can be added
  * back by staging again.
  */
+/*
+ * Everything per-turn is wiped; the ROOM is not. Where the fight is happening
+ * is a fact about the place, said once, and it was being said before Begin
+ * more often than after — a DM sets the room while the table is still rolling
+ * initiative, and it silently reverted to open ground the moment the fight
+ * started.
+ */
 export function beginCombat(combat: Combat): Combat {
   const rolled = combat.order.filter((c) => c.initiative !== null);
   return {
@@ -251,7 +258,6 @@ export function beginCombat(combat: Combat): Combat {
     offer: null,
     readied: {},
     shove: null,
-    scene: OPEN_GROUND,
   };
 }
 
