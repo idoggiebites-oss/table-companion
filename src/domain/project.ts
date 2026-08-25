@@ -320,7 +320,10 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       const claim = state.claims.find((c) => c.id === e.claimId);
       if (!claim) return state;
       const rest = { ...state, claims: state.claims.filter((c) => c.id !== e.claimId) };
-      if (!e.applied || claim.damage <= 0) return rest;
+      // A save that halves it lands as a smaller number, not a different kind
+      // of event — same target, same undo, same concentration save owed.
+      const landed = e.amount ?? claim.damage;
+      if (!e.applied || landed <= 0) return rest;
 
       // Resolution is where damage finally lands, on whichever side was hit —
       // and damage to a character is what owes a concentration save, so it
@@ -333,7 +336,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
           ...rest,
           characters: {
             ...rest.characters,
-            [target.source.characterId]: applyDamage(before, claim.damage),
+            [target.source.characterId]: applyDamage(before, landed),
           },
         };
       }
@@ -345,7 +348,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
           ...rest.combat,
           creatureHp: {
             ...rest.combat.creatureHp,
-            [claim.targetId]: Math.max(0, at - claim.damage),
+            [claim.targetId]: Math.max(0, at - landed),
           },
         },
       };

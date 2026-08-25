@@ -183,6 +183,7 @@ export function App() {
     toHit: number | null;
     damage: number;
     damageType: string;
+    save?: { ability: string; dc: number; half: boolean };
   }) => {
     if (!mine) return;
     append({
@@ -197,6 +198,7 @@ export function App() {
         toHit: c.toHit,
         damage: c.damage,
         damageType: c.damageType,
+        ...(c.save ? { save: c.save } : {}),
         at: Date.now(),
       },
     });

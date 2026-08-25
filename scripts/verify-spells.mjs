@@ -437,6 +437,87 @@ await page.waitForTimeout(300);
 ok("and it says why",
   /action is gone/i.test(await page.locator(".sp-detail").first().innerText()), true);
 
+
+/* --- a save that halves it ------------------------------------------------
+
+   The last place the app handed the DM arithmetic. A player rolls 8d6, the
+   goblin makes its save, and somebody divides by two out loud after the dice
+   are already on the table. The spell's own last sentence says which rule
+   applies, and only the CASTER's device has the spellbook — so the claim
+   carries it across. */
+await go(page, "spells");
+await page.getByRole("button", { name: "Add spells" }).click();
+await page.waitForSelector('input[aria-label="Search spells"]', { timeout: 20000 });
+await page.locator('input[aria-label="Search spells"]').fill("burning hands");
+await page.waitForTimeout(900);
+await page.locator(".menu-hd", { hasText: /^Burning Hands/ }).first().click();
+await page.waitForTimeout(300);
+await page.getByRole("button", { name: "Learn it" }).first().click();
+await page.waitForTimeout(600);
+
+/* A fresh fight, and a goblin with enough hit points left to take half of
+   anything. The one in the fight above is on its last four, and damage that
+   clamps at zero proves nothing about halving. */
+await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForTimeout(600);
+await go(page, "fight");
+await page.getByRole("button", { name: "End combat" }).click();
+await page.waitForTimeout(600);
+await page.getByRole("button", { name: "Add creature" }).click();
+await page.locator('input[aria-label="Creature 1 name"]').fill("Ogre");
+await page.locator('input[aria-label="Creature 1 hp"]').fill("59");
+await page.getByRole("button", { name: "Roll for initiative" }).click();
+await page.waitForSelector('input[aria-label="Ogre initiative"]');
+for (const [who, v] of [["Bel Ashcroft", 20], ["Ogre", 5]]) {
+  await page.locator(`input[aria-label="${who} initiative"]`).fill(String(v));
+  await page.getByRole("button", { name: `Set ${who} initiative` }).click();
+}
+await page.getByRole("button", { name: "Begin", exact: true }).click();
+await page.waitForTimeout(700);
+await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await page.waitForTimeout(700);
+await go(page, "spells");
+await page.getByRole("button", { name: "Cast Burning Hands" }).click();
+await page.waitForTimeout(500);
+// A levelled spell asks which slot first.
+const slot = page.locator(".tgt-row", { hasText: /1st/ }).first();
+if (await slot.count()) { await slot.click(); await page.waitForTimeout(500); }
+await page.locator(".tgt-row", { hasText: "Ogre" }).first().click();
+await page.waitForTimeout(500);
+
+const saveAsk = (await page.locator(".swing-step").innerText()).replace(/\s+/g, " ");
+ok("a save spell asks the target to roll, not the caster",
+  /DEX save against your DC \d+/i.test(saveAsk), true);
+/* The rule, before the dice rather than after them. */
+ok("and says what a success costs", /success takes half/i.test(saveAsk), true);
+ok("no attack roll is asked for",
+  await page.locator('input[aria-label="Spell attack roll"]').count(), 0);
+
+await page.locator('input[aria-label="Spell damage roll"]').fill("13");
+await page.getByRole("button", { name: "Send to the DM" }).click();
+await page.waitForTimeout(700);
+
+await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForTimeout(700);
+await go(page, "fight");
+const saveClaim = (await page.locator(".claim").first().innerText()).replace(/\s+/g, " ");
+/* "they save or they do not" was true and useless: it told the DM neither
+   what to roll against nor what a success was worth. */
+ok("the DM's row names the save and the DC", /DEX \d+/.test(saveClaim), true);
+ok("and which rule this spell uses", /half on a save/i.test(saveClaim), true);
+
+const gobHp = () => page.locator(".cbt", { hasText: "Ogre" }).locator(".hp").innerText();
+const beforeSave = Number((await gobHp()).split("/")[0]);
+ok("both outcomes are one press, and the app has done the halving",
+  await page.locator(".claim").first().getByRole("button", { name: /Apply 6 to Ogre on a save/ }).count(),
+  1);
+await page.screenshot({ path: `${OUT}/30-half-on-save.png` });
+await page.locator(".claim").first().getByRole("button", { name: /on a save/ }).click();
+await page.waitForTimeout(700);
+ok("half of thirteen is six, rounded down",
+  beforeSave - Number((await gobHp()).split("/")[0]), 6);
+ok("and the claim leaves the queue", await page.locator(".claim").count(), 0);
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

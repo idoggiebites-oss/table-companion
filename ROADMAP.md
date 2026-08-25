@@ -40,7 +40,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 667 unit tests, 45 browser suites, ~834 assertions, run against a
+**Proof.** 676 unit tests, 45 browser suites, ~844 assertions, run against a
 real build on two devices.
 
 ---
@@ -50,19 +50,18 @@ real build on two devices.
 The builder module is done bar its export, which is parked. What is left is
 spread across the other modules.
 
-1. **Half damage on a successful save.** *Adjudication.* The only place the
-   app hands the DM arithmetic it could do itself.
-2. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
+1. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
    Casting happens in the turn now, so the first cast of a session can pause
    while 4MB arrives.
-3. **Session recap.** *Guidance.* The log holds everything that happened and
+2. **Session recap.** *Guidance.* The log holds everything that happened and
    nothing turns it into something a table can read when they sit back down.
    The only item here that opens a module rather than closing a gap.
 
 ## Done since this list was written
 
 Scenes — prepared places that carry their room, their encounter and the DM's
-line, opened in one press. Level-up completeness, identity, languages and tools, feats with their own
+line, opened in one press. Half damage on a successful save, read off the
+spell's own last sentence and carried on the claim. Level-up completeness, identity, languages and tools, feats with their own
 choices, racial ability choices, a level-one feat, trait-granted spells,
 senses, multiclassing at creation and at the table, spell roles, the homebrew
 switch, the monster piles, and the DM's spell lookup.
@@ -77,19 +76,10 @@ switch, the monster piles, and the DM's spell lookup.
   by the app's own rule and still worth a way for a player to say "this one is
   ranged".
 
-- **The room control appears only once the fight has begun.** Opening a place
-  during the initiative roll sets the room correctly and the DM cannot see or
-  change it until Begin. Found by scenes; the fix is where `SceneSet` renders,
-  not what it does.
-
-- **A player learns the room on their turn and not before.** The banner lives
-  in the turn panel, so a place opened in the dark is dark for the dice
-  immediately and unsaid on screen until you are up.
-
-- **Damage is not halved on a successful save.** Sacred Flame hands the DM the
-  full roll and they apply what they rule; there is no "half on save" control
-  on the claim. A small addition to the queue, and the only place the app
-  makes the DM do arithmetic it could do itself.
+- **A save spell aimed at more than one creature is still one claim.** Burning
+  Hands catches three goblins and arrives as one row against one target; the
+  DM resolves it once and applies the rest by hand, or uses Area damage, which
+  takes the whole blast and asks who saved. Two paths to the same fight.
 
 ## Known and unfixed
 

@@ -112,6 +112,16 @@ await player.screenshot({ path: `${OUT}/S2-scene-player.png`, fullPage: true });
 
 await go(dm, "fight");
 await dm.waitForSelector('input[aria-label$="initiative"]', { timeout: 20000 });
+
+/* Rolling initiative is when there is TIME to talk about the room, and it is
+   where opening a prepared place lands the DM. Both sides can see it there
+   now: the DM to change it, the player because being told the room is pitch
+   dark on your own turn is being told too late to do anything about it. */
+await player.waitForTimeout(800);
+ok("the player is told the room while initiative is still going round",
+  /dark/i.test(await player.locator(".room-is").innerText()), true);
+ok("and the DM can still change it before Begin",
+  await dm.locator(".scene-hd").count(), 1);
 const staged = await Promise.all(
   (await dm.locator('input[aria-label$="initiative"]').all())
     .map(async (b) => (await b.getAttribute("aria-label")).replace(/ initiative$/, "")),
@@ -133,7 +143,7 @@ ok("and the DM's room control agrees with the place they opened",
 const fighting = await player.locator(".cbt .nm").allInnerTexts();
 ok("the fight the place carried is the fight being run",
   fighting.filter((n) => n.startsWith("Goblin")).length, 2);
-ok("the room reaches the person acting in it",
+ok("the room stays put once the fight is running",
   /dark/i.test(await player.locator(".room-is").innerText()), true);
 ok("with the ground they are fighting on",
   /difficult ground/i.test(await player.locator(".room-is").innerText()), true);

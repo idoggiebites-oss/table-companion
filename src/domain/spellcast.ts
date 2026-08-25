@@ -69,6 +69,22 @@ export function kindOf(spell: CastableSpell): SpellKind {
   return { kind: "none" };
 }
 
+/**
+ * Whether a successful save halves the damage or avoids it entirely.
+ *
+ * The rule lives in the spell's own last sentence — "half as much damage on a
+ * successful one" — and it is the one number a table gets wrong most often,
+ * because it arrives after the dice are already on the table and somebody has
+ * to divide by two out loud.
+ *
+ * Absent that sentence a save takes nothing, which is the rule's default and
+ * also the safer way to be wrong: it under-applies rather than inventing
+ * damage the spell does not do.
+ */
+export function halvesOnSave(spell: CastableSpell): boolean {
+  return /half as much damage/i.test(spell.text ?? "");
+}
+
 /** Proficiency plus the casting ability, the same as a weapon's. */
 export function spellAttackBonus(proficiencyBonus: number, abilityMod: number): number {
   return proficiencyBonus + abilityMod;

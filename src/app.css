@@ -1665,3 +1665,36 @@ html, body { overscroll-behavior-y: none; }
 }
 .sc-note textarea::placeholder { color: var(--faint); }
 .sc-ct { font-family: var(--mono); font-size: 0.6rem; color: var(--faint); }
+
+/* ---- the DM's queue: a player rolled, nothing has happened yet ---- */
+/*
+ * This had no rules at all. It read as one run-on line of text with buttons
+ * embedded in it — "Bel Ashcroft → Ogre · Burning HandsDEX 14 — half on a
+ * save13 fire" — and it is the surface a DM taps most in a fight.
+ *
+ * Three lines, in the order the DM reads them: who did what to whom, what
+ * the app makes of it, and then the verdicts. The damage sits with the
+ * ruling rather than with the buttons, so nobody taps a number.
+ */
+.claims { padding: 12px 13px; display: flex; flex-direction: column; gap: 10px; }
+.claim {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center;
+  padding: 11px 12px; border-radius: var(--r-control);
+  background: var(--raised); border-left: 2px solid var(--rule);
+}
+.claim .nm { grid-column: 1 / -1; font-size: 0.92rem; color: var(--ink); }
+.claim .say {
+  grid-column: 1; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.claim .dmg {
+  grid-column: 2; text-align: right; white-space: nowrap;
+  font-family: var(--mono); font-size: 0.86rem; color: var(--ink-dim);
+}
+.claim .acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+.claim .acts button { flex: 1 1 auto; min-height: 44px; }
+/* The app's own reading, carried on the edge rather than in a colour that
+   means something else — red is damage here and green is healing. */
+.claim.v-hits { border-left-color: var(--gold); }
+.claim.v-hits .say { color: var(--gold); }
+.claim.v-misses .say { color: var(--faint); }

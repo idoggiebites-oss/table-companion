@@ -23,7 +23,7 @@ import type { CompendiumSpell } from "../import/compendium.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { describeReasons, describeStance, type Stance, type StanceReason } from "../domain/stance.js";
 import {
-  castingAbility, damageFor, damageTypeFrom, kindOf, resolveDice,
+  castingAbility, damageFor, damageTypeFrom, halvesOnSave, kindOf, resolveDice,
   spellAttackBonus, spellSaveDc,
 } from "../domain/spellcast.js";
 
@@ -51,6 +51,8 @@ export function AimSpell({
     toHit: number | null;
     damage: number;
     damageType: string;
+    /** Present only when the target saves rather than the caster swings. */
+    save?: { ability: string; dc: number; half: boolean };
   } | null) => void;
   /** Never mind. Nothing is spent, because nothing was cast. */
   onCancel: () => void;
@@ -178,6 +180,11 @@ export function AimSpell({
         <p className="swing-ask">
           They roll a <b>{kind.ability.toUpperCase()}</b> save against your
           {" "}<b>DC {dc}</b>. The DM will tell you.
+          {/* Said before the dice, because after them it is arithmetic
+              somebody has to do out loud. */}
+          {full && (halvesOnSave(full)
+            ? " A success takes half."
+            : " A success takes nothing.")}
         </p>
       )}
 
@@ -208,6 +215,17 @@ export function AimSpell({
               toHit: kind.kind === "attack" ? num(toHit) : null,
               damage: num(damage) ?? 0,
               damageType,
+              // The spell's own rule, sent with the claim. The DM's device
+              // has the name and the number and not the spellbook.
+              ...(kind.kind === "save" && full
+                ? {
+                    save: {
+                      ability: kind.ability,
+                      dc,
+                      half: halvesOnSave(full),
+                    },
+                  }
+                : {}),
             })
           }
         >

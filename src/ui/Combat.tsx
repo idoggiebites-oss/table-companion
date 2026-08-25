@@ -14,6 +14,7 @@
 
 import { ConditionStrip } from "./Conditions.js";
 import { SceneSet } from "./SceneSet.js";
+import { describeRoom, isOpenGround, type Room } from "../domain/terrain.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { useEffect, useState } from "react";
 import { mergeStatblocks, type Statblock } from "../domain/statblock.js";
@@ -38,7 +39,9 @@ const SURPRISE_LABEL: Record<Surprise, string> = {
 };
 import type { EventBody } from "../domain/events.js";
 import type { CampaignState } from "../domain/project.js";
-import { describeVerdict, sortClaims, verdictFor } from "../domain/attackflow.js";
+import {
+  describeClaim, onSave, sortClaims, verdictFor,
+} from "../domain/attackflow.js";
 import { AreaDamage } from "./AreaDamage.js";
 import { healthStep, VAGUE_LABEL } from "./HpBar.js";
 import { PlayerTurn } from "./PlayerTurn.js";
@@ -226,6 +229,26 @@ function StartCombat({
  * verbally and the screen answers "who are we waiting on" without anyone
  * having to ask.
  */
+/**
+ * Where the fight is, for anyone who is not the DM.
+ *
+ * It sat inside the turn panel, which meant a player learned the room was
+ * pitch dark at the moment it was already too late to say anything about it —
+ * on their own turn, and never before. The room is a fact about the table,
+ * not about whose go it is.
+ */
+function RoomLine({ scene }: { scene: Room }) {
+  if (isOpenGround(scene)) return null;
+  return (
+    <div className="card-body" style={{ paddingBottom: 0 }}>
+      <p className="room-is">
+        <span className="label">The room</span>
+        {describeRoom(scene)}
+      </p>
+    </div>
+  );
+}
+
 function Rolling({
   combat, seat, append,
 }: {
@@ -380,6 +403,16 @@ export function Combat({
     return (
       <section className="card">
         <div className="card-hd"><span className="label">Combat</span></div>
+        {/* Rolling initiative is when a DM has the time to say what the room
+            is like, and where opening a prepared place lands them. Hiding the
+            control until Begin meant the one window for it was shut. */}
+        {seat.kind === "dm" ? (
+          <div className="card-body" style={{ paddingBottom: 0 }}>
+            <SceneSet scene={combat.scene} append={append} />
+          </div>
+        ) : (
+          <RoomLine scene={combat.scene} />
+        )}
         <Rolling combat={combat} seat={seat} append={append} />
       </section>
     );
@@ -402,6 +435,8 @@ export function Combat({
           </span>
         )}
       </div>
+
+      {seat.kind === "player" && <RoomLine scene={combat.scene} />}
 
       {seat.kind === "player" && state.characters[seat.characterId] && (
         <PlayerTurn
@@ -497,20 +532,39 @@ export function Combat({
                   {c.whoName} → {c.targetName}
                   <span className="faint"> · {c.weapon}</span>
                 </span>
-                <span className="say">{describeVerdict(c.toHit, ac)}</span>
+                <span className="say">{describeClaim(c, ac)}</span>
                 <span className="dmg num">{c.damage} {c.damageType}</span>
                 <span className="acts">
                   <button
                     aria-label={`Apply ${c.damage} to ${c.targetName}`}
                     onClick={() => append({ type: "attackResolved", claimId: c.id, applied: true })}
                   >
-                    {verdict === "misses" ? "Hits anyway" : "It hits"}
+                    {c.save ? `Failed — ${c.damage}` : verdict === "misses" ? "Hits anyway" : "It hits"}
                   </button>
+                  {/* The one place the app made the DM do arithmetic: a save
+                      that halves it, announced after the dice are already on
+                      the table. Half rounds down, and the button says the
+                      number so nobody has to trust it. */}
+                  {c.save?.half && (
+                    <button
+                      aria-label={`Apply ${onSave(c)} to ${c.targetName} on a save`}
+                      onClick={() =>
+                        append({
+                          type: "attackResolved",
+                          claimId: c.id,
+                          applied: true,
+                          amount: onSave(c),
+                        })
+                      }
+                    >
+                      Saved — {onSave(c)}
+                    </button>
+                  )}
                   <button
                     aria-label={`Reject ${c.whoName}'s attack`}
                     onClick={() => append({ type: "attackResolved", claimId: c.id, applied: false })}
                   >
-                    Missed
+                    {c.save ? "Saved — none" : "Missed"}
                   </button>
                 </span>
               </div>

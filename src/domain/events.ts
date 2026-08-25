@@ -227,6 +227,12 @@ export type DomainEvent = Meta &
         readonly claimId: string;
         /** False is a miss, or a DM saying no. Either way nothing lands. */
         readonly applied: boolean;
+        /**
+         * What actually landed, when it is not the whole claim — a save that
+         * halves it. Absent means the claim's own number, which is every
+         * weapon swing and every failed save.
+         */
+        readonly amount?: number;
       }
     | { readonly type: "spellLearned"; readonly who: CharacterId; readonly spell: KnownSpell }
     | { readonly type: "spellForgotten"; readonly who: CharacterId; readonly spellId: string }

@@ -32,6 +32,19 @@ export interface AttackClaim {
   /** What the player rolled, with their modifier already in it. */
   /** Null when the target rolls a save instead of the caster rolling to hit. */
   readonly toHit: number | null;
+  /**
+   * The save the target is owed, when it is a save rather than a swing.
+   *
+   * Carried on the claim rather than looked up by the DM, because by the time
+   * the claim arrives the spellbook is on the CASTER's device and the DM has
+   * only a name and a number. Absent on weapon swings and on old claims.
+   */
+  readonly save?: {
+    readonly ability: string;
+    readonly dc: number;
+    /** True when a success halves it; false when a success avoids it. */
+    readonly half: boolean;
+  };
   readonly damage: number;
   readonly damageType: string;
   readonly at: number;
@@ -48,6 +61,28 @@ export function verdictFor(toHit: number | null, ac: number | undefined): Verdic
   // A save spell has no attack roll at all; the DM decides on the save.
   if (toHit === null || ac === undefined) return "unknown";
   return toHit >= ac ? "hits" : "misses";
+}
+
+/** What a successful save actually costs, in hit points. Half rounds DOWN. */
+export function onSave(claim: AttackClaim): number {
+  return claim.save?.half ? Math.floor(claim.damage / 2) : 0;
+}
+
+/**
+ * The whole claim in one line, from the DM's side.
+ *
+ * A save claim used to read "they save or they do not", which is true and
+ * useless: the DM was told neither what to roll against nor what a success
+ * costs. Both are on the claim now, so the line says the rule and the buttons
+ * do the arithmetic.
+ */
+export function describeClaim(claim: AttackClaim, ac: number | undefined): string {
+  if (claim.save) {
+    return `${claim.save.ability.toUpperCase()} ${claim.save.dc} — ${
+      claim.save.half ? "half on a save" : "nothing on a save"
+    }`;
+  }
+  return describeVerdict(claim.toHit, ac);
 }
 
 export function describeVerdict(toHit: number | null, ac: number | undefined): string {

@@ -19,7 +19,7 @@ import { AimSpell } from "./AimSpell.js";
 import { useCasting } from "./useCasting.js";
 import { blockedBecause, STANDARD_ACTIONS } from "../domain/actions.js";
 import { stanceFor } from "../domain/stance.js";
-import { describeRoom, isOpenGround, movementCost } from "../domain/terrain.js";
+import { movementCost } from "../domain/terrain.js";
 import { Swing } from "./Swing.js";
 import {
   activeCombatant, controls, ECONOMY, isSurprised, movementLeft, turnsUntil,
@@ -274,14 +274,6 @@ export function PlayerTurn({
         </div>
         {!surprised && (
           <>
-            {/* What the DM said about the room, where the person acting in
-                it will see it. */}
-            {!isOpenGround(combat.scene) && (
-              <p className="room-is">
-                <span className="label">The room</span>
-                {describeRoom(combat.scene)}
-              </p>
-            )}
             <Pips who={who} character={character} kinds={ECONOMY} append={append} />
             {self && <Movement combat={combat} combatant={self} append={append} />}
             {picking === "menu" ? (
