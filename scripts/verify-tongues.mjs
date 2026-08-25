@@ -18,6 +18,17 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Languages, tools and background skills are closed pickers now — sixteen and
+   fifty-three of them laid out at once made this step three and a half screens
+   tall. Open the one you want, then choose in it. */
+const openPick = async (page, label) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${label}, \\d+ chosen$`) });
+  if ((await hd.count()) && (await hd.first().getAttribute("aria-expanded")) === "false") {
+    await hd.first().click();
+    await page.waitForTimeout(250);
+  }
+};
+
 /* The builder is a flow now: one question per screen, and the rail is how you
    move between them. Every step is reachable at any time — which is also how a
    person changes their mind about a race after picking spells. */
@@ -66,30 +77,66 @@ ok("the race's own languages are stated, not asked for",
 ok("and the class's tools with them",
   /thieves' tools/i.test(said), true);
 ok("neither is offered as a choice — you already have them",
-  await card.getByRole("button", { name: "Speak Dwarvish" }).count(), 0);
+  await (async () => {
+    await openPick(page, "Languages");
+    return card.getByRole("button", { name: "Speak Dwarvish" }).count();
+  })(), 0);
 ok("what is left to choose is a background's two",
   (await card.locator(".card-hd .faint").innerText()).trim(), "0 of 2");
 await page.screenshot({ path: `${OUT}/80-tongues.png`, fullPage: true });
 
 // The tool list is the compendium's, not one somebody typed out.
-const tools = await card.locator('.chips button[aria-label^="Use "]').allInnerTexts();
+await openPick(page, "Tools");
+const tools = await card.locator('.pl-row[aria-label^="Use "]').allInnerTexts();
 ok("tools come from the item catalogue", tools.length > 30, true);
 ok("and are the mundane ones, not treasure",
   tools.some((t) => /Herbalism Kit/i.test(t)) && !tools.some((t) => /legendary/i.test(t)), true);
 
+await openPick(page, "Languages");
 await card.getByRole("button", { name: "Speak Elvish" }).click();
+await openPick(page, "Tools");
 await card.getByRole("button", { name: "Use Herbalism Kit" }).click();
 await page.waitForTimeout(300);
+/* --- and it fits on a screen ---------------------------------------------
+   Sixteen languages and fifty-three tools laid out at once, with a real 44px
+   tap target, made this step three and a half screens tall. Eighty-six chips
+   is not a choice, it is a search with no search box. */
+const shape = await page.evaluate(() => ({
+  screens: document.documentElement.scrollHeight / window.innerHeight,
+  chips: document.querySelectorAll(".chips .chip").length,
+  pickers: document.querySelectorAll(".pl").length,
+}));
+ok("the step is closed pickers rather than a chip wall", shape.chips, 0);
+ok("one for each list", shape.pickers >= 3, true);
+ok("and the whole step fits in about two screens", shape.screens < 2.6, true);
+
+/* Opening the longest list must not undo that — it scrolls inside itself. */
+await openPick(page, "Tools");
+await page.waitForTimeout(300);
+const opened = await page.evaluate(() => ({
+  screens: document.documentElement.scrollHeight / window.innerHeight,
+  rows: document.querySelectorAll(".pl-row").length,
+  boxed: (() => { const e = document.querySelector(".pl-rows"); return !!e && e.scrollHeight > e.clientHeight; })(),
+}));
+ok("opening fifty-odd tools offers all of them", opened.rows > 40, true);
+ok("inside a box rather than down the page", opened.boxed, true);
+ok("so the step barely grows", opened.screens < 3, true);
+
 ok("two picks fills the background's allowance",
   (await card.locator(".card-hd .faint").innerText()).trim(), "2 of 2");
 ok("and a third is refused rather than silently ignored",
-  await card.getByRole("button", { name: "Speak Orc" }).isDisabled(), true);
+  await (async () => {
+    await openPick(page, "Languages");
+    return card.getByRole("button", { name: "Speak Orc" }).isDisabled();
+  })(), true);
 
 // Finish, and see it on the sheet.
 await atStep(page, "Story");
-await page.getByRole("button", { name: "nature", exact: true }).click();
+await openPick(page, "Skills");
+await page.getByRole("button", { name: "Train nature" }).click();
 await atStep(page, "Story");
-await page.getByRole("button", { name: "animal handling", exact: true }).click();
+await openPick(page, "Skills");
+await page.getByRole("button", { name: "Train animal handling" }).click();
 await atStep(page, "Story");
 await page.locator('input[aria-label="Background name"]').fill("Guild thief");
 await atStep(page, "Review");
@@ -123,6 +170,8 @@ await page.screenshot({ path: `${OUT}/81-tongues-sheet.png`, fullPage: true });
 // --- who they are ---------------------------------------------------------
 // The builder asked for every number a character has and never once asked
 // this. It is the difference between a build and somebody's character.
+
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

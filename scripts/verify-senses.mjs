@@ -17,6 +17,17 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+
+/* Languages, tools and background skills are closed pickers now — sixteen and
+   fifty-three of them laid out at once made this step three and a half screens
+   tall. Open the one you want, then choose in it. */
+const openPick = async (page, label) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${label}, \\d+ chosen$`) });
+  if ((await hd.count()) && (await hd.first().getAttribute("aria-expanded")) === "false") {
+    await hd.first().click();
+    await page.waitForTimeout(250);
+  }
+};
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
   await page.waitForTimeout(300);
@@ -53,8 +64,10 @@ await page.waitForTimeout(500);
 const cls = page.locator(".card", { hasText: "Your class" }).locator("select");
 for (let i = 0; i < (await cls.count()); i++) await cls.nth(i).selectOption({ index: 1 });
 await atStep(page, "Story");
-await page.getByRole("button", { name: "nature", exact: true }).click();
-await page.getByRole("button", { name: "insight", exact: true }).click();
+await openPick(page, "Skills");
+await page.getByRole("button", { name: "Train nature" }).click();
+await openPick(page, "Skills");
+await page.getByRole("button", { name: "Train insight" }).click();
 await page.locator('input[aria-label="Background name"]').fill("Soldier");
 await atStep(page, "Gear");
 const sel = page.locator('select[aria-label^="Choose"]');

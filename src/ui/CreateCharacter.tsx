@@ -72,6 +72,7 @@ import {
   featureOf, mechanicalTraits, shapeOf,
 } from "../domain/guidance.js";
 import { FeatPick } from "./FeatPick.js";
+import { PickList } from "./PickList.js";
 import { SpellPick } from "./SpellPick.js";
 import { choicesBy, findChoices } from "../domain/subclass.js";
 import type { CompendiumFeat } from "../import/compendium.js";
@@ -1347,21 +1348,23 @@ export function CreateCharacter({
                 ? "Or make one up — two skills and a name is all a background mechanically is."
                 : "The SRD ships one background, so this builder offers a custom one instead — two skills and a name. That is all a background mechanically is."}
             </p>
-            <div className="chips">
-              {SKILL_IDS.map((s) => {
-                const on = bgSkills.includes(s);
-                return (
-                  <button
-                    key={s}
-                    className={`chip${on ? " on" : ""}`}
-                    aria-pressed={on}
-                    onClick={() => setBgSkills(toggle(bgSkills, s, 2))}
-                  >
-                    {spaced(s)}
-                  </button>
-                );
-              })}
-            </div>
+            {/* The last chip wall on this step. Same control as the two
+                beneath it, so the step has one shape rather than three. */}
+            <PickList
+              label="Skills"
+              verb="Train"
+              options={SKILL_IDS.map(spaced)}
+              chosen={bgSkills.map(spaced)}
+              max={2}
+              onChange={(next) =>
+                setBgSkills(
+                  next
+                    .map((n) => SKILL_IDS.find((id) => spaced(id) === n))
+                    .filter((x): x is SkillId => x !== undefined),
+                )
+              }
+            />
+
             <input
               value={bgName}
               aria-label="Background name"
@@ -1412,63 +1415,30 @@ export function CreateCharacter({
               story you gave it.
             </p>
 
-            <span className="label">Languages</span>
-            <div className="chips">
-              {ALL_LANGUAGES.filter((l) => !raceLangs.known.includes(l)).map((l) => {
-                const on = pickedLangs.includes(l);
-                const full =
-                  pickedLangs.length + pickedTools.length >= langPicks + toolPicks + BACKGROUND_PICKS;
-                return (
-                  <button
-                    key={l}
-                    className={`chip${on ? " on" : ""}`}
-                    aria-pressed={on}
-                    aria-label={`Speak ${l}`}
-                    disabled={!on && full}
-                    onClick={() =>
-                      setPickedLangs(
-                        on ? pickedLangs.filter((x) => x !== l) : [...pickedLangs, l],
-                      )
-                    }
-                  >
-                    {l}
-                  </button>
-                );
-              })}
-            </div>
-
-            <span className="label" style={{ display: "block", marginTop: 14 }}>Tools</span>
-            {classTools.stated && (
-              <p className="cr-note" style={{ marginTop: 4 }}>{classTools.stated}</p>
-            )}
-            <div className="chips">
-              {toolOptions.map((t) => {
-                const on = pickedTools.includes(t);
-                const full =
-                  pickedLangs.length + pickedTools.length >= langPicks + toolPicks + BACKGROUND_PICKS;
-                return (
-                  <button
-                    key={t}
-                    className={`chip${on ? " on" : ""}`}
-                    aria-pressed={on}
-                    aria-label={`Use ${t}`}
-                    disabled={!on && full}
-                    onClick={() =>
-                      setPickedTools(
-                        on ? pickedTools.filter((x) => x !== t) : [...pickedTools, t],
-                      )
-                    }
-                  >
-                    {t}
-                  </button>
-                );
-              })}
-              {toolOptions.length === 0 && (
-                <p className="faint" style={{ margin: 0, fontSize: ".82rem" }}>
-                  No tools on this device to choose from.
-                </p>
-              )}
-            </div>
+            {/*
+              * Two lists, closed. Sixteen languages and fifty-three tools laid
+              * out at once made this step three and a half screens tall — and
+              * eighty-odd chips is not a choice, it is a search with no search
+              * box. What was chosen reads on the closed row, because that is
+              * the answer; the list is only how you got there.
+              */}
+            <PickList
+              label="Languages"
+              verb="Speak"
+              options={ALL_LANGUAGES.filter((l) => !raceLangs.known.includes(l))}
+              chosen={pickedLangs}
+              max={langPicks + toolPicks + BACKGROUND_PICKS - pickedTools.length}
+              onChange={setPickedLangs}
+            />
+            <PickList
+              label="Tools"
+              verb="Use"
+              options={toolOptions}
+              chosen={pickedTools}
+              max={langPicks + toolPicks + BACKGROUND_PICKS - pickedLangs.length}
+              onChange={setPickedTools}
+              {...(classTools.stated ? { note: classTools.stated } : {})}
+            />
           </div>
         </section>
       )}

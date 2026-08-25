@@ -56,11 +56,7 @@ spread across the other modules.
 3. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
    Casting happens in the turn now, so the first cast of a session can pause
    while 4MB arrives.
-4. **Long lists are still chip walls in places.** *Guidance.* The story step is
-   3.6 screens tall with 86 chips. Tap targets are fixed; the control is still
-   wrong for 53 tools. The searchable scroll-box the spell and monster pickers
-   use is the answer.
-5. **Session recap.** *Guidance.* The log holds everything that happened and
+4. **Session recap.** *Guidance.* The log holds everything that happened and
    nothing turns it into something a table can read when they sit back down.
    The only item here that opens a module rather than closing a gap.
 

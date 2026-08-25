@@ -1535,3 +1535,38 @@ html, body { overscroll-behavior-y: none; }
 .cr-review::after, .lv::after {
   bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 var(--r-card) 0;
 }
+
+/* ---- a few things from a long list ---- */
+.pl { border: 1px solid var(--rule); border-radius: var(--r-control); overflow: hidden; }
+.pl + .pl { margin-top: 8px; }
+.pl-hd {
+  display: flex; align-items: baseline; gap: 10px; width: 100%;
+  padding: 12px 13px; text-align: left; border: 0; border-radius: 0;
+  background: var(--raised); letter-spacing: 0; text-transform: none;
+}
+.pl-hd.open { border-bottom: 1px solid var(--rule); }
+.pl-hd .nm {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted); flex: 0 0 auto;
+}
+/* What was chosen reads as the answer; the list is only how you got there. */
+.pl-said {
+  flex: 1; min-width: 0; color: var(--ink-dim); font-size: 0.88rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pl-mark { color: var(--muted); font-family: var(--mono); flex: 0 0 auto; }
+.pl-body { padding: 11px 13px 13px; }
+.pl-rows {
+  margin-top: 9px; max-height: 240px; overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.pl-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; padding: 6px 10px; text-align: left;
+  border: 1px solid transparent; border-radius: var(--r-control);
+  background: transparent; color: var(--ink-dim);
+  letter-spacing: 0; text-transform: none; font-size: 0.9rem;
+}
+.pl-row.on { border-color: var(--gold); background: var(--gold-wash); color: var(--ink); }
+.pl-tick { color: var(--gold); font-size: 0.78rem; }

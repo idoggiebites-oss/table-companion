@@ -18,6 +18,17 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Languages, tools and background skills are closed pickers now — sixteen and
+   fifty-three of them laid out at once made this step three and a half screens
+   tall. Open the one you want, then choose in it. */
+const openPick = async (page, label) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${label}, \\d+ chosen$`) });
+  if ((await hd.count()) && (await hd.first().getAttribute("aria-expanded")) === "false") {
+    await hd.first().click();
+    await page.waitForTimeout(250);
+  }
+};
+
 /* The builder is a flow now: one question per screen, and the rail is how you
    move between them. Every step is reachable at any time — which is also how a
    person changes their mind about a race after picking spells. */
@@ -87,9 +98,11 @@ await page.waitForTimeout(400);
 await atStep(page, "Scores");
 await page.getByRole("button", { name: "Recommend" }).click();
 await atStep(page, "Story");
-await page.getByRole("button", { name: "nature", exact: true }).click();
+await openPick(page, "Skills");
+await page.getByRole("button", { name: "Train nature" }).click();
 await atStep(page, "Story");
-await page.getByRole("button", { name: "animal handling", exact: true }).click();
+await openPick(page, "Skills");
+await page.getByRole("button", { name: "Train animal handling" }).click();
 await atStep(page, "Story");
 await page.locator('input[aria-label="Background name"]').fill("Soldier");
 await atStep(page, "Review");

@@ -24,6 +24,17 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Languages, tools and background skills are closed pickers now — sixteen and
+   fifty-three of them laid out at once made this step three and a half screens
+   tall. Open the one you want, then choose in it. */
+const openPick = async (page, label) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${label}, \\d+ chosen$`) });
+  if ((await hd.count()) && (await hd.first().getAttribute("aria-expanded")) === "false") {
+    await hd.first().click();
+    await page.waitForTimeout(250);
+  }
+};
+
 /* The builder is a flow now: one question per screen, and the rail is how you
    move between them. Every step is reachable at any time — which is also how a
    person changes their mind about a race after picking spells. */
@@ -128,20 +139,30 @@ await page.waitForTimeout(500);
 await atStep(page, "Story");
 ok("choosing one fills in its name",
   await page.locator('input[aria-label="Background name"]').inputValue(), "Acolyte");
-const chosen = await page.locator(".chip.on").allInnerTexts();
+/* The skills a background grants read on the closed picker's own row — that
+   IS the answer, and the list behind it is only how you would change it. */
+const chosen = [
+  (await page.getByRole("button", { name: /^Skills, \d+ chosen$/ }).innerText())
+    .replace(/\s+/g, " "),
+];
 ok("and the skills it grants",
   chosen.some((t) => /insight/i.test(t)) && chosen.some((t) => /religion/i.test(t)), true);
 
 // The custom route has to survive alongside it. Background skills cap at two,
 // so swapping means dropping one first.
 await atStep(page, "Story");
-await page.getByRole("button", { name: "religion", exact: true }).click();
+await openPick(page, "Skills");
+await page.getByRole("button", { name: "Train religion" }).click();
 await atStep(page, "Story");
-await page.getByRole("button", { name: "history", exact: true }).click();
+await openPick(page, "Skills");
+await page.getByRole("button", { name: "Train history" }).click();
 await atStep(page, "Story");
 await page.locator('input[aria-label="Background name"]').fill("Greenwarden");
 await page.waitForTimeout(400);
-const edited = await page.locator(".chip.on").allInnerTexts();
+const edited = [
+  (await page.getByRole("button", { name: /^Skills, \d+ chosen$/ }).innerText())
+    .replace(/\s+/g, " "),
+];
 ok("a chosen background can still be edited by hand",
   edited.some((t) => /history/i.test(t)) && !edited.some((t) => /religion/i.test(t)), true);
 await atStep(page, "Story");
