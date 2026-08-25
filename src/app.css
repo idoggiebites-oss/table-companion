@@ -41,11 +41,14 @@
   --gold: #c9a227;
   --gold-dim: #8a7220;
   /*
-   * The trim: a rule with warmth in it rather than gold outright. A card is a
-   * frame around content, not a highlight — every card in full gold would
-   * make the one card that matters indistinguishable from the rest.
+   * The trim. It started as a rule with warmth barely in it, which read as
+   * grey beside the study page — the page uses the dim gold itself on every
+   * frame, and that is what makes it look gilded rather than merely dark.
+   *
+   * The accent still has somewhere to go: --gold is brighter than --trim, so
+   * the thing being decided still stands out against the frame around it.
    */
-  --trim: #33301f;
+  --trim: #6d5a1c;
 
   /*
    * A radius scale rather than a number per component.
@@ -58,6 +61,9 @@
   --r-control: 8px;
   --r-card: 12px;
   --r-pill: 999px;
+
+  /* The ground under something chosen — warm, and dark enough to read on. */
+  --gold-wash: #1f1c14;
 
   /*
    * The edge that marks the active thing — the tab you are on, the row you
@@ -330,7 +336,7 @@ section.card {
   padding: 6px 11px; min-height: 44px; color: var(--ink-dim); background: var(--raised);
   border: 1px solid var(--rule); display: inline-flex; align-items: center; gap: 6px;
 }
-.chip.on { color: var(--ink); border-color: var(--steel); }
+.chip.on { color: var(--ink); border-color: var(--gold); background: var(--gold-wash); }
 .chip.conc { color: var(--conc); border-color: rgba(152, 135, 201, 0.45); }
 
 /* ---- stat lists ---- */
@@ -966,8 +972,8 @@ html, body { overscroll-behavior-y: none; }
 /* The level-up is a decision, so it carries the accent and the flourish. */
 .lv { border-color: var(--gold-dim); position: relative; }
 .lv::before, .lv::after {
-  content: ""; position: absolute; width: 11px; height: 11px;
-  border: 1px solid var(--gold); opacity: 0.5; pointer-events: none;
+  content: ""; position: absolute; width: 14px; height: 14px;
+  border: 1px solid var(--gold); opacity: 0.9; pointer-events: none;
 }
 .lv::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: var(--r-card) 0 0 0; }
 .lv::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 var(--r-card) 0; }
@@ -1243,7 +1249,7 @@ html, body { overscroll-behavior-y: none; }
   background: var(--panel); color: var(--ink-dim);
   font: inherit; letter-spacing: 0; text-transform: none;
 }
-.klass.on { border-color: var(--steel); background: var(--raised); }
+.klass.on { border-color: var(--gold); background: var(--gold-wash); }
 .kg {
   width: 34px; height: 34px; flex: 0 0 auto; border-radius: var(--r-control);
   border: 1px solid var(--rule); background: var(--ground);
@@ -1381,15 +1387,18 @@ html, body { overscroll-behavior-y: none; }
 
 .cr-nav { display: flex; gap: 8px; margin-top: 12px; }
 .cr-nav button { flex: 0 0 auto; }
-/* And the button that commits to it. */
-.cr-nav .cr-on { flex: 1; border-color: var(--gold-dim); color: var(--gold); }
+/* And the button that commits to it, with the study page's weight. */
+.cr-nav .cr-on {
+  flex: 1; border-color: var(--gold); color: var(--gold);
+  background: linear-gradient(var(--gold-wash), #17140e);
+}
 
 /* ---- the review: a character, not a form you filled in ---- */
 /* A drawn flourish: ornament without an image to ship. */
 .cr-review { position: relative; }
 .cr-review::before, .cr-review::after {
-  content: ""; position: absolute; width: 11px; height: 11px;
-  border: 1px solid var(--gold); opacity: 0.5; pointer-events: none;
+  content: ""; position: absolute; width: 14px; height: 14px;
+  border: 1px solid var(--gold); opacity: 0.9; pointer-events: none;
 }
 .cr-review::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: var(--r-card) 0 0 0; }
 .cr-review::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 var(--r-card) 0; }
