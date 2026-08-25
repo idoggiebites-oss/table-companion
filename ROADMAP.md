@@ -29,6 +29,11 @@ creature. A claim queue: players send rolls, the DM confirms. NPCs, homebrew
 statblocks, saved encounters, rules and monster reference. XP or milestone
 levels, loot, coin, a shop. Skill checks and saves asked of named players.
 
+**Between sessions.** A recap: the log read forwards rather than backwards —
+where the party fought, how many fights, who hit the floor, the hardest hit
+of the night, what it earned. Sessions are split on a six-hour gap, because
+there is no button to forget to press.
+
 **The player.** Character building from level 1 or mid-campaign at any level,
 with class, race, background, abilities, skills, subclass, spells, feats and
 starting equipment — each choice showing its consequence. Sheet: HP, hit dice,
@@ -40,7 +45,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 676 unit tests, 46 browser suites, ~851 assertions, run against a
+**Proof.** 695 unit tests, 47 browser suites, ~864 assertions, run against a
 real build on two devices.
 
 ---
@@ -50,16 +55,17 @@ real build on two devices.
 The builder module is done bar its export, which is parked. What is left is
 spread across the other modules.
 
-1. **Session recap.** *Guidance.* The log holds everything that happened and
-   nothing turns it into something a table can read when they sit back down.
-   The only item here that opens a module rather than closing a gap.
-2. **A player's device pulls 6MB of `class.json` on load.** *Content.*
+1. **A player's device pulls 6MB of `class.json` on load.** *Content.*
    Measured, not guessed: the sheet's feature list merges the shipped classes
    into the per-level table to pick up subclass feature NAMES, and pays six
    megabytes for a list of strings. The fix is a slimmer shipped file built
    alongside the others — names and levels — rather than skipping the fetch,
    which would quietly drop a cleric's domain features off their sheet.
    `item.json` is another 2.4MB on the same load, for the same reason.
+2. **The recap reports; it does not prompt.** *Guidance.* It says what
+   happened. Nothing says "here is what changed on your sheet", and nothing
+   is offered to the DM about what to prepare next — the same question from
+   the other side of the screen.
 
 ## Done since this list was written
 

@@ -162,12 +162,18 @@ and stated where they cannot. Actions described by consequence. Advantage
 computed from both sides of the roll and explained in a sentence. One question
 per screen, never a wall.
 
-`guidance.ts` `stance.ts` `actions.ts` `feats.ts` `marks.ts`
-· suites: `guidance` `guide` `stance` `feats`
+And, between sessions, a recap: the log read forwards instead of backwards —
+where you fought, how many fights, who hit the floor, what it earned — built
+from whatever events the reader is allowed to see, so a player's recap comes
+from a player's log.
 
-**Weakest point:** it stops at the fight and the builder. Nothing guides a
-player *between* sessions — no recap, no "here is what changed", no prompt
-toward the parts of their sheet they have never used.
+`guidance.ts` `stance.ts` `actions.ts` `feats.ts` `marks.ts` `recap.ts`
+· suites: `guidance` `guide` `stance` `feats` `recap`
+
+**Weakest point:** the recap reports and does not prompt. Nothing says "here
+is what changed on your sheet" or points a player at the half of it they have
+never used — and nothing at all is offered to the DM about what to prepare
+next, which is the same question from the other side of the screen.
 
 ## 12. Prep — *DM* · **Solid**
 

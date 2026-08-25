@@ -1698,3 +1698,28 @@ html, body { overscroll-behavior-y: none; }
 .claim.v-hits { border-left-color: var(--gold); }
 .claim.v-hits .say { color: var(--gold); }
 .claim.v-misses .say { color: var(--faint); }
+
+/* ---- last time, in six sentences ---- */
+/*
+ * Prose, so it is set as prose: a reading measure, real leading, and the
+ * display face. The log below it is a ledger and looks like one; this is the
+ * part somebody reads ALOUD to four people who were not paying attention.
+ */
+.rc-said p {
+  margin: 0 0 8px; max-width: 60ch;
+  font-family: var(--display); font-size: 0.98rem; line-height: 1.5;
+  color: var(--ink);
+}
+.rc-said p:last-child { margin-bottom: 0; }
+/* The numbers, kept out of the sentences and away from each other. */
+.rc-nums {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule);
+}
+.rc-n {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 7px 11px; border-radius: var(--r-control);
+  background: var(--raised); border-left: 2px solid var(--gold-dim);
+}
+.rc-n .num { font-family: var(--mono); font-size: 1rem; color: var(--ink); }
+.rc-n .label { font-size: 0.58rem; color: var(--muted); }

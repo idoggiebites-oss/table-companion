@@ -32,6 +32,7 @@ import { Spells } from "./Spells.js";
 import { Boundary } from "./Boundary.js";
 import { Tabs, type TabDef } from "./Tabs.js";
 import { Gear } from "./Gear.js";
+import { Recap } from "./Recap.js";
 import { loadSpells } from "../store/srd.js";
 
 /** Device-local, like the seat — never in the log. */
@@ -626,6 +627,10 @@ export function App() {
             )
           )}
         </>
+      )}
+
+      {current === "log" && !needsCharacter && (
+        <Recap log={log} builds={state.builds} reverted={reverted} seat={seat} />
       )}
 
       {current === "log" && !needsCharacter && (
