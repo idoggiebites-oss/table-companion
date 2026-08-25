@@ -48,6 +48,18 @@
   --trim: #33301f;
 
   /*
+   * A radius scale rather than a number per component.
+   *
+   * The app had nine different radii and the four controls people touch most
+   * — button, input, select, and the card itself — had none at all, which is
+   * what made it read as squarer than the concept beside it. Three sizes:
+   * a control, a card, and a pill.
+   */
+  --r-control: 8px;
+  --r-card: 12px;
+  --r-pill: 999px;
+
+  /*
    * The edge that marks the active thing — the tab you are on, the row you
    * chose. It was USED in three places and never defined, so it silently fell
    * back to currentColor and the active tab has been ink-coloured all along.
@@ -200,6 +212,7 @@ button {
   color: var(--ink-dim);
   background: var(--raised);
   border: 1px solid var(--rule);
+  border-radius: var(--r-control);
   padding: 10px 14px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
@@ -214,13 +227,19 @@ input, select {
   color: var(--ink);
   background: var(--raised);
   border: 1px solid var(--rule);
+  border-radius: var(--r-control);
   padding: 9px 10px;
   width: 100%;
 }
 input:focus-visible, select:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
 input[type="number"] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
-section.card { border: 1px solid var(--trim); background: var(--panel); margin-top: 18px; }
+section.card {
+  border: 1px solid var(--trim); background: var(--panel); margin-top: 18px;
+  border-radius: var(--r-card);
+  /* So a header's own border-bottom does not square off the top corners. */
+  overflow: hidden;
+}
 .card-hd {
   display: flex; justify-content: space-between; align-items: center;
   gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--trim); flex-wrap: wrap;
@@ -466,6 +485,7 @@ input[type="file"] { padding: 8px; font-size: 0.85rem; }
   display: flex; justify-content: space-between; align-items: center; gap: 14px;
   width: 100%; text-align: left; padding: 13px 16px;
   border: 0; border-bottom: 1px solid var(--rule); background: transparent;
+  border-radius: 0;
   text-transform: none; letter-spacing: 0; font-size: 0.96rem; font-weight: 400;
   color: var(--ink-dim);
 }
@@ -549,6 +569,7 @@ html, body { overscroll-behavior-y: none; }
 .chooser-hd {
   display: flex; align-items: baseline; gap: 10px; width: 100%;
   padding: 12px 0; border: 0; background: none; text-align: left;
+  border-radius: 0;
 }
 .chooser-hd .nm { flex: 1 1 auto; color: var(--ink); }
 .chooser-mark { flex: 0 0 auto; color: var(--muted); font-size: 1rem; line-height: 1; }
@@ -576,6 +597,7 @@ html, body { overscroll-behavior-y: none; }
   flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
   align-items: flex-start; gap: 2px;
   border: 0; background: none; text-align: left; padding: 0;
+  border-radius: 0;
 }
 .sp-main .nm { color: var(--ink); }
 .sp-main .faint { font-size: 0.74rem; }
@@ -612,7 +634,8 @@ html, body { overscroll-behavior-y: none; }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
   position: relative; flex: 1 0 auto; padding: 12px 14px;
-  border: 0; border-bottom: 2px solid transparent; background: none;
+  /* A tab is an underline, not a box — the base radius bent it into a bowl. */
+  border: 0; border-radius: 0; border-bottom: 2px solid transparent; background: none;
   color: var(--muted); font-size: 0.64rem; letter-spacing: 0.12em;
   text-transform: uppercase; white-space: nowrap;
 }
@@ -699,6 +722,7 @@ html, body { overscroll-behavior-y: none; }
 .inv-add {
   display: flex; align-items: baseline; gap: 8px; width: 100%;
   padding: 8px 4px; text-align: left; border: 0;
+  border-radius: 0;
   border-top: 1px solid var(--rule); background: none;
 }
 .inv-add .nm { flex: 1 1 auto; min-width: 0; color: var(--ink); }
@@ -945,8 +969,8 @@ html, body { overscroll-behavior-y: none; }
   content: ""; position: absolute; width: 11px; height: 11px;
   border: 1px solid var(--gold); opacity: 0.5; pointer-events: none;
 }
-.lv::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
-.lv::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
+.lv::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: var(--r-card) 0 0 0; }
+.lv::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 var(--r-card) 0; }
 .lv-head { padding: 18px 16px 14px; border-bottom: 1px solid var(--rule); }
 .lv-k {
   display: block; font-weight: 500; text-transform: uppercase;
@@ -1110,7 +1134,7 @@ html, body { overscroll-behavior-y: none; }
 .crash { border-color: var(--damage); }
 .crash-say { margin: 0 0 10px; font-size: 0.9rem; color: var(--ink); }
 .crash-msg {
-  margin: 0 0 12px; padding: 10px 12px; border-radius: 8px;
+  margin: 0 0 12px; padding: 10px 12px; border-radius: var(--r-control);
   background: var(--ground); border: 1px solid var(--rule);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.78rem; color: var(--muted);
@@ -1119,7 +1143,7 @@ html, body { overscroll-behavior-y: none; }
 
 /* ---- advantage, conditions, reactions: the fight, made legible ---- */
 .stance {
-  margin: 0; padding: 7px 10px; border-radius: 8px;
+  margin: 0; padding: 7px 10px; border-radius: var(--r-control);
   font-size: 0.82rem; line-height: 1.35;
   background: var(--raised); border-left: 3px solid var(--faint); color: var(--ink-dim);
 }
@@ -1128,7 +1152,7 @@ html, body { overscroll-behavior-y: none; }
 
 .conds { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
 .cnd {
-  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--rule);
+  padding: 2px 7px; border-radius: var(--r-pill); border: 1px solid var(--rule);
   background: transparent; color: var(--muted);
   font-size: 0.7rem; letter-spacing: 0.02em;
 }
@@ -1137,7 +1161,7 @@ html, body { overscroll-behavior-y: none; }
 .cnd-pick {
   flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 5px;
   padding: 8px; margin-top: 4px;
-  background: var(--ground); border: 1px solid var(--rule); border-radius: 8px;
+  background: var(--ground); border: 1px solid var(--rule); border-radius: var(--r-control);
 }
 
 .offer, .shove-ask { display: flex; flex-direction: column; gap: 8px; }
@@ -1147,7 +1171,7 @@ html, body { overscroll-behavior-y: none; }
 .readied { display: flex; flex-direction: column; gap: 6px; }
 .ready-row {
   display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
-  padding: 8px 10px; border-radius: 8px;
+  padding: 8px 10px; border-radius: var(--r-control);
   background: var(--raised); border-left: 3px solid var(--conc);
   font-size: 0.84rem;
 }
@@ -1156,7 +1180,7 @@ html, body { overscroll-behavior-y: none; }
 /* Owed NOW, above the tabs, on whatever screen you are on. */
 .react-ask {
   display: flex; flex-direction: column; gap: 8px;
-  padding: 14px 16px; margin-top: 12px; border-radius: 10px;
+  padding: 14px 16px; margin-top: 12px; border-radius: var(--r-control);
   background: var(--raised); border: 1px solid var(--steel);
 }
 
@@ -1174,7 +1198,7 @@ html, body { overscroll-behavior-y: none; }
 
 /* ---- what a level actually gives you ---- */
 .lv-gains {
-  margin: 0 0 14px; padding: 10px 12px; border-radius: 8px;
+  margin: 0 0 14px; padding: 10px 12px; border-radius: var(--r-control);
   background: var(--raised); border-left: 2px solid var(--unharmed);
   font-size: 0.86rem; color: var(--ink-dim);
 }
@@ -1183,7 +1207,7 @@ html, body { overscroll-behavior-y: none; }
 
 /* ---- taking a level somewhere new ---- */
 .lv-block {
-  margin: 0 0 12px; padding: 10px 12px; border-radius: 8px;
+  margin: 0 0 12px; padding: 10px 12px; border-radius: var(--r-control);
   background: var(--raised); border-left: 2px solid var(--damage);
   font-size: 0.86rem; color: var(--ink-dim);
 }
@@ -1193,7 +1217,7 @@ html, body { overscroll-behavior-y: none; }
 .who-say label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
 .who-say textarea {
   width: 100%; min-height: 58px; resize: vertical;
-  padding: 9px 11px; border: 1px solid var(--rule); border-radius: 8px;
+  padding: 9px 11px; border: 1px solid var(--rule); border-radius: var(--r-control);
   background: var(--ground); color: var(--ink);
   font: inherit; font-size: 0.88rem; line-height: 1.45;
 }
@@ -1215,13 +1239,13 @@ html, body { overscroll-behavior-y: none; }
 .klass {
   display: flex; gap: 12px; align-items: flex-start; width: 100%;
   padding: 13px; text-align: left;
-  border: 1px solid var(--rule); border-radius: 11px;
+  border: 1px solid var(--rule); border-radius: var(--r-card);
   background: var(--panel); color: var(--ink-dim);
   font: inherit; letter-spacing: 0; text-transform: none;
 }
 .klass.on { border-color: var(--steel); background: var(--raised); }
 .kg {
-  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 8px;
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: var(--r-control);
   border: 1px solid var(--rule); background: var(--ground);
   display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
   /* The hue is on the mark and nowhere else — see CLASS_HUE. */
@@ -1235,7 +1259,7 @@ html, body { overscroll-behavior-y: none; }
 .kdesc { display: block; margin-top: 3px; font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
 .ktags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
 .ktag {
-  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--rule);
+  padding: 2px 7px; border-radius: var(--r-pill); border: 1px solid var(--rule);
   font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--muted);
 }
@@ -1250,7 +1274,7 @@ html, body { overscroll-behavior-y: none; }
 /* ---- skills as a table: the consequence is a number, so show the number ---- */
 .cnt {
   display: flex; justify-content: space-between; align-items: center; gap: 14px;
-  padding: 10px 12px; margin: 12px 0; border-radius: 9px;
+  padding: 10px 12px; margin: 12px 0; border-radius: var(--r-control);
   background: var(--raised); border: 1px solid var(--rule);
   font-size: 0.86rem;
 }
@@ -1295,7 +1319,7 @@ html, body { overscroll-behavior-y: none; }
 .hot {
   position: relative; aspect-ratio: 1; padding: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  border: 1px solid var(--rule); border-radius: 10px;
+  border: 1px solid var(--rule); border-radius: var(--r-control);
   background: var(--raised); color: var(--ink-dim);
   letter-spacing: 0; text-transform: none;
 }
@@ -1316,7 +1340,7 @@ html, body { overscroll-behavior-y: none; }
 .hot.on { border-color: var(--steel); background: var(--panel); }
 
 .hot-say {
-  padding: 11px 12px; border-radius: 9px;
+  padding: 11px 12px; border-radius: var(--r-control);
   background: var(--panel); border: 1px solid var(--rule);
 }
 .hot-say .what { margin: 8px 0 0; font-size: 0.9rem; color: var(--ink-dim); }
@@ -1339,7 +1363,7 @@ html, body { overscroll-behavior-y: none; }
 .cr-rail::-webkit-scrollbar { display: none; }
 .cr-node {
   display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
-  padding: 6px 10px 6px 6px; border: 1px solid transparent; border-radius: 999px;
+  padding: 6px 10px 6px 6px; border: 1px solid transparent; border-radius: var(--r-pill);
   background: transparent; color: var(--muted);
   font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1367,25 +1391,25 @@ html, body { overscroll-behavior-y: none; }
   content: ""; position: absolute; width: 11px; height: 11px;
   border: 1px solid var(--gold); opacity: 0.5; pointer-events: none;
 }
-.cr-review::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
-.cr-review::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
+.cr-review::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: var(--r-card) 0 0 0; }
+.cr-review::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 var(--r-card) 0; }
 .cr-review .rv-nm { font-family: var(--display); text-transform: none; }
 .cr-review .rv-who { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
 .rv-crest {
-  width: 44px; height: 44px; flex: 0 0 auto; border-radius: 10px;
+  width: 44px; height: 44px; flex: 0 0 auto; border-radius: var(--r-control);
   border: 1px solid var(--rule); background: var(--raised);
   display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
 }
 .rv-nm { display: block; color: var(--ink); font-size: 1.05rem; }
 .rv-sub { display: block; font-size: 0.8rem; color: var(--muted); text-transform: capitalize; }
 .rv-quote {
-  margin: 14px 0 0; padding: 10px 12px; border-radius: 0 8px 8px 0;
+  margin: 14px 0 0; padding: 10px 12px; border-radius: 0 var(--r-control) var(--r-control) 0;
   border-left: 2px solid var(--conc); background: var(--raised);
   font-size: 0.9rem; color: var(--ink-dim);
 }
 .rv-abils {
   display: grid; grid-template-columns: repeat(6, 1fr);
-  margin: 14px 0 0; border: 1px solid var(--rule); border-radius: 9px; overflow: hidden;
+  margin: 14px 0 0; border: 1px solid var(--rule); border-radius: var(--r-control); overflow: hidden;
 }
 .rv-abils div { padding: 9px 0; text-align: center; border-right: 1px solid var(--rule); }
 .rv-abils div:last-child { border-right: 0; }
@@ -1401,13 +1425,13 @@ html, body { overscroll-behavior-y: none; }
 /* ---- one switch for other people's material ---- */
 .hb-toggle {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 7px 11px; border-radius: 999px;
+  padding: 7px 11px; border-radius: var(--r-pill);
   border: 1px solid var(--rule); background: transparent;
   color: var(--muted); font-family: var(--mono);
   font-size: 0.58rem; letter-spacing: 0.09em; text-transform: uppercase;
 }
 .hb-toggle i {
-  width: 22px; height: 12px; border-radius: 999px; flex: 0 0 auto;
+  width: 22px; height: 12px; border-radius: var(--r-pill); flex: 0 0 auto;
   border: 1px solid var(--rule); background: var(--ground); position: relative;
 }
 .hb-toggle i::after {
@@ -1423,7 +1447,7 @@ html, body { overscroll-behavior-y: none; }
 .spick { display: flex; flex-direction: column; gap: 10px; }
 .roles { display: flex; gap: 5px; flex-wrap: wrap; }
 .role {
-  padding: 3px 9px; border-radius: 999px;
+  padding: 3px 9px; border-radius: var(--r-pill);
   border: 1px solid var(--rule); background: transparent; color: var(--muted);
   font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.08em;
   text-transform: uppercase; min-width: 0;
@@ -1474,7 +1498,7 @@ html, body { overscroll-behavior-y: none; }
 }
 .ba-col {
   display: flex; flex-direction: column; gap: 4px;
-  padding: 11px; border-radius: 8px;
+  padding: 11px; border-radius: var(--r-control);
   background: var(--raised); border: 1px solid var(--rule);
 }
 .ba-col.to { border-color: var(--gold-dim); }
@@ -1497,8 +1521,8 @@ html, body { overscroll-behavior-y: none; }
 
 
 .cr-review::before, .lv::before {
-  top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0;
+  top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: var(--r-card) 0 0 0;
 }
 .cr-review::after, .lv::after {
-  bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 10px 0;
+  bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 var(--r-card) 0;
 }
