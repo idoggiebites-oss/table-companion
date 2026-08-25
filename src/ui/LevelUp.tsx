@@ -61,15 +61,26 @@ export function LevelUp({
   const [homebrew, setHomebrew] = useHomebrew();
   /** Which choices the player asked to see in full. */
   const [openAll, setOpenAll] = useState<Record<string, boolean>>({});
-  const book = useSpellbook(true);
+  /*
+   * Nothing until there is a level to spend.
+   *
+   * This component returns null when nothing is owed, but hooks run first —
+   * so every player's device pulled four megabytes of spellbook, the feat
+   * list and the class tables on load, whether or not they had levelled and
+   * whether or not they cast anything at all. A fighter's phone was paying
+   * for a wizard's picker.
+   */
+  const owing = owed > 0;
+  const book = useSpellbook(owing);
 
   useEffect(() => {
+    if (!owing) return;
     loadClassLevels().then(setLevels, () => setLevels({}));
     loadFeats().then(setFeats, () => setFeats([]));
     loadClasses().then(setClassList, () => setClassList([]));
-  }, []);
+  }, [owing]);
 
-  if (owed <= 0) return null;
+  if (!owing) return null;
 
   const conMod = build.abilityMods.con;
   /** Classes they do not have yet, offered as a dip. */

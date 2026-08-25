@@ -40,7 +40,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 676 unit tests, 45 browser suites, ~844 assertions, run against a
+**Proof.** 676 unit tests, 46 browser suites, ~851 assertions, run against a
 real build on two devices.
 
 ---
@@ -50,18 +50,25 @@ real build on two devices.
 The builder module is done bar its export, which is parked. What is left is
 spread across the other modules.
 
-1. **Prefetch the spellbook when a fight starts.** *Spellcasting.* Small.
-   Casting happens in the turn now, so the first cast of a session can pause
-   while 4MB arrives.
-2. **Session recap.** *Guidance.* The log holds everything that happened and
+1. **Session recap.** *Guidance.* The log holds everything that happened and
    nothing turns it into something a table can read when they sit back down.
    The only item here that opens a module rather than closing a gap.
+2. **A player's device pulls 6MB of `class.json` on load.** *Content.*
+   Measured, not guessed: the sheet's feature list merges the shipped classes
+   into the per-level table to pick up subclass feature NAMES, and pays six
+   megabytes for a list of strings. The fix is a slimmer shipped file built
+   alongside the others — names and levels — rather than skipping the fetch,
+   which would quietly drop a cleric's domain features off their sheet.
+   `item.json` is another 2.4MB on the same load, for the same reason.
 
 ## Done since this list was written
 
 Scenes — prepared places that carry their room, their encounter and the DM's
 line, opened in one press. Half damage on a successful save, read off the
-spell's own last sentence and carried on the claim. Level-up completeness, identity, languages and tools, feats with their own
+spell's own last sentence and carried on the claim. The spellbook fetched
+when a fight is staged rather than when somebody is waiting on it — and no
+longer fetched at all by a device with no level to spend. Level-up
+completeness, identity, languages and tools, feats with their own
 choices, racial ability choices, a level-one feat, trait-granted spells,
 senses, multiclassing at creation and at the table, spell roles, the homebrew
 switch, the monster piles, and the DM's spell lookup.

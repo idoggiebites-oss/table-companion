@@ -32,6 +32,7 @@ import { Spells } from "./Spells.js";
 import { Boundary } from "./Boundary.js";
 import { Tabs, type TabDef } from "./Tabs.js";
 import { Gear } from "./Gear.js";
+import { loadSpells } from "../store/srd.js";
 
 /** Device-local, like the seat — never in the log. */
 type TabId = "fight" | "party" | "prep" | "book" | "log" | "sheet" | "gear" | "spells";
@@ -228,6 +229,27 @@ export function App() {
   const said = liveScene ? state.scenes[liveScene]?.note : undefined;
 
   const inFight = state.combat !== null;
+
+  /*
+   * Four megabytes of spellbook, fetched while people are still typing their
+   * initiative rolls.
+   *
+   * The file is needed the instant a spell is pointed at something — the
+   * casting time, whether the caster rolls or the target saves, the dice at
+   * this level — and until it lands the aim screen can only say "looking up
+   * what it does". The old trigger was the fight's ACTIVE phase, because
+   * that is when the turn panel mounts; a fight is staged a good minute
+   * before that, and nothing is happening on the wire in between.
+   *
+   * Cheap to be wrong: the loader memoises per device, so a fight that never
+   * produces a cast has spent a fetch that the Spells tab would have made
+   * anyway, and one that does starts the turn with the book already there.
+   */
+  useEffect(() => {
+    if (!inFight || !casts) return;
+    void loadSpells().catch(() => {});
+  }, [inFight, casts]);
+
   const wasFighting = useRef(inFight);
   useEffect(() => {
     // Nothing to move to when the fight is already pinned beside you.
