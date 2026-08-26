@@ -48,10 +48,13 @@ hide one.
 The whole 5e compendium, shipped with the app: spells, feats, races, classes,
 backgrounds, items, monsters. Imports merge field-by-field so a thinner file
 cannot delete what a richer one knew. Two thirds of a complete compendium is
-homebrew, so the game's own material sorts first everywhere it is listed.
+homebrew, so the game's own material sorts first everywhere it is listed —
+and a class table that carries every archetype ever written for it is read
+down to the one the character took.
 
-`compendium.ts` `content.ts` `bundled.ts` `srd.ts` `marks.ts` `non-srd.ts`
-· suites: `compendium` `import` `shipped` `builder-content`
+`compendium.ts` `content.ts` `bundled.ts` `srd.ts` `marks.ts` `subclass.ts`
+`non-srd.ts` · suites: `compendium` `import` `shipped` `builder-content`
+`guidance`
 
 **Weakest point:** provenance ordering has now been fixed twice, in two
 places, after the same bug. Any *new* list drawn from the compendium will have
@@ -202,7 +205,7 @@ Nine of twelve are solid. Every gap in the app right now sits in one of four:
 | Module | Gap |
 |---|---|
 | Creation & Progression | export — parked, decision open |
-| Content | the sheet lists every archetype's features, not the one taken |
+| Content | provenance is a trap for the next list drawn from a compendium |
 | Spellcasting | one blast, several creatures, one claim |
 | Guidance | the recap reports; nothing prompts |
 | The Turn | Help untested against a real ally |

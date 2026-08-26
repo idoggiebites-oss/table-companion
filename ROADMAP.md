@@ -50,7 +50,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 700 unit tests, 47 browser suites, ~874 assertions, run against a
+**Proof.** 714 unit tests, 47 browser suites, ~881 assertions, run against a
 real build on two devices.
 
 ---
@@ -67,7 +67,9 @@ spread across the other modules.
 
 ## Done since this list was written
 
-The slim class file: a player's load went from 8.9MB to 3.1MB, and from
+The sheet showing the character's own features rather than every archetype's
+— 372 names down to 24 for a Ranger 8. The slim class file: a player's load
+went from 8.9MB to 3.1MB, and from
 1.8MB to 0.3MB over the wire. Scenes — prepared places that carry their room, their encounter and the DM's
 line, opened in one press. Half damage on a successful save, read off the
 spell's own last sentence and carried on the claim. The spellbook fetched
@@ -87,11 +89,6 @@ switch, the monster piles, and the DM's spell lookup.
   magic item would save that fifth — and would silently show wrong stats the
   first time the escalation missed. Not worth it at this size. If the
   catalogue doubles, revisit.
-
-- **The sheet lists every archetype's features, not the character's.** A
-  Ranger 8 sees Hunter's Prey, Dread Ambusher and Umbral Sight side by side
-  because the per-level rows carry every subclass in the book. The build knows
-  which archetype was taken; the Features card does not ask it.
 
 ## Noted, for when combat comes round again
 

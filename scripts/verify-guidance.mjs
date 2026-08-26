@@ -56,6 +56,45 @@ await page.locator(".feat-hd").first().click();
 await page.waitForTimeout(400);
 ok("and open to show what they are",
   await page.locator(".feat-list .chip").count() > 0, true);
+
+/* --- and only the ones this character has --------------------------------
+
+   A complete compendium ships every archetype ever written for a class in
+   one per-level table. The sample is a Ranger 8 who took Hunter; the table
+   she is read from carries 372 feature names by that level, of which about
+   two dozen are hers. Counted rather than eyeballed: "the list is shorter"
+   is not something a screenshot can tell you. */
+/* One level opens at a time — clicking them all in a row leaves exactly one
+   open, which is how a count of four looked like the whole list. */
+const shown = [];
+for (const hd of await page.locator(".feat-hd").all()) {
+  // One of them is already open from the assertion above; opening it again
+  // closes it, which is how this loop first counted four.
+  if ((await hd.getAttribute("aria-expanded")) === "false") await hd.click();
+  await page.locator(".feat-list .chip").first().waitFor({ timeout: 5000 });
+  shown.push(...(await page.locator(".feat-list .chip").allInnerTexts()));
+  await hd.click();
+  await page.waitForTimeout(60);
+}
+// The card counts them itself, in the header, which is the number a person
+// reads. Collected names and counted names have to agree.
+const counted = Number(
+  (await page.locator(".card", { hasText: "Features" })
+    .locator(".label.faint").first().innerText()).replace(/\D/g, ""),
+);
+ok("a Ranger 8 is shown a readable number of features",
+  counted > 5 && counted < 40, true);
+ok("and the card counts what it shows", shown.length, counted);
+console.log(`      ${counted} shown, of 372 the table carries at this level`);
+const said = shown.join(" | ");
+ok("her own archetype's, by name", /Hunter's Prey/i.test(said), true);
+/* The three that made this unreadable: two other archetypes, and an
+   archetype that merely ends in the same word as hers. */
+ok("not the Gloom Stalker's", /Dread Ambusher|Umbral Sight/i.test(said), false);
+ok("not the Beast Master's", /Ranger's Companion/i.test(said), false);
+ok("and not the Trophy Hunter's", /Visceral Attack|Trophy/i.test(said), false);
+/* Nor the compendium's own scaffolding, which is not a feature of anything. */
+ok("nor rows that were never features", /Starting Ranger|Multiclass Ranger/i.test(said), false);
 await page.screenshot({ path: `${OUT}/65-guidance.png`, fullPage: true });
 
 // --- what the numbers mean when you are down ------------------------------

@@ -366,12 +366,17 @@ console.log(
    the compendium, not in the SRD's own per-level table. */
 await go(page, "sheet");
 await page.waitForSelector(".feat-row", { timeout: 20000 });
-// Grouped by the level that granted them, and closed until asked.
+// Grouped by the level that granted them, closed until asked, and only one
+// open at a time — so they are collected one level at a time.
+const chips = [];
 for (const hd of await page.locator(".feat-hd").all()) {
   await hd.click();
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(100);
+  chips.push(...(await page.locator(".feat-list .chip").allInnerTexts()));
+  await hd.click();
+  await page.waitForTimeout(60);
 }
-const feats = (await page.locator(".feat-list .chip").allInnerTexts()).join(" | ");
+const feats = chips.join(" | ");
 ok("a wizard's features are listed", feats.length > 0, true);
 ok("including ones the SRD table does not carry",
   /Arcane Recovery|Spellcasting|Arcane Tradition/i.test(feats), true);

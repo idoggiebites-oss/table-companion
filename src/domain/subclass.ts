@@ -121,6 +121,91 @@ export function ownerOf(name: string, options: ReadonlySet<string>): string | nu
   return null;
 }
 
+/**
+ * Whether a recorded answer names this option.
+ *
+ * The answer is written down in more than one place and more than one way: a
+ * character built here stores "Life Domain", one typed in by hand stores
+ * "life", and an imported one stores whatever its file said. Comparing them
+ * exactly loses a cleric their own domain features, which is worse than
+ * showing a few extra — so the match is loose in two named places and
+ * nowhere else.
+ *
+ * A trailing label: "life" answers "Life Domain".
+ *
+ * And a leading one, but only across "of": "Evocation" answers "School of
+ * Evocation" and "Moon" answers "Circle of the Moon". Matching any shared
+ * last word instead would hand a Hunter every feature of the Trophy Hunter
+ * and the Bounty Hunter, which is the noise this exists to remove.
+ */
+export function answers(answer: string, option: string): boolean {
+  const a = answer.trim().toLowerCase();
+  const o = option.trim().toLowerCase();
+  if (a === "" || o === "") return false;
+  if (a === o) return true;
+  if (o.startsWith(`${a} `) || a.startsWith(`${o} `)) return true;
+  const across = (whole: string, tail: string) =>
+    new RegExp(`\\bof (the )?${tail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`).test(whole);
+  return across(o, a) || across(a, o);
+}
+
+/**
+ * Rows a compendium writes that are not features: the class's own preamble,
+ * and what it hands somebody arriving by multiclass.
+ */
+const STRUCTURE = /^(starting|multiclass)\b/i;
+
+/**
+ * What THIS character has, out of everything the class can be.
+ *
+ * A complete compendium's ranger table carries every archetype ever written
+ * for it — 372 feature names by level 8, of which 22 belong to the character
+ * holding the sheet. The level-up screen has filtered this since the day a
+ * fighter reaching 3 was told they gained a hundred and fifty features; the
+ * sheet, which shows the same list forever afterwards, never did.
+ *
+ * Same rule as the level-up: a name in parentheses belongs to an option, and
+ * it is yours only if you took that option. What it adds is the answers that
+ * are not recorded as choices — a subclass set when the character was made,
+ * or imported, or typed in by hand.
+ */
+export function ownFeatures(
+  rows: readonly { readonly level: number; readonly features: readonly string[] }[],
+  { level, answered }: { level: number; answered: readonly string[] },
+): { level: number; names: string[] }[] {
+  const all: ClassFeature[] = rows.flatMap((r) =>
+    r.features.map((name) => ({ level: r.level, name })),
+  );
+  const options = new Set(findChoices(all).flatMap((p) => p.options.map((o) => o.name)));
+  const mine = answered.filter((a) => a.trim() !== "");
+
+  const out: { level: number; names: string[] }[] = [];
+  for (const row of rows.filter((r) => r.level <= level)) {
+    const names: string[] = [];
+    /*
+     * The SRD table and the compendium say the same thing twice and spell it
+     * differently: "Favored Enemy (1 type)" beside "Favored Enemy", "Ranger
+     * Archetype feature" beside "Ranger Archetype Feature". The first wins,
+     * because the SRD's is merged in first and carries the detail.
+     */
+    const said = new Set<string>();
+    for (const name of row.features) {
+      if (STRUCTURE.test(name)) continue;
+      // "Divine Domain: Life Domain" is the question being answered, not a
+      // feature. The answer itself shows up as the features it granted.
+      if (/^.{3,40}?:\s/.test(name)) continue;
+      const owner = ownerOf(name, options);
+      if (owner !== null && !mine.some((a) => answers(a, owner))) continue;
+      const key = name.replace(/\s*\([^()]*\)\s*$/, "").trim().toLowerCase();
+      if (said.has(key)) continue;
+      said.add(key);
+      names.push(name);
+    }
+    if (names.length > 0) out.push({ level: row.level, names });
+  }
+  return out;
+}
+
 /** What an option actually grants, for showing beside it. */
 export function featuresOf(
   features: readonly ClassFeature[],
