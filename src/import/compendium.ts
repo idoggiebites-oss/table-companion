@@ -108,6 +108,42 @@ export interface CompendiumClass {
   readonly features: readonly { level: number; name: string; text: string }[];
 }
 
+/**
+ * A class stripped to what a SHEET needs: the per-level feature names and the
+ * slot table, without a word of the descriptions.
+ *
+ * The full class file is 6.3MB — 1.6MB over the wire — and almost all of it
+ * is feature text. Every player's device pulled the lot on load so their
+ * sheet could print a list of names, which is the whole of what the per-level
+ * table reads. Shipped as its own file, the same lists cost 0.09MB gzipped.
+ *
+ * The BUILDER still loads the full one, because a builder that offers a class
+ * without saying what it does is the thing this app exists not to be.
+ */
+export interface ClassIndexRow {
+  readonly id: string;
+  readonly name: string;
+  readonly hitDie: number;
+  readonly slots: readonly (readonly number[])[];
+  readonly features: readonly { level: number; name: string }[];
+}
+
+/**
+ * Kept beside the parser rather than in the build script, so the shape the
+ * app reads and the shape the deploy writes cannot drift apart.
+ */
+export function classIndex(
+  classes: readonly CompendiumClass[],
+): ClassIndexRow[] {
+  return classes.map((c) => ({
+    id: c.id,
+    name: c.name,
+    hitDie: c.hitDie,
+    slots: c.slots,
+    features: c.features.map((f) => ({ level: f.level, name: f.name })),
+  }));
+}
+
 export interface Compendium {
   readonly name: string;
   readonly importedAt: number;

@@ -13,8 +13,8 @@
 import type { Item } from "../domain/items.js";
 import type { Statblock } from "../domain/statblock.js";
 import type {
-  CompendiumBackground, CompendiumClass, CompendiumFeat, CompendiumKind,
-  CompendiumRace, CompendiumSpell,
+  ClassIndexRow, CompendiumBackground, CompendiumClass, CompendiumFeat,
+  CompendiumKind, CompendiumRace, CompendiumSpell,
 } from "../import/compendium.js";
 
 export interface BundledIndex {
@@ -44,6 +44,23 @@ export function loadBundled<K extends CompendiumKind>(kind: K): Promise<RowsFor[
     cache.set(kind, hit);
   }
   return hit as Promise<RowsFor[K][]>;
+}
+
+let classIdx: Promise<ClassIndexRow[] | null> | null = null;
+
+/**
+ * The classes, without their descriptions — names, levels and slots.
+ *
+ * Null means this deployment was built before the slim file existed, and the
+ * caller falls back to the full one. Absent content is normal here (see the
+ * note at the top) and "fall back to six megabytes" is the right failure:
+ * slower, never wrong.
+ */
+export function loadBundledClassIndex(): Promise<ClassIndexRow[] | null> {
+  classIdx ??= fetch("/content/class-index.json")
+    .then((r) => (r.ok ? (r.json() as Promise<ClassIndexRow[]>) : null))
+    .catch(() => null);
+  return classIdx;
 }
 
 let index: Promise<BundledIndex | null> | null = null;

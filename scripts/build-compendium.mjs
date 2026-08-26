@@ -29,7 +29,8 @@ const OUT = "public/content";
 
 const win = new Window();
 globalThis.DOMParser = win.DOMParser;
-const { KINDS, parseKind, survey, looksLikeCompendium } = await import("../src/import/compendium.ts");
+const { KINDS, classIndex, parseKind, survey, looksLikeCompendium } =
+  await import("../src/import/compendium.ts");
 
 const xml = readFileSync(path, "utf8");
 const bad = looksLikeCompendium(xml);
@@ -58,6 +59,26 @@ for (const kind of KINDS) {
     `  ${kind.padEnd(11)} ${String(rows.length).padStart(6)} rows  ` +
     `${(json.length / 1e6).toFixed(2)} MB  →  ${(gz / 1e6).toFixed(2)} MB gzipped`,
   );
+
+  /*
+   * And a second, tiny copy of the classes: names and levels, no descriptions.
+   *
+   * Every player's device was pulling the full 6.3MB so their sheet could
+   * print a list of feature NAMES. The builder still reads the full file —
+   * offering a class without saying what it does is the thing this app exists
+   * not to be — but a sheet never needs a word of it.
+   */
+  if (kind === "class") {
+    const index = JSON.stringify(classIndex(rows));
+    writeFileSync(`${OUT}/class-index.json`, index);
+    onDisk += index.length;
+    const igz = gzipSync(index).length;
+    overWire += igz;
+    console.log(
+      `  ${"class-index".padEnd(11)} ${String(rows.length).padStart(6)} rows  ` +
+      `${(index.length / 1e6).toFixed(2)} MB  →  ${(igz / 1e6).toFixed(2)} MB gzipped`,
+    );
+  }
 }
 
 const name = path.split("/").pop().replace(/\.xml$/i, "");

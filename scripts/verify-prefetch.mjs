@@ -1,4 +1,5 @@
-/* Four megabytes, fetched at the right moment.
+/* Four megabytes, fetched at the right moment — and six that are not fetched
+   at all.
 
    The spellbook is needed the instant a spell is pointed at something, and
    until it lands the aim screen can only say "looking up what it does". It
@@ -26,14 +27,22 @@ const go = async (page, tab) => {
   await page.waitForTimeout(300);
 };
 const spellHits = [];
+const pulled = [];
 async function device(name) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 1300 } });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${name}: ${e}`));
   page.on("console", (m) => m.type() === "error" && errors.push(`${name}: ${m.text()}`));
-  // Every request for the book, whoever made it.
+  // Every request for the book, whoever made it — and everything else the
+  // device pulls, weighed.
   page.on("request", (r) => {
     if (/\/content\/spell\.json/.test(r.url())) spellHits.push(name);
+  });
+  page.on("response", async (r) => {
+    if (!/\/(content|srd)\//.test(r.url())) return;
+    let bytes = 0;
+    try { bytes = (await r.body()).length; } catch { bytes = 0; }
+    pulled.push({ who: name, file: r.url().split("/").slice(-2).join("/"), bytes });
   });
   await page.goto(URL, { waitUntil: "networkidle" });
   return page;
@@ -62,6 +71,21 @@ await player.waitForTimeout(1500);
 /* Kira is a ranger with slots, so she is a caster — and out of a fight the
    book is still four megabytes nobody asked for. */
 ok("nothing is fetched before a fight", hitsFrom("player"), 0);
+
+/* And what IS fetched on load, weighed.
+
+   The sheet prints a list of class feature names. It used to pay 6.3MB of
+   feature descriptions for them, on every player's device, because the names
+   and the text ship in one file. They ship in two now — and the number below
+   is the one that would quietly grow again. */
+const load = pulled.filter((p) => p.who === "player");
+const megabytes = load.reduce((n, p) => n + p.bytes, 0) / 1e6;
+console.log(`      ${load.map((p) => `${p.file} ${(p.bytes / 1e6).toFixed(2)}MB`).join(", ")}`);
+ok("a player's device does not pull the class descriptions",
+  load.some((p) => p.file.endsWith("content/class.json")), false);
+ok("it pulls the slim copy instead",
+  load.some((p) => p.file.endsWith("content/class-index.json")), true);
+ok("and the whole load is under four megabytes", megabytes < 4, true);
 
 // --- staged, not begun ---------------------------------------------------
 await go(dm, "fight");

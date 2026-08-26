@@ -29,6 +29,11 @@ creature. A claim queue: players send rolls, the DM confirms. NPCs, homebrew
 statblocks, saved encounters, rules and monster reference. XP or milestone
 levels, loot, coin, a shop. Skill checks and saves asked of named players.
 
+**What a device pulls.** A player's load is 3.1MB of content, about 0.3MB
+over the wire: the classes ship twice, once whole for the builder and once
+slimmed to names and levels for the sheet. The spellbook arrives when a fight
+is staged, and only on a caster's device.
+
 **Between sessions.** A recap: the log read forwards rather than backwards —
 where the party fought, how many fights, who hit the floor, the hardest hit
 of the night, what it earned. Sessions are split on a six-hour gap, because
@@ -45,7 +50,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 695 unit tests, 47 browser suites, ~864 assertions, run against a
+**Proof.** 700 unit tests, 47 browser suites, ~874 assertions, run against a
 real build on two devices.
 
 ---
@@ -55,21 +60,15 @@ real build on two devices.
 The builder module is done bar its export, which is parked. What is left is
 spread across the other modules.
 
-1. **A player's device pulls 6MB of `class.json` on load.** *Content.*
-   Measured, not guessed: the sheet's feature list merges the shipped classes
-   into the per-level table to pick up subclass feature NAMES, and pays six
-   megabytes for a list of strings. The fix is a slimmer shipped file built
-   alongside the others — names and levels — rather than skipping the fetch,
-   which would quietly drop a cleric's domain features off their sheet.
-   `item.json` is another 2.4MB on the same load, for the same reason.
-2. **The recap reports; it does not prompt.** *Guidance.* It says what
+1. **The recap reports; it does not prompt.** *Guidance.* It says what
    happened. Nothing says "here is what changed on your sheet", and nothing
    is offered to the DM about what to prepare next — the same question from
    the other side of the screen.
 
 ## Done since this list was written
 
-Scenes — prepared places that carry their room, their encounter and the DM's
+The slim class file: a player's load went from 8.9MB to 3.1MB, and from
+1.8MB to 0.3MB over the wire. Scenes — prepared places that carry their room, their encounter and the DM's
 line, opened in one press. Half damage on a successful save, read off the
 spell's own last sentence and carried on the claim. The spellbook fetched
 when a fight is staged rather than when somebody is waiting on it — and no
@@ -78,6 +77,21 @@ completeness, identity, languages and tools, feats with their own
 choices, racial ability choices, a level-one feat, trait-granted spells,
 senses, multiclassing at creation and at the table, spell roles, the homebrew
 switch, the monster piles, and the DM's spell lookup.
+
+## Measured, and left alone
+
+- **`item.json` is 2.5MB raw and 0.21MB gzipped.** The roadmap called it a
+  2.4MB problem, which was the raw number; over the wire it is a fifth of a
+  megabyte and about 5ms to parse on a desktop. Loading only the base
+  equipment and escalating to the full catalogue when a character carries a
+  magic item would save that fifth — and would silently show wrong stats the
+  first time the escalation missed. Not worth it at this size. If the
+  catalogue doubles, revisit.
+
+- **The sheet lists every archetype's features, not the character's.** A
+  Ranger 8 sees Hunter's Prey, Dread Ambusher and Umbral Sight side by side
+  because the per-level rows carry every subclass in the book. The build knows
+  which archetype was taken; the Features card does not ask it.
 
 ## Noted, for when combat comes round again
 

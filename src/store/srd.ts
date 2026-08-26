@@ -38,7 +38,7 @@ import type { CompendiumFeat, CompendiumSpell } from "../import/compendium.js";
 import { proficiencyBonus } from "../domain/abilities.js";
 import { deriveClass } from "../domain/classes-from-compendium.js";
 import { consolidateRaces } from "../domain/races.js";
-import { loadBundled } from "./bundled.js";
+import { loadBundled, loadBundledClassIndex } from "./bundled.js";
 import { mergeById, readContent } from "./content.js";
 
 export interface ClassLevel {
@@ -195,16 +195,25 @@ export function loadClasses(): Promise<ClassEntry[]> {
   return classes;
 }
 
-/** The per-level table, extended with anything a compendium brought. */
+/**
+ * The per-level table, extended with anything a compendium brought.
+ *
+ * Reads the SLIM class file — names, levels and slots — because that is all
+ * this table takes from a compendium class, and the full one is 6.3MB of
+ * feature descriptions that every player's device was pulling on load so
+ * their sheet could print a list of names. A deployment built before that
+ * file existed falls back to the full one: slower, never wrong.
+ */
 export function loadClassLevels(): Promise<ClassLevels> {
   classLevels ??= Promise.all([
     fetch("/srd/class-levels.json").then((r) => {
       if (!r.ok) throw new Error(`class-levels: HTTP ${r.status}`);
       return r.json() as Promise<ClassLevels>;
     }),
-    Promise.all([loadBundled("class"), readContent("class")]).then(([a, b]) =>
-      mergeById(a, b),
-    ),
+    Promise.all([
+      loadBundledClassIndex().then((slim) => slim ?? loadBundled("class")),
+      readContent("class"),
+    ]).then(([a, b]) => mergeById(a, b)),
   ]).then(([srd, extra]) => {
     const out: Record<string, readonly ClassLevel[]> = { ...srd };
     for (const c of extra) {

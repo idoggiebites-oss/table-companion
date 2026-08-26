@@ -317,6 +317,65 @@ ok("and are castable straight away",
 ok("the builder said why there was no spell limit",
   /prepares from a book/i.test(await page.content()), false);
 
+
+/* --- the slim class file ---------------------------------------------------
+
+   A sheet prints a list of feature NAMES; the full class file is 6.3MB of
+   feature TEXT, and every player's device was pulling the lot on load to get
+   at the names. The slim copy is written beside it at deploy time.
+
+   What has to hold is not "the small file is small" but that it says the same
+   thing: the same {level, name} pairs, in the same order, for every class. If
+   it ever does not, a sheet quietly loses features and nothing else notices. */
+const sizes = await page.evaluate(async () => {
+  const at = async (f) => {
+    const t = await (await fetch(f)).text();
+    return { bytes: t.length, rows: JSON.parse(t) };
+  };
+  const full = await at("/content/class.json");
+  const slim = await at("/content/class-index.json");
+  const pairs = (rows) =>
+    Object.fromEntries(
+      rows.map((c) => [c.id, (c.features ?? []).map((f) => `${f.level}:${f.name}`)]),
+    );
+  const slots = (rows) => Object.fromEntries(rows.map((c) => [c.id, JSON.stringify(c.slots)]));
+  return {
+    fullBytes: full.bytes,
+    slimBytes: slim.bytes,
+    classes: full.rows.length,
+    samePairs: JSON.stringify(pairs(full.rows)) === JSON.stringify(pairs(slim.rows)),
+    sameSlots: JSON.stringify(slots(full.rows)) === JSON.stringify(slots(slim.rows)),
+    sameIds:
+      JSON.stringify(full.rows.map((c) => c.id)) === JSON.stringify(slim.rows.map((c) => c.id)),
+    // The text is what was dropped, and dropping it is the whole point.
+    slimHasText: slim.rows.some((c) => (c.features ?? []).some((f) => "text" in f)),
+  };
+});
+ok("every class is in the slim file", sizes.sameIds, true);
+ok("with the same feature names, at the same levels", sizes.samePairs, true);
+ok("and the same slot table", sizes.sameSlots, true);
+ok("carrying none of the descriptions", sizes.slimHasText, false);
+ok("which is most of the file",
+  sizes.slimBytes < sizes.fullBytes / 5, true);
+console.log(
+  `      ${(sizes.fullBytes / 1e6).toFixed(2)} MB → ${(sizes.slimBytes / 1e6).toFixed(2)} MB ` +
+  `across ${sizes.classes} classes`,
+);
+
+/* And the sheet still shows what the merge is FOR: names that exist only in
+   the compendium, not in the SRD's own per-level table. */
+await go(page, "sheet");
+await page.waitForSelector(".feat-row", { timeout: 20000 });
+// Grouped by the level that granted them, and closed until asked.
+for (const hd of await page.locator(".feat-hd").all()) {
+  await hd.click();
+  await page.waitForTimeout(120);
+}
+const feats = (await page.locator(".feat-list .chip").allInnerTexts()).join(" | ");
+ok("a wizard's features are listed", feats.length > 0, true);
+ok("including ones the SRD table does not carry",
+  /Arcane Recovery|Spellcasting|Arcane Tradition/i.test(feats), true);
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

@@ -202,7 +202,7 @@ Nine of twelve are solid. Every gap in the app right now sits in one of four:
 | Module | Gap |
 |---|---|
 | Creation & Progression | export — parked, decision open |
-| Content | 8.4MB pulled on every player's load, for lists of names |
+| Content | the sheet lists every archetype's features, not the one taken |
 | Spellcasting | one blast, several creatures, one claim |
 | Guidance | the recap reports; nothing prompts |
 | The Turn | Help untested against a real ally |
