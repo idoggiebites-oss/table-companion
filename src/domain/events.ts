@@ -418,6 +418,20 @@ export type DomainEvent = Meta &
           readonly saved: boolean;
         }[];
       }
+    /**
+     * A player's own notes, kept whole rather than appended to.
+     *
+     * In the log, because a note that lives on one phone is lost with that
+     * phone — and because everything else that survives a device change got
+     * there the same way. NOT private in the cryptographic sense: every
+     * device replays every event, so the DM's screen can read them and the
+     * app says so where they are written. Hidden from other players.
+     */
+    | {
+        readonly type: "notesSaved";
+        readonly who: CharacterId;
+        readonly text: string;
+      }
     | { readonly type: "shortRestTaken"; readonly who: readonly CharacterId[] }
     | { readonly type: "longRestTaken"; readonly who: readonly CharacterId[] }
     /**

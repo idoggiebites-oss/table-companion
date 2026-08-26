@@ -80,6 +80,11 @@ export interface CampaignState {
   readonly scenes: Readonly<Record<string, Scene>>;
   /** The DM's own creatures, by statblock id. */
   readonly homebrew: Readonly<Record<string, Statblock>>;
+  /**
+   * What each player wrote down, by character. Kept whole — a note is edited,
+   * not appended to, so the last save is the note.
+   */
+  readonly notes: Readonly<Record<string, string>>;
   readonly npcs: Readonly<Record<string, Npc>>;
   /** The shop the party is standing in, if any. Players see only this one. */
   readonly openTrader: string | null;
@@ -584,6 +589,8 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         combat: { ...state.combat, offer: done ? null : { ...offer, declined } },
       };
     }
+    case "notesSaved":
+      return { ...state, notes: { ...state.notes, [e.who]: e.text } };
     case "scenePrepared":
       return { ...state, scenes: { ...state.scenes, [e.scene.id]: e.scene } };
     case "sceneDeleted": {
@@ -911,7 +918,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
 
 export const EMPTY_STATE: CampaignState = {
   sources: {}, builds: {}, characters: {}, combat: null,
-  encounters: {}, scenes: {}, homebrew: {}, progression: "xp",
+  encounters: {}, scenes: {}, homebrew: {}, notes: {}, progression: "xp",
   npcs: {}, openTrader: null, stash: { items: [], coins: 0 }, claims: [], checks: [],
 };
 

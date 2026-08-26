@@ -83,9 +83,21 @@ const megabytes = load.reduce((n, p) => n + p.bytes, 0) / 1e6;
 console.log(`      ${load.map((p) => `${p.file} ${(p.bytes / 1e6).toFixed(2)}MB`).join(", ")}`);
 ok("a player's device does not pull the class descriptions",
   load.some((p) => p.file.endsWith("content/class.json")), false);
-ok("it pulls the slim copy instead",
-  load.some((p) => p.file.endsWith("content/class-index.json")), true);
-ok("and the whole load is under four megabytes", megabytes < 4, true);
+/* Nor the slim copy, until somebody asks for it: the feature list moved
+   behind a press when the sheet became a panel, so a session that never
+   opens it never pays for it. */
+ok("nor the class tables at all, before anybody opens their features",
+  load.some((p) => p.file.includes("class")), false);
+ok("and the whole load is under three megabytes", megabytes < 3, true);
+
+await go(player, "sheet");
+await player.getByRole("button", { name: /^Features, / }).click();
+await player.waitForTimeout(1500);
+const after = pulled.filter((p) => p.who === "player");
+ok("opening them pulls the slim file, not the six-megabyte one",
+  after.some((p) => p.file.endsWith("content/class-index.json"))
+  && !after.some((p) => p.file.endsWith("content/class.json")), true);
+await go(player, "fight");
 
 // --- staged, not begun ---------------------------------------------------
 await go(dm, "fight");

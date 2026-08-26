@@ -39,12 +39,26 @@ const BEHIND_THE_SCREEN = new Set<DomainEvent["type"]>([
   "creatureDamaged",
 ]);
 
+/**
+ * Events that belong to ONE character, and to the DM.
+ *
+ * A player's notes are theirs. They are in the log because a note that lives
+ * on one phone dies with it — but the log is replayed on every device, so
+ * "private" here means "no screen but yours and the DM's prints it", and the
+ * app says exactly that where the notes are written. Anything stronger would
+ * be a promise the architecture cannot keep.
+ */
+const THEIR_OWN = new Set<DomainEvent["type"]>(["notesSaved"]);
+
 export function isDmOnly(type: DomainEvent["type"]): boolean {
   return BEHIND_THE_SCREEN.has(type);
 }
 
 export function visibleInLog(event: DomainEvent, seat: Seat): boolean {
   if (seat.kind === "dm") return true;
+  if (THEIR_OWN.has(event.type)) {
+    return "who" in event && event.who === seat.characterId;
+  }
   return !isDmOnly(event.type);
 }
 

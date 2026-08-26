@@ -49,6 +49,24 @@ const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
   await page.waitForTimeout(250);
 };
+/* Casting from the Spells tab is two presses now: the grid shows a dozen
+   spells at once, and a tile opens before it casts so a mis-tap cannot spend
+   a slot. In a fight, casting happens on the turn and is still one press. */
+const openSpell = async (page, name) => {
+  const tile = page.locator(".sp-tile", { hasText: new RegExp(`^${name}`, "i") }).first();
+  if ((await tile.getAttribute("aria-expanded")) !== "true") await tile.click();
+  await page.waitForTimeout(250);
+};
+const castSpell = async (page, name) => {
+  await openSpell(page, name);
+  await page.getByRole("button", { name: `Cast ${name}` }).click();
+  await page.waitForTimeout(400);
+};
+const castable = async (page, name) => {
+  await openSpell(page, name);
+  return !(await page.getByRole("button", { name: `Cast ${name}` }).isDisabled());
+};
+
 const ctx = await browser.newContext({ viewport: { width: 430, height: 1500 } });
 const page = await ctx.newPage();
 page.on("pageerror", (e) => errors.push(`${e}`));
@@ -213,7 +231,7 @@ await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/59-spells.png`, fullPage: true });
 
 // --- casting spends the slot you chose ------------------------------------
-await page.getByRole("button", { name: "Cast Magic Missile" }).click();
+await castSpell(page, "Magic Missile");
 await page.waitForSelector(".sp-cast");
 const offered = (await page.locator(".sp-cast .tgt-row").allInnerTexts()).map((t) => t.toLowerCase());
 ok("a 1st-level spell offers higher slots too — upcasting, in the open",
@@ -227,13 +245,13 @@ ok("the slot you picked is the one spent",
   (await page.locator(".slot .num").allInnerTexts()), ["4", "2", "2"]);
 
 // A cantrip asks nothing and costs nothing.
-await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
+await castSpell(page, "Fire Bolt");
 await page.waitForTimeout(500);
 ok("a cantrip costs nothing and does not ask",
   (await page.locator(".slot .num").allInnerTexts()), ["4", "2", "2"]);
 
 // --- concentration is exclusive -------------------------------------------
-await page.getByRole("button", { name: "Cast Haste" }).click();
+await castSpell(page, "Haste");
 await page.waitForTimeout(600);
 ok("a concentration spell takes hold",
   (await page.locator(".src-note").innerText()).toLowerCase().includes("haste"), true);
@@ -242,7 +260,7 @@ ok("and the sheet agrees",
   (await page.locator(".chip.conc").innerText()).toLowerCase(), "haste");
 
 await go(page, "spells");
-await page.getByRole("button", { name: "Cast Fireball" }).click();
+await castSpell(page, "Fireball");
 await page.waitForTimeout(600);
 ok("casting a non-concentration spell leaves it alone",
   (await page.locator(".src-note").innerText()).toLowerCase().includes("haste"), true);
@@ -251,9 +269,9 @@ ok("casting a non-concentration spell leaves it alone",
 await page.getByRole("button", { name: "Unprepare Fireball" }).click();
 await page.waitForTimeout(500);
 ok("an unprepared spell cannot be cast",
-  await page.getByRole("button", { name: "Cast Fireball" }).isDisabled(), true);
+  !(await castable(page, "Fireball")), true);
 ok("but a cantrip never needs preparing",
-  await page.getByRole("button", { name: "Cast Fire Bolt" }).isDisabled(), false);
+  !(await castable(page, "Fire Bolt")), false);
 
 // --- one undo returns the slot AND the concentration ----------------------
 await go(page, "log");
@@ -377,7 +395,7 @@ const slotsBefore = await slotsNow();
 // Counted, not searched: this spell was cast earlier in the session, so its
 // presence in the log says nothing — only a change in the count does.
 const castsBefore = await castsOf("Fire Bolt");
-await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
+await castSpell(page, "Fire Bolt");
 await page.waitForTimeout(500);
 ok("pressing Cast asks who first", await page.locator(".swing-step").count(), 1);
 ok("and spends nothing yet", await actionUp(), true);
@@ -386,13 +404,13 @@ ok("nothing is cast until it is aimed", await castsOf("Fire Bolt"), castsBefore)
 ok("and the slots are where they were", await slotsNow(), slotsBefore);
 
 // Backing out on purpose says so, and still costs nothing.
-await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
+await castSpell(page, "Fire Bolt");
 await page.waitForTimeout(400);
 await page.getByRole("button", { name: "Never mind" }).click();
 await page.waitForTimeout(400);
 ok("thinking better of it costs nothing", await actionUp(), true);
 
-await page.getByRole("button", { name: "Cast Fire Bolt" }).click();
+await castSpell(page, "Fire Bolt");
 await page.waitForTimeout(600);
 ok("casting in a fight asks what to aim at",
   (await page.locator(".tgt-row").allInnerTexts()).map((t) => t.toLowerCase()), ["goblin"]);
@@ -430,10 +448,9 @@ ok("confirming applies it", before9 - Number((await hpNow()).split("/")[0]), 9);
 await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
 await page.waitForTimeout(700);
 await go(page, "spells");
-ok("the action is gone", await page.getByRole("button", { name: "Cast Fire Bolt" }).isDisabled(), true);
-// The reason lives on the spell's own row, opened by tapping it.
-await page.locator(".sp-main", { hasText: "Fire Bolt" }).click();
-await page.waitForTimeout(300);
+ok("the action is gone", !(await castable(page, "Fire Bolt")), true);
+// The reason lives on the spell's own tile, opened by tapping it.
+await openSpell(page, "Fire Bolt");
 ok("and it says why",
   /action is gone/i.test(await page.locator(".sp-detail").first().innerText()), true);
 
@@ -477,8 +494,7 @@ await page.waitForTimeout(700);
 await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
 await page.waitForTimeout(700);
 await go(page, "spells");
-await page.getByRole("button", { name: "Cast Burning Hands" }).click();
-await page.waitForTimeout(500);
+await castSpell(page, "Burning Hands");
 // A levelled spell asks which slot first.
 const slot = page.locator(".tgt-row", { hasText: /1st/ }).first();
 if (await slot.count()) { await slot.click(); await page.waitForTimeout(500); }

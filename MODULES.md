@@ -129,8 +129,18 @@ Everything true about your character between turns: hit points, temporary hit
 points, hit dice, short and long rests, death saves, conditions, exhaustion,
 inspiration, concentration and the saves it owes, class resources, boons.
 
-`project.ts` `rest.ts` `resources.ts` `concentration.ts` `boons.ts`
-`Sheet.tsx` `StateCard.tsx` · suites: `table` `conc` `progression`
+Shaped as a panel rather than a document — a figure showing what is worn and
+wielded, what is left to spend, and skills, saves and features behind buttons
+that carry their own answer. And the player's own notes, which live in the
+log so they survive a lost phone, and say plainly that the DM can read them.
+
+`project.ts` `rest.ts` `resources.ts` `concentration.ts` `boons.ts` `slots.ts`
+`Sheet.tsx` `StateCard.tsx` `Doll.tsx` `Drawer.tsx` `Notes.tsx`
+· suites: `table` `conc` `progression` `panel` `notes`
+
+**Weakest point:** the six slots are a reading, not a rules system — 5e does
+not have one. A pair of boots and a ring are equipped and named under the
+figure rather than placed on it.
 
 ## 9. Gear & Economy — *player, DM opens the shop* · **Solid**
 

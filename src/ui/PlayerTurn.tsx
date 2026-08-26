@@ -12,7 +12,8 @@
  */
 
 import { useEffect, useState } from "react";
-import type { ResolvedAttack } from "../domain/attack.js";
+import { describeAttack, type ResolvedAttack } from "../domain/attack.js";
+import { formatModifier } from "../domain/abilities.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import { levelLabel, type KnownSpell } from "../domain/spells.js";
 import { AimSpell } from "./AimSpell.js";
@@ -166,6 +167,8 @@ export function PlayerTurn({
   const [picking, setPicking] = useState<
     null | "attack" | "opportunity" | "menu" | "help" | "shove" | "ready" | "cast"
   >(null);
+  /** Chosen from the strip, so the swing skips "which weapon". */
+  const [withWeapon, setWithWeapon] = useState<ResolvedAttack | null>(null);
   const [took, setTook] = useState<string | null>(null);
   const [trigger, setTrigger] = useState("");
   const [athletics, setAthletics] = useState("");
@@ -363,6 +366,68 @@ export function PlayerTurn({
                     </div>
                   );
                 })()}
+                {/*
+                  * What you are holding and what you could cast, under the
+                  * grid that names the actions. Both were two tabs away from
+                  * the turn that needed them — a player mid-turn was being
+                  * asked to remember their own weapon's damage die.
+                  */}
+                {attacks.length > 0 && (
+                  <div className="pt-strip">
+                    <span className="label q">In your hands</span>
+                    {attacks.slice(0, 3).map((a) => (
+                      <button
+                        className="pt-arm"
+                        key={a.name}
+                        disabled={character.economy.action}
+                        aria-label={`Attack with ${a.name}`}
+                        onClick={() => {
+                          setWithWeapon(a);
+                          setPicking("attack");
+                        }}
+                      >
+                        <span className="n">
+                          {a.name}
+                          <span className="d">{describeAttack(a)}</span>
+                        </span>
+                        <span className="v">{formatModifier(a.toHit)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {castable.length > 0 && (
+                  <div className="pt-strip">
+                    <span className="label q">Can be cast right now</span>
+                    <div className="sp-grid pt-cast">
+                      {castable.slice(0, 6).map((sp) => (
+                        <button
+                          className="sp-tile ready"
+                          key={sp.id}
+                          aria-label={`Cast ${sp.name}`}
+                          onClick={() => {
+                            const options = cast.optionsFor(sp);
+                            setPicking("cast");
+                            if (sp.level === 0) return setAiming({ spell: sp, atLevel: 0 });
+                            if (options.length === 1) {
+                              return setAiming({ spell: sp, atLevel: options[0]!.level });
+                            }
+                            setCasting(sp);
+                          }}
+                        >
+                          {sp.concentration && <i className="conc" aria-hidden="true" />}
+                          <span className="nm">{sp.name}</span>
+                          <span className="c">
+                            <span className="cost">
+                              {sp.level === 0 ? "cantrip" : levelLabel(sp.level)}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <button onClick={() => setPicking(null)}>Back</button>
               </div>
             ) : picking === "help" ? (
@@ -581,13 +646,18 @@ export function PlayerTurn({
             ) : picking === "attack" ? (
               <Swing
                 attacks={attacks}
+                {...(withWeapon ? { start: withWeapon } : {})}
                 targets={visibleTargets}
                 stanceAt={stanceAt}
-                onCancel={() => setPicking(null)}
+                onCancel={() => {
+                  setWithWeapon(null);
+                  setPicking(null);
+                }}
                 onSend={(swing) => {
                   if (!character.economy.action) {
                     append({ type: "economySpent", who, kind: "action" });
                   }
+                  setWithWeapon(null);
                   onSwing?.(swing);
                 }}
               />

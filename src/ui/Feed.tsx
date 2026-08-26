@@ -186,6 +186,9 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return "Let it go";
     case "reactionOfferClosed":
       return null;
+    case "notesSaved":
+      // Never the note itself. The log is read over shoulders.
+      return "Wrote something down";
     case "scenePrepared":
       return `Prepared ${e.scene.name || "a place"}`;
     case "sceneDeleted":

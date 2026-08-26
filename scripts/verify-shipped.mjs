@@ -309,9 +309,12 @@ await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".tabs", { timeout: 20000 });
 
 await go(page, "spells");
-const known = (await page.locator(".sp-main .nm").allInnerTexts()).map((t) => t.toLowerCase());
+const known = (await page.locator(".sp-tile .nm").allInnerTexts()).map((t) => t.toLowerCase());
 ok("the spells chosen at creation are on the sheet",
   known.some((n) => /fire bolt/.test(n)) && known.some((n) => /magic missile/.test(n)), true);
+const missile = page.locator(".sp-tile", { hasText: /^Magic Missile/i }).first();
+await missile.click();
+await page.waitForTimeout(300);
 ok("and are castable straight away",
   await page.getByRole("button", { name: "Cast Magic Missile" }).isDisabled(), false);
 ok("the builder said why there was no spell limit",
@@ -365,6 +368,8 @@ console.log(
 /* And the sheet still shows what the merge is FOR: names that exist only in
    the compendium, not in the SRD's own per-level table. */
 await go(page, "sheet");
+// Behind its own button since the sheet became a panel.
+await page.getByRole("button", { name: /^Features, / }).click();
 await page.waitForSelector(".feat-row", { timeout: 20000 });
 // Grouped by the level that granted them, closed until asked, and only one
 // open at a time — so they are collected one level at a time.

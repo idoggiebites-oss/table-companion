@@ -41,6 +41,15 @@ where the party fought, how many fights, who hit the floor, the hardest hit
 of the night, what it earned. Sessions are split on a six-hour gap, because
 there is no button to forget to press.
 
+**The player's own screen.** A panel rather than a document: vitals, a figure
+showing what is worn and wielded in six slots, what is left to spend, and
+three buttons that carry their own answer — skills, saves and features open
+over the panel instead of being scrolled past. Spells are a grid where the
+cost is on the tile and what cannot be paid for is dimmed rather than hidden.
+The turn carries what is in your hands and what can be cast right now, both
+of which used to be two tabs away. And a notes tab: in the log, so it
+survives a lost phone, and honest about the DM being able to read it.
+
 **The player.** Character building from level 1 or mid-campaign at any level,
 with class, race, background, abilities, skills, subclass, spells, feats and
 starting equipment — each choice showing its consequence. Sheet: HP, hit dice,
@@ -52,7 +61,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 714 unit tests, 47 browser suites, ~881 assertions, run against a
+**Proof.** 732 unit tests, 49 browser suites, ~925 assertions, run against a
 real build on two devices.
 
 ---
@@ -69,7 +78,9 @@ spread across the other modules.
 
 ## Done since this list was written
 
-The sheet showing the character's own features rather than every archetype's
+The player side as a game interface — the panel, the equipment figure, the
+spell grid, the turn's own weapons and spells, and notes. The sheet showing
+the character's own features rather than every archetype's
 — 372 names down to 24 for a Ranger 8. The slim class file: a player's load
 went from 8.9MB to 3.1MB, and from
 1.8MB to 0.3MB over the wire. Scenes — prepared places that carry their room, their encounter and the DM's

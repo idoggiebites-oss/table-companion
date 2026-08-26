@@ -605,6 +605,43 @@ html, body { overscroll-behavior-y: none; }
 /* Spent is dimmed, never coloured — red here would read as damage. */
 .slot.out { opacity: 0.42; }
 .slot.out b { color: var(--muted); }
+/*
+ * A grid, because twelve rows are read one at a time and twelve tiles are
+ * read at once. Three across at 430px; the tile is 84px tall, which is a
+ * comfortable thumb and two lines of a long spell name.
+ */
+.sp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sp-tile {
+  position: relative; min-height: 84px; padding: 9px 8px 8px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 6px;
+  text-align: left; letter-spacing: 0; text-transform: none;
+  background: var(--raised); border: 1px solid var(--rule);
+  border-radius: var(--r-control);
+}
+.sp-tile .nm {
+  font-family: var(--display); font-size: 0.84rem; line-height: 1.2; color: var(--ink);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.sp-tile .c { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.sp-tile .cost {
+  font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--gold);
+}
+.sp-tile .sc {
+  font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+}
+/* A gold rim means you can pay for it this second. */
+.sp-tile.ready { border-color: var(--gold-dim); }
+.sp-tile.on { border-color: var(--gold); background: var(--gold-wash); }
+/* Dimmed, never hidden: "why can't I cast this" needs the tile to exist. */
+.sp-tile.no { opacity: 0.45; }
+.sp-tile.no .cost { color: var(--faint); }
+.sp-tile .conc {
+  position: absolute; top: 7px; right: 8px; width: 7px; height: 7px;
+  border-radius: 999px; background: var(--conc);
+}
+
 .sp {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   padding: 9px 16px; border-top: 1px solid var(--rule);
@@ -618,7 +655,12 @@ html, body { overscroll-behavior-y: none; }
 .sp-main .nm { color: var(--ink); }
 .sp-main .faint { font-size: 0.74rem; }
 .sp button { padding: 6px 10px; font-size: 0.6rem; }
-.sp-detail { flex-basis: 100%; font-size: 0.78rem; }
+.sp-detail {
+  margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--gold-dim);
+  font-size: 0.78rem;
+}
+.sp-detail .nm { font-family: var(--display); font-size: 1rem; color: var(--ink); margin-right: 8px; }
+.sp-detail .why { margin: 7px 0 10px; color: var(--ink-dim); font-size: 0.84rem; }
 .sp-cast { padding: 12px 16px; border-top: 1px solid var(--rule); background: var(--sunk); }
 
 /* ---- sources ---- */
@@ -1723,3 +1765,128 @@ html, body { overscroll-behavior-y: none; }
 }
 .rc-n .num { font-family: var(--mono); font-size: 1rem; color: var(--ink); }
 .rc-n .label { font-size: 0.58rem; color: var(--muted); }
+
+/* ---- what you are wearing, as a figure ---- */
+/*
+ * Three columns and a drawing. minmax(0,…) rather than 1fr, or a slot's own
+ * name widens its column past the card — which is exactly how the mock-up's
+ * first render pushed a longbow off the edge of the phone.
+ */
+.dl {
+  display: grid; grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr);
+  gap: 8px; align-items: center;
+}
+.dl-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dl-fig { display: grid; place-items: center; }
+.dl-fig svg { width: 100%; height: auto; opacity: 0.85; }
+
+.dl-slot {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  min-height: 56px; padding: 7px 9px; text-align: left;
+  border-radius: var(--r-control); letter-spacing: 0; text-transform: none;
+  background: var(--raised); border: 1px solid var(--rule);
+}
+.dl-slot.empty { background: transparent; border-style: dashed; }
+.dl-slot.on { border-color: var(--gold); }
+.dl-slot .g {
+  flex: 0 0 auto; width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: 6px; background: var(--gold-wash); font-size: 0.95rem;
+}
+.dl-slot.empty .g { background: transparent; border: 1px dashed var(--rule); color: var(--faint); }
+.dl-slot .t { flex: 1; min-width: 0; }
+/* Two lines rather than an ellipsis: "Studded le…" is nothing anybody wears. */
+.dl-slot .n {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; font-size: 0.78rem; line-height: 1.2; color: var(--ink);
+}
+.dl-slot.empty .n { color: var(--faint); }
+.dl-slot .s {
+  display: block; font-family: var(--mono); font-size: 0.58rem; color: var(--muted);
+}
+/*
+ * Rarity as a rim, never as a fill, and never as the only signal — the word
+ * is on the slot. Red is damage here and green is healing, so rarity climbs
+ * the structural steel into gold instead of inventing a hue.
+ */
+.dl-slot[data-rarity="1"] { border-color: #4d6472; }
+.dl-slot[data-rarity="2"] { border-color: var(--steel); box-shadow: inset 0 0 14px -6px var(--steel); }
+.dl-slot[data-rarity="3"] { border-color: #9fc3d6; box-shadow: inset 0 0 14px -5px #9fc3d6; }
+.dl-slot[data-rarity="4"] { border-color: var(--gold); box-shadow: inset 0 0 14px -5px var(--gold); }
+
+.dl-pick { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--gold-dim); }
+.dl-what { margin: 6px 0 9px; font-size: 0.88rem; color: var(--ink); }
+.dl-offer { display: flex; flex-direction: column; gap: 6px; margin-top: 7px; }
+.dl-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  width: 100%; min-height: 44px; padding: 8px 11px; text-align: left;
+  letter-spacing: 0; text-transform: none;
+}
+.dl-row .n { font-size: 0.86rem; color: var(--ink); }
+.dl-row .s { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); }
+.dl-else {
+  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--rule);
+}
+.dl-names { font-size: 0.8rem; color: var(--ink-dim); }
+
+/* ---- the drawer: what a sheet carries and rarely opens ---- */
+.dw-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 12px; }
+.dw-open {
+  display: grid; place-items: center; gap: 2px;
+  min-height: 46px; padding: 6px 4px; letter-spacing: 0; text-transform: none;
+}
+.dw-open .n {
+  font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-dim);
+}
+.dw-open .v { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); }
+.dw-open.on { border-color: var(--gold); background: var(--gold-wash); }
+.dw-open.on .n { color: var(--gold); }
+
+.dw-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; padding: 4px 13px 13px; }
+.dw-row {
+  display: flex; align-items: baseline; gap: 6px;
+  width: 100%; min-height: 44px; padding: 7px 0; text-align: left;
+  background: transparent; border: 0; border-bottom: 1px solid var(--rule);
+  border-radius: 0; letter-spacing: 0; text-transform: none;
+}
+.dw-row .n { flex: 1; font-size: 0.82rem; color: var(--ink-dim); text-transform: capitalize; }
+.dw-row .a {
+  font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--faint);
+}
+.dw-row .v { font-family: var(--mono); font-size: 0.82rem; color: var(--ink); }
+.dw-row.on .n { color: var(--ink); }
+.dw-row.on .v { color: var(--gold); }
+.dw-row.sel { background: var(--gold-wash); }
+
+/* ---- what you are holding, on the turn that needs it ---- */
+.pt-strip { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--rule); }
+/* The tiles themselves are the spell grid's — same widget, one definition.
+   Only the spacing around them belongs here. */
+.pt-cast { margin-top: 8px; }
+.pt-arm {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: 48px; padding: 8px 0; margin-top: 2px;
+  background: transparent; border: 0; border-bottom: 1px solid var(--rule);
+  border-radius: 0; text-align: left; letter-spacing: 0; text-transform: none;
+}
+.pt-arm:last-child { border-bottom: 0; }
+.pt-arm .n { flex: 1; min-width: 0; font-size: 0.86rem; color: var(--ink); }
+.pt-arm .d {
+  display: block; font-family: var(--mono); font-size: 0.66rem; color: var(--muted);
+}
+.pt-arm .v { font-family: var(--mono); font-size: 0.9rem; color: var(--gold); }
+.pt-arm:disabled .v { color: var(--faint); }
+
+/* ---- what a player wrote down ---- */
+.nt {
+  width: 100%; min-height: 260px; resize: vertical;
+  padding: 12px 13px; border: 1px solid var(--rule); border-radius: var(--r-control);
+  background: var(--sunk); color: var(--ink);
+  font-family: var(--sans); font-size: 0.92rem; line-height: 1.55;
+}
+.nt::placeholder { color: var(--faint); }
+.nt:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+/* Said plainly, beside the button, rather than promised in a heading. */
+.nt-who { font-size: 0.76rem; color: var(--muted); }

@@ -216,6 +216,15 @@ export function Spells({
         </section>
       )}
 
+      {/*
+        * A grid, not a list.
+        *
+        * Twelve rows of name-and-school is twelve things read one at a time;
+        * the same twelve as tiles is one glance. What a spell COSTS is on its
+        * face, because that is the question — and what you cannot pay for is
+        * dimmed rather than hidden, because "why can't I cast this" is the
+        * next question and a missing row cannot answer it.
+        */}
       {groups.map((g) => (
         <section className="card" key={g.level}>
           <div className="card-hd">
@@ -226,65 +235,84 @@ export function Spells({
               </span>
             )}
           </div>
-          {g.spells.map((s) => {
-            const ready = isReady(s);
-            const able = canCast(s, slots);
-            return (
-              <div className="sp" key={s.id}>
-                <button className="sp-main" onClick={() => setOpen(open === s.id ? null : s.id)}>
-                  <span className="nm">
-                    {s.name}
-                    {s.concentration && <> <span className="hb">conc</span></>}
-                    {s.ritual && <> <span className="hb">ritual</span></>}
-                  </span>
-                  <span className="faint">{s.school}</span>
-                </button>
-                {g.level > 0 && (
+          <div className="card-body">
+            <div className="sp-grid">
+              {g.spells.map((s) => {
+                const able = isReady(s) && canCast(s, slots) && canAfford(s);
+                return (
                   <button
-                    className={`chip${s.prepared ? " on" : ""}`}
-                    aria-label={`${s.prepared ? "Unprepare" : "Prepare"} ${s.name}`}
-                    onClick={() =>
-                      append({
-                        type: "spellPrepared", who: build.id, spellId: s.id, prepared: !s.prepared,
-                      })
-                    }
+                    className={`sp-tile${able ? " ready" : " no"}${open === s.id ? " on" : ""}`}
+                    key={s.id}
+                    aria-label={`${s.name}, ${able ? "ready" : "not ready"}`}
+                    aria-expanded={open === s.id}
+                    onClick={() => setOpen(open === s.id ? null : s.id)}
                   >
-                    {s.prepared ? "Prepared" : "Prepare"}
-                  </button>
-                )}
-                <button
-                  disabled={!able || !canAfford(s)}
-                  aria-label={`Cast ${s.name}`}
-                  onClick={() => {
-                    const options = slotsFor(s, slots);
-                    // No choice to make: a cantrip, or exactly one slot left.
-                    if (s.level === 0) return cast(s, 0);
-                    if (options.length === 1) return cast(s, options[0]!.level);
-                    setCasting(s);
-                  }}
-                >
-                  Cast
-                </button>
-                {open === s.id && (
-                  <div className="sp-detail">
-                    <span className="faint">
-                      {!ready
-                        ? "Not prepared."
-                        : !able
-                          ? "No slot left for this."
-                          : !canAfford(s)
-                            ? costFor(s) === "long"
-                              ? "Takes longer than a turn — not in a fight."
-                              : `Your ${costFor(s)} is gone this turn.`
-                            : s.level === 0
-                              ? `Costs nothing but your ${costFor(s)}.`
-                              : `A ${levelLabel(s.level).toLowerCase()} slot and your ${costFor(s)}.`}
+                    {s.concentration && <i className="conc" aria-hidden="true" />}
+                    <span className="nm">{s.name}</span>
+                    <span className="c">
+                      <span className="cost">{s.level === 0 ? "cantrip" : levelLabel(s.level)}</span>
+                      <span className="sc">{(s.school ?? "").slice(0, 3)}</span>
                     </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {g.spells.filter((s) => open === s.id).map((s) => {
+              const ready = isReady(s);
+              const able = canCast(s, slots);
+              return (
+                <div className="sp-detail" key={s.id}>
+                  <span className="nm">{s.name}</span>
+                  <span className="faint">
+                    {s.school}
+                    {s.concentration ? " · concentration" : ""}
+                    {s.ritual ? " · ritual" : ""}
+                  </span>
+                  <p className="why">
+                    {!ready
+                      ? "Not prepared."
+                      : !able
+                        ? "No slot left for this."
+                        : !canAfford(s)
+                          ? costFor(s) === "long"
+                            ? "Takes longer than a turn — not in a fight."
+                            : `Your ${costFor(s)} is gone this turn.`
+                          : s.level === 0
+                            ? `Costs nothing but your ${costFor(s)}.`
+                            : `A ${levelLabel(s.level).toLowerCase()} slot and your ${costFor(s)}.`}
+                  </p>
+                  <div className="row">
+                    <button
+                      disabled={!able || !canAfford(s) || !ready}
+                      aria-label={`Cast ${s.name}`}
+                      onClick={() => {
+                        const options = slotsFor(s, slots);
+                        if (s.level === 0) return cast(s, 0);
+                        if (options.length === 1) return cast(s, options[0]!.level);
+                        setCasting(s);
+                      }}
+                    >
+                      Cast
+                    </button>
+                    {g.level > 0 && (
+                      <button
+                        className={`chip${s.prepared ? " on" : ""}`}
+                        aria-label={`${s.prepared ? "Unprepare" : "Prepare"} ${s.name}`}
+                        onClick={() =>
+                          append({
+                            type: "spellPrepared", who: build.id, spellId: s.id, prepared: !s.prepared,
+                          })
+                        }
+                      >
+                        {s.prepared ? "Prepared" : "Prepare"}
+                      </button>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
         </section>
       ))}
 

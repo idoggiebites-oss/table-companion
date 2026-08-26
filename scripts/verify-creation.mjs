@@ -14,6 +14,17 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Skills and saves sit behind a press now: the sheet stopped being forty rows
+   to scroll past on the way to the hit points. The button says what it holds
+   ("Skills, +7 best"); opening it is one tap. */
+const openDrawer = async (page, which) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${which}, `) });
+  await hd.waitFor({ timeout: 20000 });
+  if ((await hd.getAttribute("aria-expanded")) !== "true") await hd.click();
+  await page.waitForTimeout(300);
+};
+
+
 /* Languages, tools and background skills are closed pickers now — sixteen and
    fifty-three of them laid out at once made this step three and a half screens
    tall. Open the one you want, then choose in it. */
@@ -199,11 +210,12 @@ ok("hit points are the full die plus constitution",
   (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "11 / 11");
 ok("proficiency at level 1", await player.page.locator(".strip div").nth(3).locator("b").innerText(), "+2");
 ok("a class skill carries proficiency",
-  await player.page.getByRole("button", { name: /^stealth/ }).locator(".m").innerText(), "+5");
+  await (await openDrawer(player.page, "Skills"),
+    player.page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText()), "+5");
 ok("a background skill does too — int 11 gives +0, plus proficiency",
-  await player.page.getByRole("button", { name: /^nature/ }).locator(".m").innerText(), "+2");
+  await player.page.getByRole("button", { name: /^nature/ }).locator(".v").innerText(), "+2");
 ok("and an unproficient skill does not",
-  await player.page.getByRole("button", { name: /^arcana/ }).locator(".m").innerText(), "+0");
+  await player.page.getByRole("button", { name: /^arcana/ }).locator(".v").innerText(), "+0");
 
 // and it reached the table
 await dm.page.selectOption('select[aria-label="Seat"]', "dm").catch(() => {});

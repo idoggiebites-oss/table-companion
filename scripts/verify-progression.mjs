@@ -15,6 +15,17 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Skills and saves sit behind a press now: the sheet stopped being forty rows
+   to scroll past on the way to the hit points. The button says what it holds
+   ("Skills, +7 best"); opening it is one tap. */
+const openDrawer = async (page, which) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${which}, `) });
+  await hd.waitFor({ timeout: 20000 });
+  if ((await hd.getAttribute("aria-expanded")) !== "true") await hd.click();
+  await page.waitForTimeout(300);
+};
+
+
 /* A level now asks for what it opens — a subclass, the spells it grants —
    before the hit-point roll is offered. Answer whatever is there. */
 const answerWhatTheLevelOpens = async (page) => {
@@ -113,7 +124,8 @@ await player.page.screenshot({ path: `${OUT}/32-pending.png` });
 
 // --- resolved later, at the player's pace ---------------------------------
 const before = {
-  stealth: await player.page.getByRole("button", { name: /^stealth/ }).locator(".m").innerText(),
+  stealth: await (await openDrawer(player.page, "Skills"),
+    player.page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText()),
   prof: await player.page.locator(".strip div").nth(3).locator("b").innerText(),
   hp: (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "),
 };
@@ -134,9 +146,11 @@ ok("hit points rose by the roll plus constitution",
   (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "52 / 61");
 ok("proficiency moved", await player.page.locator(".strip div").nth(3).locator("b").innerText(), "+4");
 ok("stealth moved with it, untouched by hand",
-  await player.page.getByRole("button", { name: /^stealth/ }).locator(".m").innerText(), "+8");
+  await (await openDrawer(player.page, "Skills"),
+    player.page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText()), "+8");
 ok("so did a saving throw",
-  await player.page.locator(".stat.rollable", { hasText: /^dex/ }).first().locator(".m").innerText(), "+8");
+  await (await openDrawer(player.page, "Saves"),
+    player.page.locator(".dw-row", { hasText: /^dex/ }).first().locator(".v").innerText()), "+8");
 ok("and the attack bonus",
   await player.page.locator(".atk", { hasText: "Longbow" }).locator(".m").innerText(), "+8");
 ok("and hit dice",

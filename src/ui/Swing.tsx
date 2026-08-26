@@ -24,9 +24,14 @@ import { describeReasons, describeStance, type Stance, type StanceReason } from 
 export type Step = "weapon" | "target" | "hit" | "damage" | "sent";
 
 export function Swing({
-  attacks, targets, stanceAt, onSend, onCancel,
+  attacks, targets, stanceAt, onSend, onCancel, start,
 }: {
   attacks: readonly ResolvedAttack[];
+  /**
+   * The weapon already chosen, when the turn was started by tapping one.
+   * Skips the "which weapon" step — it has just been answered.
+   */
+  start?: ResolvedAttack | undefined;
   targets: readonly Combatant[];
   /** How the dice fall against this target, and why. */
   stanceAt: (
@@ -36,8 +41,10 @@ export function Swing({
   onSend: (a: { attack: ResolvedAttack; target: Combatant; toHit: number; damage: number }) => void;
   onCancel: () => void;
 }) {
-  const [step, setStep] = useState<Step>(attacks.length === 1 ? "target" : "weapon");
-  const [attack, setAttack] = useState<ResolvedAttack | null>(attacks[0] ?? null);
+  const [step, setStep] = useState<Step>(
+    start || attacks.length === 1 ? "target" : "weapon",
+  );
+  const [attack, setAttack] = useState<ResolvedAttack | null>(start ?? attacks[0] ?? null);
   const [target, setTarget] = useState<Combatant | null>(null);
   const [toHit, setToHit] = useState("");
   const [damage, setDamage] = useState("");

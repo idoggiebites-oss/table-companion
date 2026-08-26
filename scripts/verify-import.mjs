@@ -20,6 +20,15 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Skills and saves sit behind a press now: the sheet stopped being forty rows
+   to scroll past on the way to the hit points. */
+const openDrawer = async (page, which) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${which}, `) });
+  await hd.waitFor({ timeout: 20000 });
+  if ((await hd.getAttribute("aria-expanded")) !== "true") await hd.click();
+  await page.waitForTimeout(300);
+};
+
 /* The builder is a flow: the rail is how you move between its steps. */
 const atStep = async (page, label) => {
   const node = page.getByRole("button", { name: new RegExp(`^Step \\d+, ${label}$`) });
@@ -84,7 +93,9 @@ await page.waitForSelector(".hp-big");
 ok("sheet shows imported hp", (await page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "52 / 52");
 ok("sheet shows the fixed armour class", await page.locator(".strip div").first().locator("b").innerText(), "16");
 ok("proficiency derived from level", await page.locator(".strip div").nth(3).locator("b").innerText(), "+3");
-ok("stealth from the import", await page.getByRole("button", { name: /^stealth/ }).locator(".m").innerText(), "+7");
+await openDrawer(page, "Skills");
+ok("stealth from the import",
+  await page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText(), "+7");
 ok("slots became a pool", await page.locator(".pool", { hasText: "Level 1 slots" }).locator(".ct").innerText(), "4 of 4");
 await page.screenshot({ path: `${OUT}/9-imported-sheet.png` });
 

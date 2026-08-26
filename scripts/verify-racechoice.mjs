@@ -19,6 +19,15 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Skills and saves sit behind a press now: the sheet stopped being forty rows
+   to scroll past on the way to the hit points. */
+const openDrawer = async (page, which) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${which}, `) });
+  await hd.waitFor({ timeout: 20000 });
+  if ((await hd.getAttribute("aria-expanded")) !== "true") await hd.click();
+  await page.waitForTimeout(300);
+};
+
 /* Languages, tools and background skills are closed pickers now — sixteen and
    fifty-three of them laid out at once made this step three and a half screens
    tall. Open the one you want, then choose in it. */
@@ -150,9 +159,14 @@ ok("and the character can now be finished", await create.isDisabled(), false);
 await create.click();
 await page.waitForSelector(".hp-big", { timeout: 20000 });
 await go(page, "sheet");
+// The skills are behind their own button now — the sheet stopped listing all
+// eighteen on the way to the hit points.
+await openDrawer(page, "Skills");
 const sheet = (await page.locator(".app").innerText()).replace(/\s+/g, " ");
 ok("arriving at the table with the racial skills",
   /acrobatics/i.test(sheet) && /stealth/i.test(sheet), true);
+ok("and trained in them, not merely listed",
+  await page.locator(".dw-row.on", { hasText: /acrobatics/i }).count(), 1);
 
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;

@@ -18,6 +18,17 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Skills and saves sit behind a press now: the sheet stopped being forty rows
+   to scroll past on the way to the hit points. The button says what it holds
+   ("Skills, +7 best"); opening it is one tap. */
+const openDrawer = async (page, which) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${which}, `) });
+  await hd.waitFor({ timeout: 20000 });
+  if ((await hd.getAttribute("aria-expanded")) !== "true") await hd.click();
+  await page.waitForTimeout(300);
+};
+
+
 /* Languages, tools and background skills are closed pickers now — sixteen and
    fifty-three of them laid out at once made this step three and a half screens
    tall. Open the one you want, then choose in it. */
@@ -237,6 +248,7 @@ await player.page.keyboard.press("Escape");
 await player.page.waitForTimeout(400);
 
 // A Bless says nothing about a skill check, and must stay out of the way.
+await openDrawer(player.page, "Skills");
 await player.page.getByRole("button", { name: /^stealth/ }).click();
 await player.page.waitForTimeout(400);
 ok("but stays out of the way of a check it does not touch",

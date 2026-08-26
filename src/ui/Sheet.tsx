@@ -9,7 +9,7 @@
 
 import { describeSenses, hasSenses } from "../domain/senses.js";
 import { useMemo, useState } from "react";
-import { formatModifier, SKILLS, SKILL_IDS, type Ability } from "../domain/abilities.js";
+import { formatModifier } from "../domain/abilities.js";
 import { describeAttack } from "../domain/attack.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
@@ -19,16 +19,15 @@ import type { RollMode } from "../domain/roll.js";
 import { RollPad, type RollTarget } from "./RollPad.js";
 import type { CampaignState } from "../domain/project.js";
 import { HpBar, healthStep, VAGUE_LABEL } from "./HpBar.js";
-import { Features } from "./Features.js";
 import { useCatalogue } from "./Inventory.js";
+import { Doll } from "./Doll.js";
+import { Drawer } from "./Drawer.js";
 import { acBoons, boonsFor, describeBoon } from "../domain/boons.js";
 import { armourClass, attacksFromEquipment } from "../domain/equipment.js";
 import { equippedItems, indexItems } from "../domain/items.js";
 import { resolveAttack } from "../domain/attack.js";
 import { loadEquipment } from "../store/srd.js";
 import { StateCard } from "./StateCard.js";
-
-const spaced = (s: string) => s.replace(/([A-Z])/g, " $1").toLowerCase();
 
 function Pips({
   max, spent, die, onSpend, onRestore,
@@ -321,6 +320,21 @@ export function Sheet({
         </div>
       </section>
 
+      <section className="card">
+        <div className="card-hd">
+          <span className="label">Worn &amp; wielded</span>
+          <span className="label q">Tap a slot</span>
+        </div>
+        <div className="card-body">
+          <Doll
+            who={who}
+            inventory={state.inventory}
+            equipped={state.equipped}
+            append={append}
+          />
+        </div>
+      </section>
+
       {build.resources.length > 0 && (
         <section className="card">
           <div className="card-hd"><span className="label">Pools</span></div>
@@ -345,8 +359,6 @@ export function Sheet({
           })}
         </section>
       )}
-
-      <Features build={build} />
 
       {build.choices.length > 0 && (
         <section className="card">
@@ -483,53 +495,21 @@ export function Sheet({
         </section>
       )}
 
-      <section className="card">
-        <div className="card-hd"><span className="label">Saving throws</span></div>
-        <div className="card-body">
-          <div className="grid2">
-            {(Object.keys(build.saveMods) as Ability[]).map((a) => {
-              const label = `${a} save`;
-              return (
-                <button
-                  type="button"
-                  className={`stat rollable${pad?.target.label === label ? " sel" : ""}`}
-                  key={a}
-                  onClick={() => openCheck({ label, modifier: build.saveMods[a], boons: boonsFor(state.boons, "save") })}
-                >
-                  <span className="n prof">{a}</span>
-                  <span className="m">{formatModifier(build.saveMods[a])}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="card">
-        <div className="card-hd"><span className="label">Skills</span></div>
-        <div className="card-body">
-          <div className="grid2">
-            {SKILL_IDS.map((s) => {
-              const label = spaced(s);
-              return (
-                <button
-                  type="button"
-                  className={`stat rollable${pad?.target.label === label ? " sel" : ""}`}
-                  key={s}
-                  onClick={() => openCheck({ label, modifier: build.skillMods[s], boons: boonsFor(state.boons, "check") })}
-                >
-                  <span className="n">
-                    {label} <span className="a">{SKILLS[s]}</span>
-                  </span>
-                  <span className="m">{formatModifier(build.skillMods[s])}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
       <StateCard build={build} state={state} append={append} />
+
+      <Drawer
+        build={build}
+        rolling={pad?.target.label}
+        onRoll={(label, modifier, kind) =>
+          openCheck({
+            label,
+            modifier,
+            boons: boonsFor(state.boons, kind === "save" ? "save" : "check"),
+          })
+        }
+      />
+
 
       {pad && (
         <RollPad

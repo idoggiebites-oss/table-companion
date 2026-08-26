@@ -33,15 +33,18 @@ import { Boundary } from "./Boundary.js";
 import { Tabs, type TabDef } from "./Tabs.js";
 import { Gear } from "./Gear.js";
 import { Recap } from "./Recap.js";
+import { Notes } from "./Notes.js";
 import { loadSpells } from "../store/srd.js";
 
 /** Device-local, like the seat — never in the log. */
-type TabId = "fight" | "party" | "prep" | "book" | "log" | "sheet" | "gear" | "spells";
+type TabId =
+  | "fight" | "party" | "prep" | "book" | "log" | "sheet" | "gear" | "spells" | "notes";
 
 /** What a crash on this tab calls itself. */
 const TAB_NAME: Record<TabId, string> = {
   fight: "The fight", party: "The party", prep: "Prep", book: "The book",
   log: "The log", sheet: "Your sheet", gear: "Your gear", spells: "Your spells",
+  notes: "Your notes",
 };
 import { Shop } from "./Shop.js";
 import { UpdateBar } from "./UpdateBar.js";
@@ -158,6 +161,7 @@ export function App() {
     { id: "sheet", label: "Sheet", dot: owed > 0 || saveOwed },
     ...(casts ? [{ id: "spells" as const, label: "Spells" }] : []),
     { id: "gear", label: "Gear", dot: shopOpen },
+    { id: "notes", label: "Notes" },
     { id: "log", label: "Log" },
   ];
   /*
@@ -567,6 +571,15 @@ export function App() {
                   />
                   <Sheet build={mine} state={mineState} campaign={state} append={append} />
                 </>
+              )}
+
+              {current === "notes" && (
+                <Notes
+                  who={mine.id}
+                  name={mine.name}
+                  text={state.notes[mine.id] ?? ""}
+                  append={append}
+                />
               )}
 
               {current === "spells" && (

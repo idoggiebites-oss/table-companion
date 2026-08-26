@@ -18,6 +18,15 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Skills and saves sit behind a press now: the sheet stopped being forty rows
+   to scroll past on the way to the hit points. */
+const openDrawer = async (page, which) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${which}, `) });
+  await hd.waitFor({ timeout: 20000 });
+  if ((await hd.getAttribute("aria-expanded")) !== "true") await hd.click();
+  await page.waitForTimeout(300);
+};
+
 /** Sections are tabs now; content is one tap away rather than a scroll. */
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
@@ -64,7 +73,7 @@ await page.waitForSelector(".hp-big", { timeout: 15000 });
 ok("app loads with no network", (await page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "40 / 52");
 
 // and is still fully usable offline
-await page.getByRole("button", { name: /^perception/ }).click();
+await (await openDrawer(page, "Skills"), page).getByRole("button", { name: /^perception/ }).click();
 await page.waitForSelector(".rollpad");
 await page.locator(".rp-pad button", { hasText: /^11$/ }).click();
 ok("rolling works offline", await page.locator(".rp-total").innerText(), "17");

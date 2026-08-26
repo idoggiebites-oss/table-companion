@@ -18,6 +18,17 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Skills and saves sit behind a press now: the sheet stopped being forty rows
+   to scroll past on the way to the hit points. The button says what it holds
+   ("Skills, +7 best"); opening it is one tap. */
+const openDrawer = async (page, which) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${which}, `) });
+  await hd.waitFor({ timeout: 20000 });
+  if ((await hd.getAttribute("aria-expanded")) !== "true") await hd.click();
+  await page.waitForTimeout(300);
+};
+
+
 /* Languages, tools and background skills are closed pickers now — sixteen and
    fifty-three of them laid out at once made this step three and a half screens
    tall. Open the one you want, then choose in it. */
@@ -240,7 +251,8 @@ ok("the improvement reached the sheet",
   Number((await player.page.locator(".cr-ab, .strip div").first().innerText().catch(() => "0"))
     .replace(/\D/g, "")) >= 0, true);
 ok("a class skill carries the larger bonus — dex +3, proficiency +3",
-  await player.page.getByRole("button", { name: /^stealth/ }).locator(".m").innerText(), "+6");
+  await (await openDrawer(player.page, "Skills"),
+    player.page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText()), "+6");
 
 ok("eight hit dice, one per level",
   await player.page.locator(".controls", { hasText: "Hit die" }).locator(".faint").last().innerText(), "8 left");
@@ -331,11 +343,11 @@ ok("and the score moves as they are spent",
   (await player.page.locator(".lv-abils .chip").first().innerText()) !== before, true);
 
 const athleticsBefore = await player.page
-  .getByRole("button", { name: /^athletics/ }).locator(".m").innerText();
+  .getByRole("button", { name: /^athletics/ }).locator(".v").innerText();
 await player.page.locator(".lv-pad button").nth(5).click();
 await player.page.waitForTimeout(1000);
 const athleticsAfter = await player.page
-  .getByRole("button", { name: /^athletics/ }).locator(".m").innerText();
+  .getByRole("button", { name: /^athletics/ }).locator(".v").innerText();
 // Two points of Strength is one modifier, and everything derived moves with it.
 ok("the improvement reached everything derived from it",
   Number(athleticsAfter.replace("+", "")) - Number(athleticsBefore.replace("+", "")), 1);

@@ -122,9 +122,11 @@ await p1.page.getByRole("button", { name: "Create character" }).click();
 await p1.page.waitForSelector(".tabs", { timeout: 20000 });
 await p1.page.waitForTimeout(600);
 
+/* Six now: notes is a place a player writes in mid-fight without leaving the
+   turn, which is why it is a tab rather than a corner of the log. */
 ok("a player gets different sections",
   (await tabsOf(p1.page)).map((t) => t.toLowerCase()),
-  ["fight", "sheet", "gear", "log"]);
+  ["fight", "sheet", "gear", "notes", "log"]);
 ok("and lands on their own sheet", await activeTab(p1.page), "sheet");
 ok("there is no prep or reference for them",
   await p1.page.locator('[data-tab="prep"], [data-tab="book"]').count(), 0);

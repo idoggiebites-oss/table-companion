@@ -19,6 +19,17 @@ const ok = (label, got, want) => {
   if (!pass) process.exitCode = 1;
 };
 
+/* Skills and saves sit behind a press now: the sheet stopped being forty rows
+   to scroll past on the way to the hit points. The button says what it holds
+   ("Skills, +7 best"); opening it is one tap. */
+const openDrawer = async (page, which) => {
+  const hd = page.getByRole("button", { name: new RegExp(`^${which}, `) });
+  await hd.waitFor({ timeout: 20000 });
+  if ((await hd.getAttribute("aria-expanded")) !== "true") await hd.click();
+  await page.waitForTimeout(300);
+};
+
+
 /** Sections are tabs now; content is one tap away rather than a scroll. */
 const go = async (page, tab) => {
   await page.locator(`[data-tab="${tab}"]`).click();
@@ -31,6 +42,7 @@ await page.getByRole("button", { name: "Load sample" }).click();
 await page.waitForSelector(".hp-big");
 
 // perception is +6 for a Ranger 8 with wis 16 and proficiency
+await openDrawer(page, "Skills");
 await page.getByRole("button", { name: /^perception/ }).click();
 await page.waitForSelector(".rollpad");
 ok("pad names the roll", (await page.locator(".rp-title").innerText()).replace(/\s+/g, " ").toLowerCase(), "perception +6");
@@ -59,7 +71,12 @@ await face(20).click();
 ok("natural 20 flagged", (await page.locator(".rp-expl").innerText()).includes("natural 20"), true);
 
 // the row that opened it stays marked
-ok("tapped row is marked", await page.locator(".stat.sel .n").first().innerText(), "perception WIS");
+/* innerText is what is RENDERED, and the drawer capitalises its rows in CSS.
+   Comparing against the source's own casing is a test that fails on a style
+   rule — this project has been caught by that one before. */
+ok("tapped row is marked",
+  (await page.locator(".dw-row.sel").first().innerText()).replace(/\s+/g, " ").trim().toLowerCase(),
+  "perception wis +6");
 
 // escape closes
 await page.keyboard.press("Escape");

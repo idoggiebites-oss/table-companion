@@ -48,6 +48,12 @@ await page.waitForTimeout(500);
 ok("and stops when it does", await page.locator(".cond").count(), 0);
 
 // --- what your class gave you ---------------------------------------------
+/* Behind a press now. Forty rows of features are not something a player
+   should have to scroll past to reach their hit points — but the button says
+   what it holds, and one tap opens it. */
+ok("features are not in the way", await page.locator(".feat-row").count(), 0);
+await page.getByRole("button", { name: /^Features, / }).click();
+await page.waitForTimeout(400);
 ok("features are listed", await page.locator(".feat-row").count() > 0, true);
 const levels = await page.locator(".feat-hd .nm").allInnerTexts();
 ok("newest first, because that is what people ask about",
