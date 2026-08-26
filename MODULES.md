@@ -3,6 +3,8 @@
 Not a code layout — a breakdown of what this tool is *for*, so that "what
 should we build next" becomes "which of these is weakest."
 
+The rules that decide what belongs here at all are in [VISION.md](VISION.md).
+
 Every module names the person it serves and the job it does for them. Where a
 module has two faces, that is the point rather than a split: a fight is one
 act that two people are inside of.

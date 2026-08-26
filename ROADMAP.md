@@ -8,8 +8,10 @@ Kept current with the work — if a commit changes what is true here, it changes
 this file too.
 
 What the app is *for*, broken into twelve modules, is in
-[MODULES.md](MODULES.md). Everything below is ordered by which module it
-strengthens rather than by what surfaced most recently.
+[MODULES.md](MODULES.md). Why it is for that — the rules that settle what to
+build and what to refuse — is in [VISION.md](VISION.md). Everything below is
+ordered by which module it strengthens rather than by what surfaced most
+recently.
 
 ---
 
