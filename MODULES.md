@@ -146,8 +146,10 @@ rules behind both.
 `spells.ts` `spellcast.ts` `useCasting.ts` `Spells.tsx` `SpellPick.tsx`
 · suites: `spells` `conc`
 
-**Weakest point:** the spellbook is 4MB and loads on first need. Casting now
-happens in the turn, so the first cast of a session can pause.
+**Weakest point:** a save spell aimed at more than one creature is still one
+claim against one target. Burning Hands catching three goblins is resolved
+once and applied by hand, or through Area damage, which asks who saved — two
+paths to the same fight.
 
 ---
 
@@ -200,10 +202,12 @@ Nine of twelve are solid. Every gap in the app right now sits in one of four:
 | Module | Gap |
 |---|---|
 | Creation & Progression | export — parked, decision open |
-| Spellcasting | 4MB loaded at the worst moment |
-| Guidance | nothing between sessions |
-| Content | provenance is a trap for the next list added |
+| Content | 8.4MB pulled on every player's load, for lists of names |
+| Spellcasting | one blast, several creatures, one claim |
+| Guidance | the recap reports; nothing prompts |
+| The Turn | Help untested against a real ally |
+| Disclosure | a creature's conditions are shown to everyone |
 
-That is the whole of it, and it is a shorter list than the shape of the last
-twelve days would suggest. The roadmap's order follows from this rather than
-from whatever surfaced most recently.
+That is the whole of it, and it is a shorter list than the shape of the work
+would suggest. The roadmap's order follows from this rather than from
+whatever surfaced most recently.
