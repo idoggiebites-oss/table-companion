@@ -25,6 +25,7 @@ import { combatantsFor, creaturesFrom, type StagedCreature } from "../domain/sta
 import { loadMonsters } from "../store/srd.js";
 import {
   activeCombatant, awaitingRolls, controls, DISCLOSURE, hasReaction, mayEndTurn,
+  baseName, rollGroups,
   turnsUntil, visibleTo,
   type Combat, type Combatant, type Disclosure, type Seat,
 } from "../domain/combat.js";
@@ -333,6 +334,9 @@ function Rolling({
   append: (body: EventBody) => void;
 }) {
   const waiting = awaitingRolls(combat);
+  /** Groups the DM has pulled apart, by key. Device-local: it is a choice
+      about how to roll, not a fact about the fight. */
+  const [split, setSplit] = useState<readonly string[]>([]);
   /**
    * The DM may roll for ANYONE, not only their own creatures — the same rule
    * that lets them always advance a turn. Somebody is in the toilet, somebody
@@ -352,9 +356,35 @@ function Rolling({
         </span>
       </div>
 
-      {mine.map((c) => (
-        <InitiativeRow key={c.id} combatant={c} append={append} />
-      ))}
+      {/*
+        * One roll per group, which is how a table already does it.
+        *
+        * The app asked for a number each: one player and six goblins is seven
+        * prompts, and the DM fills six of them with the same digits. The DMG
+        * rolls once per group of identical monsters; this just stops making
+        * that harder than doing it by hand.
+        *
+        * Splitting is one press, because sometimes the goblin on the roof is
+        * genuinely not with the others.
+        */}
+      {rollGroups(mine).map((g) =>
+        g.members.length > 1 && !split.includes(g.key) ? (
+          <InitiativeRow
+            key={g.key}
+            combatant={g.members[0]!}
+            label={`${g.name} ×${g.members.length}`}
+            append={append}
+            onSet={(value) => {
+              for (const m of g.members) {
+                append({ type: "initiativeRolled", combatantId: m.id, value });
+              }
+            }}
+            onSplit={() => setSplit([...split, g.key])}
+          />
+        ) : (
+          g.members.map((c) => <InitiativeRow key={c.id} combatant={c} append={append} />)
+        ),
+      )}
 
       {mine.length === 0 && (
         <p className="faint" style={{ margin: "8px 0", fontSize: ".86rem" }}>
@@ -390,39 +420,66 @@ function Rolling({
 
 /** One roll. The app names the modifier and a person rolls the die. */
 function InitiativeRow({
-  combatant, append,
+  combatant, append, label, onSet, onSplit,
 }: {
   combatant: Combatant;
   append: (body: EventBody) => void;
+  /** "Goblin ×6" when this row speaks for a group. */
+  label?: string | undefined;
+  /** Given, the row sets the whole group rather than this one combatant. */
+  onSet?: ((value: number) => void) | undefined;
+  onSplit?: (() => void) | undefined;
 }) {
   const [value, setValue] = useState("");
+  const who = label ?? combatant.name;
   const send = () => {
     const n = Number(value);
     if (!Number.isFinite(n) || value.trim() === "") return;
-    append({ type: "initiativeRolled", combatantId: combatant.id, value: n });
+    if (onSet) onSet(n);
+    else append({ type: "initiativeRolled", combatantId: combatant.id, value: n });
     setValue("");
   };
   return (
     <div className="init-row">
-      <span className="n">{combatant.name}</span>
+      <span className="n">{who}</span>
       <input
         type="number"
-        aria-label={`${combatant.name} initiative`}
+        aria-label={`${who} initiative`}
         value={value}
         placeholder="d20"
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && send()}
       />
-      <button aria-label={`Set ${combatant.name} initiative`} onClick={send}>Set</button>
+      <button aria-label={`Set ${who} initiative`} onClick={send}>Set</button>
+      {onSplit && (
+        // The group's name, not the first member's: "roll each Goblin 1
+        // separately" is not a thing anybody means.
+        <button className="init-split" aria-label={`Roll each ${baseName(combatant.name)} separately`}
+          onClick={onSplit}>
+          Split
+        </button>
+      )}
     </div>
   );
 }
 
 export function Combat({
-  state, seat, append, onCast, takeReaction, onReactionOpened, buzz,
+  state, seat, append, onCast, takeReaction, onReactionOpened, buzz, log, revert, reverted,
 }: {
   state: CampaignState;
   seat: Seat;
+  /*
+   * For stepping a turn back. Undo already does this and does it correctly —
+   * it appends a marker rather than deleting, so nobody's history is quietly
+   * rewritten — but it lives in the Log tab, and a DM who taps Next by
+   * mistake mid-fight is on the one screen they cannot leave.
+   *
+   * So this is not a new mechanism. It is the existing one, put where the
+   * mistake happens.
+   */
+  log?: readonly { readonly id: string; readonly type: string }[] | undefined;
+  revert?: ((target: string) => void) | undefined;
+  reverted?: ReadonlySet<string> | undefined;
   append: (body: EventBody) => void;
   /** Sends a player to their spells, where casting lives. */
   /** An aimed spell, on its way to the DM's queue like any other claim. */
@@ -456,6 +513,9 @@ export function Combat({
   const [something, setSomething] = useState(false);
   /** Which row has its own number open, and what it says. */
   const [hurting, setHurting] = useState<string | null>(null);
+  /** Which row is being renamed, and what to. */
+  const [naming, setNaming] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
   const [amount, setAmount] = useState(5);
   const [offerTo, setOfferTo] = useState<readonly string[]>([]);
   const [offerWhy, setOfferWhy] = useState("");
@@ -508,6 +568,15 @@ export function Combat({
         : null,
     [needId, book, state.homebrew],
   );
+  /** The last turn advance that still counts — what "back" would take back. */
+  const lastAdvance = (() => {
+    if (!log || !revert) return null;
+    for (let i = log.length - 1; i >= 0; i--) {
+      const e = log[i]!;
+      if (e.type === "turnAdvanced" && !reverted?.has(e.id)) return e.id;
+    }
+    return null;
+  })();
   const combat = state.combat;
 
   // What the seated player is holding, so the walkthrough can name the weapon
@@ -872,7 +941,24 @@ export function Combat({
             <div className={`cbt${isActive ? " on" : ""}`} key={c.id}>
               <span className="i num">{c.initiative}</span>
               <span className="who">
-                <span className="nm">{c.name}</span>
+                {/*
+                  * Six goblins arrive as Goblin 1 through 6, which is enough
+                  * to tell them apart in a list and not at a table. The
+                  * moment one does something memorable it stops being a
+                  * number, and the DM was left saying "the second goblin,
+                  * no, the other second one".
+                  */}
+                {seat.kind === "dm" && c.source.kind === "creature" ? (
+                  <button
+                    className="nm nm-edit"
+                    aria-label={`Rename ${c.name}`}
+                    onClick={() => { setNaming(c.id); setNewName(c.name); }}
+                  >
+                    {c.name}
+                  </button>
+                ) : (
+                  <span className="nm">{c.name}</span>
+                )}
                 {seat.kind === "dm" && c.source.kind === "creature" && (
                   <button
                     className="disc"
@@ -919,6 +1005,34 @@ export function Combat({
                     {hurting === c.id ? "−" : "…"}
                   </button>
                 </>
+              )}
+              {naming === c.id && (
+                <div className="hurt-row">
+                  <input
+                    aria-label={`New name for ${c.name}`}
+                    value={newName}
+                    autoFocus
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      if (newName.trim()) {
+                        append({ type: "combatantRenamed", combatantId: c.id, name: newName.trim() });
+                      }
+                      setNaming(null);
+                    }}
+                  />
+                  <button
+                    aria-label={`Call it ${newName.trim() || c.name}`}
+                    disabled={!newName.trim()}
+                    onClick={() => {
+                      append({ type: "combatantRenamed", combatantId: c.id, name: newName.trim() });
+                      setNaming(null);
+                    }}
+                  >
+                    Rename
+                  </button>
+                  <button onClick={() => setNaming(null)}>Cancel</button>
+                </div>
               )}
               {hurting === c.id && seat.kind === "dm" && c.source.kind === "creature" && (
                 <div className="hurt-row">
@@ -1026,6 +1140,17 @@ export function Combat({
             Next turn
             <small>{upNext ? `${upNext.name} is up` : "round ends"}</small>
           </button>
+          {/* One press, where the mis-tap happens. Undo, not a rewind: the
+              log keeps the advance and adds a marker saying to skip it. */}
+          {lastAdvance && revert && (
+            <button
+              className="turn-back"
+              aria-label="Back a turn"
+              onClick={() => revert(lastAdvance)}
+            >
+              Back a turn
+            </button>
+          )}
         </div>
       )}
 

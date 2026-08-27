@@ -112,6 +112,20 @@ export type DomainEvent = Meta &
         readonly value: number;
       }
     | { readonly type: "combatBegan" }
+    /*
+     * "The one with the net."
+     *
+     * Six goblins arrive as Goblin 1 through 6, which is enough to tell them
+     * apart in a list and not enough to tell them apart at a table. The
+     * moment one of them does something memorable it stops being a number,
+     * and the DM was left saying "the second goblin, no, the other second
+     * one".
+     */
+    | {
+        readonly type: "combatantRenamed";
+        readonly combatantId: string;
+        readonly name: string;
+      }
     /** Signed feet. Undo is replay-without-it, so no inverse is stored. */
     | {
         readonly type: "movementSpent";

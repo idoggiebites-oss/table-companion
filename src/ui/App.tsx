@@ -399,6 +399,9 @@ export function App() {
               onCast={sendSpell}
               takeReaction={takingReaction}
               onReactionOpened={() => setTakingReaction(false)}
+              log={log}
+              revert={revert}
+              reverted={reverted}
             />
         </div>
       )}
@@ -518,6 +521,9 @@ export function App() {
               onCast={sendSpell}
               takeReaction={takingReaction}
               onReactionOpened={() => setTakingReaction(false)}
+              log={log}
+              revert={revert}
+              reverted={reverted}
               buzz={
                 <Buzz
                   characters={myCharacters}

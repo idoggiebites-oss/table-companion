@@ -122,13 +122,18 @@ ok("the player is told the room while initiative is still going round",
   /dark/i.test(await player.locator(".room-is").innerText()), true);
 ok("and the DM can still change it before Begin",
   await dm.locator(".scene-hd").count(), 1);
+/* Read off the roster rather than off the prompts: identical creatures roll
+   as one group now, so the number of inputs says how the DM is asked, not
+   who is in the fight. This assertion only ever meant the second. */
+const inOrder = (await dm.locator(".init-waiting .chip").allInnerTexts())
+  .map((t) => t.split("\n")[0].trim());
+ok("what was waiting is already in the initiative order",
+  inOrder.filter((n) => /^goblin/i.test(n)).length, 2);
+ok("alongside the party", inOrder.some((n) => /kira vance/i.test(n)), true);
 const staged = await Promise.all(
   (await dm.locator('input[aria-label$="initiative"]').all())
     .map(async (b) => (await b.getAttribute("aria-label")).replace(/ initiative$/, "")),
 );
-ok("what was waiting is already in the initiative order",
-  staged.filter((n) => n.startsWith("Goblin")).length, 2);
-ok("alongside the party", staged.includes("Kira Vance"), true);
 
 /* And the room the place carried is on the dice, not just in the header. The
    banner appears on the turn of whoever is acting in it. */

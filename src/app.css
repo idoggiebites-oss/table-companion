@@ -2166,3 +2166,40 @@ html, body { overscroll-behavior-y: none; }
   .app.two.dm .pane-pin > .card > .card-hd { grid-column: 1 / -1; }
   .app.two.dm .pane-pin > .card > .sb-turn { grid-column: 2; grid-row: 2 / 99; }
 }
+
+/* ---- rolling as a group, and taking a turn back ---- */
+/*
+ * The DMG rolls initiative once per group of identical monsters, and the app
+ * asked for a number each: one player and six goblins was seven prompts, six
+ * of them filled with the same digits. Split is there for the goblin on the
+ * roof who genuinely is not with the others.
+ */
+.init-split { flex: 0 0 auto; font-size: 0.76rem; padding: 0 10px; }
+/*
+ * A name that can be corrected. "Goblin 4" is enough to tell them apart in a
+ * list and not at a table — it reads as text until you need it, so it keeps
+ * the name's weight and gains a hint of an edge on hover.
+ */
+/*
+ * A full tap target, not a line of text that happens to be clickable. This
+ * rule has been broken three times before — 30px chips, 39px feat rows, an
+ * 18px skills tick — each time by something that looked like text. The row
+ * is already tall enough to hold it, so this costs nothing but saying it.
+ */
+.nm-edit {
+  display: inline-flex; align-items: center; min-height: 44px;
+  background: none; border: 0; border-bottom: 1px dashed transparent;
+  padding: 0; color: inherit; font: inherit;
+  text-transform: none; letter-spacing: normal;
+}
+.nm-edit:hover { border-bottom-color: var(--line); }
+/*
+ * Quieter than Next turn, and beside it. Taking a turn back is a correction,
+ * not a move — a DM reaches for it once an evening and must never hit it
+ * reaching for the other one.
+ */
+.turn-back {
+  display: block; width: 100%; margin-top: 6px;
+  font-size: 0.78rem; color: var(--ink-dim);
+  background: none; border: 1px solid var(--line);
+}

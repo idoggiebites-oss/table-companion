@@ -279,6 +279,45 @@ export function setInitiative(combat: Combat, id: string, value: number): Combat
   };
 }
 
+/**
+ * The base name behind "Goblin 4" — what numberDuplicates numbered.
+ *
+ * A renamed combatant keeps whatever it was renamed to, which is what stops
+ * "the one with the net" being swept back into the goblins.
+ */
+export function baseName(name: string): string {
+  return name.replace(/\s+\d+$/, "").trim();
+}
+
+/**
+ * Creatures that roll as one, the way a table already does it.
+ *
+ * The DMG rolls initiative once per group of identical monsters, and every
+ * table I have seen does it whether or not they know that. The app asked for
+ * a number each: one player and six goblins is SEVEN prompts, and the DM
+ * fills six of them with the same digits.
+ *
+ * Grouped by statblock where there is one, by name where there is not — two
+ * hand-typed Ghouls are as much a group as two catalogued ones. Players are
+ * never grouped: each is a person with their own dexterity and their own
+ * opinion about when to go.
+ */
+export function rollGroups(
+  combatants: readonly Combatant[],
+): { key: string; name: string; members: readonly Combatant[] }[] {
+  const out = new Map<string, { key: string; name: string; members: Combatant[] }>();
+  for (const c of combatants) {
+    const key =
+      c.source.kind === "creature"
+        ? `sb:${c.source.statblockId ?? ""}|${baseName(c.name)}`
+        : `pc:${c.id}`;
+    const had = out.get(key);
+    if (had) had.members.push(c);
+    else out.set(key, { key, name: baseName(c.name), members: [c] });
+  }
+  return [...out.values()];
+}
+
 export function awaitingRolls(combat: Combat): readonly Combatant[] {
   return combat.order.filter((c) => c.initiative === null);
 }

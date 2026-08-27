@@ -249,6 +249,18 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       return state.combat
         ? { ...state, combat: setInitiative(state.combat, e.combatantId, e.value) }
         : state;
+    case "combatantRenamed":
+      return state.combat
+        ? {
+            ...state,
+            combat: {
+              ...state.combat,
+              order: state.combat.order.map((c) =>
+                c.id === e.combatantId ? { ...c, name: e.name } : c,
+              ),
+            },
+          }
+        : state;
     case "combatantJoined":
       return state.combat
         ? { ...state, combat: joinCombat(state.combat, e.combatant) }

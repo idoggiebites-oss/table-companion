@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 813 unit tests, 54 browser suites, ~1,100 assertions, run against a
+**Proof.** 813 unit tests, 55 browser suites, ~1,120 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -101,6 +101,14 @@ spread across the other modules.
    the other side of the screen.
 
 ## Done since this list was written
+
+**Three from Improved Initiative, filtered through the laws.** Identical
+creatures roll once — one player and six goblins was seven prompts and is now
+two, splittable in one press. A creature can be renamed to what the table
+calls it, through the log like anything else. And a turn can be stepped back
+where the mis-tap happens: not a new mechanism, the existing undo put on the
+screen a DM cannot leave.
+
 
 **A creature's turn shows the creature.** Staging kept hit points, armour class
 and the damaging actions and dropped the rest — twice, at two boundaries.

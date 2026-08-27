@@ -71,10 +71,18 @@ for (const [i, hp] of [[1, 22], [2, 22]]) {
 await dm.getByRole("button", { name: "Roll for initiative" }).click();
 await dm.waitForSelector('input[aria-label="Kira Vance initiative"]');
 /* Typed as two Ghouls; they cannot both be "Ghoul" in a track, a log, or an
-   aria-label — which is how this was found. */
+   aria-label — which is how this was found.
+
+   Counted on the names rather than the prompts: identical creatures roll as
+   one group now, so the number of inputs measures how the DM is asked, not
+   whether the ghouls are told apart. They are two different claims and this
+   assertion only ever meant the second. */
 ok("two creatures typed alike are numbered apart",
-  (await dm.locator('input[aria-label$="initiative"]').all()).length, 3);
-for (const [n, v] of [["Kira Vance", 18], ["Ghoul 1", 12], ["Ghoul 2", 7]]) {
+  (await dm.locator(".init-waiting .chip").allInnerTexts())
+    .filter((c) => /ghoul/i.test(c)).length, 2);
+ok("and are asked for one roll between them, the way a table rolls them",
+  await dm.locator('input[aria-label="Ghoul ×2 initiative"]').count(), 1);
+for (const [n, v] of [["Kira Vance", 18], ["Ghoul ×2", 12]]) {
   await dm.locator(`input[aria-label="${n} initiative"]`).fill(String(v));
   await dm.getByRole("button", { name: `Set ${n} initiative` }).click();
 }
