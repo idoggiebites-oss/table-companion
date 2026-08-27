@@ -263,7 +263,7 @@ export function Inventory({
         {reading && (
           <>
             {itemFacts(reading).map((line) => (
-              <p className="pop-text" key={line}>{line}</p>
+              <p className="pop-text selectable" key={line}>{line}</p>
             ))}
             <p className="pop-text faint">
               {formatPrice(reading.cost)} · the compendium ships no description

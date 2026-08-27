@@ -2259,3 +2259,44 @@ html, body { overscroll-behavior-y: none; }
   margin: 0; font-size: 0.86rem; line-height: 1.5; color: var(--ink-dim);
   white-space: pre-wrap;
 }
+
+/* ---- selection, now that holding means something ---- */
+/*
+ * Press-and-hold is a gesture in this app — it is how you ask what a spell
+ * does — and iOS answers the same gesture with its own text selection: blue
+ * handles across the name and a "Copy | Search with Google" bar over the
+ * card. Both fire, so reading a spell also selected its title.
+ *
+ * So selection is off by default, which is what it should be anyway on a
+ * screen made of controls. It is turned back on in the two places text is
+ * text: what you type, and reference prose you might want to lift into a
+ * message. Neither carries a hold, so nothing competes there.
+ *
+ * -webkit-touch-callout is the separate iOS switch for the callout bar; it
+ * appears even where selection is already suppressed.
+ */
+/*
+ * On the shell by element rather than by class, because this is not a
+ * component's business — it is how the whole surface responds to a finger,
+ * and check-css is right that a class list spanning six sections is a rule
+ * with no owner.
+ */
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* Reference prose you might want to lift into a message. Marked explicitly,
+   so it is a decision each time rather than a list that drifts. */
+.selectable {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}

@@ -72,6 +72,47 @@ await first.click();
 await page.waitForTimeout(400);
 ok("a tap does not open it", await page.locator(".pop-pane").count(), 0);
 
+/* --- and holding does not also select --------------------------------
+
+   iOS answers a long press with its own text selection: blue handles across
+   the name and a "Copy | Search with Google" bar over the card. Both fired,
+   so reading a spell also selected its title. Selection is off on the shell
+   and turned back on where text is text — what you type, and reference prose
+   you might lift into a message. */
+const selectable = await page.evaluate(() => {
+  const read = (el) => (el ? getComputedStyle(el).webkitUserSelect || getComputedStyle(el).userSelect : "missing");
+  return {
+    body: read(document.body),
+    row: read(document.querySelector(".inv-row .nm")),
+    input: read(document.querySelector("input")),
+  };
+});
+ok("the page does not select under a finger", selectable.body, "none");
+ok("nor does a row you can hold", selectable.row, "none");
+ok("but what you type still does", selectable.input, "text");
+/* The callout bar is a separate iOS switch and appears even where selection
+   is suppressed, so it is turned off in its own right.
+
+   Checked in the stylesheet rather than on the element: -webkit-touch-callout
+   is Safari-only, and Chrome — which is what drives these suites — does not
+   expose it on a computed style at all. Asserting it there would be asserting
+   `undefined === undefined` and calling it a pass. */
+const css = await page.evaluate(async () => {
+  const link = [...document.querySelectorAll("link[rel=stylesheet]")][0];
+  return link ? (await fetch(link.href)).text() : "";
+});
+ok("the copy/search bar is turned off in its own right",
+  /body\s*\{[^}]*-webkit-touch-callout:\s*none/.test(css), true);
+
+await hold(first);
+ok("prose in the sheet stays liftable, since nothing competes for it there",
+  await page.evaluate(() => {
+    const p = document.querySelector(".pop-text");
+    return p ? getComputedStyle(p).webkitUserSelect : "missing";
+  }), "text");
+await page.getByRole("button", { name: "Close", exact: true }).click();
+await page.waitForTimeout(300);
+
 /* --- a shopkeeper with three of a thing --------------------------------- */
 // Prep is the DM's screen.
 await page.selectOption('select[aria-label="Seat"]', "dm");

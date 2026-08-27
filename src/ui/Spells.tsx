@@ -390,7 +390,7 @@ export function Spells({
               </span>
               {full?.text
                 ? full.text.split(/\n{2,}/).map((para, i) => (
-                    <p className="pop-text" key={i}>{para}</p>
+                    <p className="pop-text selectable" key={i}>{para}</p>
                   ))
                 : <p className="pop-text faint">
                     No description shipped with this one — it came from a list
