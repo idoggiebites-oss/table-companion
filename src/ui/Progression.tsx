@@ -93,11 +93,16 @@ export function Progression({
       <div className="card-body prog-acts">
         {xpMode ? (
           <div className="row">
-            <input
-              type="number" min={0} value={amount} aria-label="XP to award"
-              style={{ width: 100 }}
-              onChange={(e) => setAmount(Math.max(0, +e.target.value || 0))}
-            />
+            {/* A bare number box beside a button is a box that means whatever
+                you last assumed it meant. */}
+            <div style={{ flex: "0 0 110px" }}>
+              <label className="label" htmlFor="prog-xp">Experience</label>
+              <input
+                id="prog-xp"
+                type="number" min={0} value={amount} aria-label="XP to award"
+                onChange={(e) => setAmount(Math.max(0, +e.target.value || 0))}
+              />
+            </div>
             <button onClick={() => append({ type: "xpAwarded", who: everyone, amount })}>
               Award the party
             </button>

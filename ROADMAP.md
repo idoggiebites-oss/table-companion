@@ -271,6 +271,18 @@ switch, the monster piles, and the DM's spell lookup.
   `verify-guidance` measures three screens and `verify-group` measures the
   fight, but nothing stops a new one being added at 33 somewhere else.
 
+- **The dev server dies under repeated full-suite runs.** Removed from this
+  list once on the evidence of a clean 55-suite run; that was wrong. It dies
+  reliably when two sweeps overlap, and it died again on a single run of 60 —
+  54 of them then reported nothing.
+
+  What made it dangerous was not the crash but the check: a filter looking for
+  lines that were NOT "N pass, 0 fail" treats "0 pass, 0 fail" as a pass, so a
+  sweep that ran almost nothing read as clean. `scripts/sweep.sh` replaces it —
+  it refuses to start without a server, counts a suite that asserted nothing as
+  an error, re-checks the server at the end, and exits non-zero. Silence is not
+  success.
+
 - **`verify-turns`'s race is arranged, not raced for.** The player goes
   offline before pressing, which is what "at the same instant" means in a
   distributed system. Deterministic across repeated runs, but it proves the

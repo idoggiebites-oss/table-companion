@@ -440,7 +440,7 @@ export function advance(combat: Combat, from: number): Combat {
   }
   // An offer nobody answered dies with the turn that raised it. Leaving it up
   // would have a player answering a question about a moment that has passed.
-  const helpedBy = { ...(combat.helpedBy ?? {}) };
+  const helpedBy = { ...combat.helpedBy };
   for (const [id, who] of Object.entries(helpedBy)) {
     if (who === opening?.id) delete helpedBy[id];
   }

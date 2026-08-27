@@ -152,6 +152,20 @@ function StartCombat({
       <span className="label cr-sub" style={{ marginTop: 12 }}>
         Against {creatures.length > 0 ? `· ${creatures.length}` : ""}
       </span>
+      {/*
+        * Three boxes in a row and no way to tell them apart once they are
+        * filled: a name, a number and another number, with the placeholders
+        * gone the moment anything was typed. The header names them once, at
+        * the top, rather than repeating a label on every row.
+        */}
+      {creatures.length > 0 && (
+        <div className="init-row init-head-row">
+          <span className="label">Name</span>
+          <span className="label">HP</span>
+          <span className="label">AC</span>
+          <span />
+        </div>
+      )}
       {creatures.map((c, i) => (
         <div className="init-row" key={i}>
           <input
@@ -367,23 +381,39 @@ function Rolling({
         * Splitting is one press, because sometimes the goblin on the roof is
         * genuinely not with the others.
         */}
-      {rollGroups(mine).map((g) =>
-        g.members.length > 1 && !split.includes(g.key) ? (
-          <InitiativeRow
-            key={g.key}
-            combatant={g.members[0]!}
-            label={`${g.name} ×${g.members.length}`}
-            append={append}
-            onSet={(value) => {
-              for (const m of g.members) {
-                append({ type: "initiativeRolled", combatantId: m.id, value });
-              }
-            }}
-            onSplit={() => setSplit([...split, g.key])}
-          />
-        ) : (
-          g.members.map((c) => <InitiativeRow key={c.id} combatant={c} append={append} />)
-        ),
+      {/*
+        * flatMap, and it matters.
+        *
+        * This returned EITHER an element or a nested array, and React reads a
+        * nested array as an implicit fragment keyed by position. So the
+        * moment one row was submitted and the shape of the list changed, the
+        * children stopped lining up, every row remounted, and the numbers
+        * typed into the others — held in each row's own state until Set —
+        * were thrown away. A DM filling in six initiatives lost five of them
+        * on the first press.
+        *
+        * One flat list of keyed elements reconciles by key, which is what
+        * keeps a half-typed row alive while its neighbour is settled.
+        */}
+      {rollGroups(mine).flatMap((g) =>
+        g.members.length > 1 && !split.includes(g.key)
+          ? [
+              <InitiativeRow
+                key={g.key}
+                combatant={g.members[0]!}
+                label={`${g.name} ×${g.members.length}`}
+                append={append}
+                onSet={(value) => {
+                  for (const m of g.members) {
+                    append({ type: "initiativeRolled", combatantId: m.id, value });
+                  }
+                }}
+                onSplit={() => setSplit([...split, g.key])}
+              />,
+            ]
+          : g.members.map((c) => (
+              <InitiativeRow key={c.id} combatant={c} append={append} />
+            )),
       )}
 
       {mine.length === 0 && (

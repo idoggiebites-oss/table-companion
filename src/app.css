@@ -829,8 +829,16 @@ html, body { overscroll-behavior-y: none; }
 .seatbar select { width: auto; flex: 0 1 200px; }
 
 /* ---- initiative ---- */
+/*
+ * Four columns, because these rows have four things in them.
+ *
+ * It was three, so a creature's remove button — and the Split control on a
+ * grouped initiative row — fell onto a second grid line and drew as a
+ * full-width bar under every creature. A row that wraps its own last control
+ * reads as a layout that has given up.
+ */
 .init-row {
-  display: grid; grid-template-columns: 1fr 64px 84px; gap: 8px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 64px 84px auto; gap: 8px;
   align-items: center; padding: 6px 0;
 }
 .init-row .n { color: var(--ink-dim); font-size: 0.94rem; }
@@ -2350,3 +2358,13 @@ textarea,
 .ask-row:last-of-type { border-bottom: 0; }
 .ask-row .nm { font-weight: 600; }
 .ask-row .why { flex: 1 1 160px; font-size: 0.82rem; }
+
+/* ---- saying what a box is ---- */
+/*
+ * Three boxes in a row and no way to tell them apart once filled: a name, a
+ * number and another number, with the placeholders gone the moment anything
+ * was typed. Named once at the top of the list rather than on every row.
+ */
+.init-head-row { padding-bottom: 0; min-height: 0; }
+/* One number and three buttons: the box needs to say it is how MUCH. */
+.pm-howmuch { flex: 1 1 100%; margin-bottom: 2px; }

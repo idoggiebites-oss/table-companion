@@ -102,6 +102,9 @@ export function Party({
             {editable && (
               <>
                 <div className="pm-acts">
+                  {/* One number, three buttons, and nothing saying it is how
+                      MUCH — the box read as whatever you last used it for. */}
+                  <span className="label pm-howmuch">How much</span>
                   <Num min={0} value={amountOf(b.id)}
                     aria-label={`${b.name} amount`}
                     style={{ width: 62 }}

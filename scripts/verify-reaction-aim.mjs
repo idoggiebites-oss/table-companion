@@ -60,6 +60,28 @@ for (const [i, n] of [[1, "Ogre"], [2, "Wolf"], [3, "Bandit"]]) {
 }
 await dm.getByRole("button", { name: "Roll for initiative" }).click();
 await dm.waitForTimeout(600);
+
+/* --- typing in one box must not empty the others -------------------------
+
+   Each row holds its number in its own state until Set, and the list of rows
+   returned EITHER an element or a nested array — which React reads as a
+   fragment keyed by position. Settling one row changed the shape of the
+   list, the children stopped lining up, every row remounted, and a DM
+   filling in four initiatives lost three of them on the first press.
+
+   It needs FOUR separately-named combatants to show: identical creatures
+   roll as one group, and a group happens to reconcile cleanly. The bug lives
+   in the list of one-member groups, which is the ordinary case. */
+for (const [who, v] of [["Kira Vance", "5"], ["Ogre", "20"], ["Wolf", "18"], ["Bandit", "16"]]) {
+  await dm.locator(`input[aria-label="${who} initiative"]`).fill(v);
+}
+await dm.getByRole("button", { name: "Set Kira Vance initiative" }).click();
+await dm.waitForTimeout(600);
+ok("settling one roll leaves the others as they were typed",
+  await dm.locator('input[aria-label$="initiative"]')
+    .evaluateAll((ns) => ns.map((n) => n.value)),
+  ["20", "18", "16"]);
+
 for (let g = 0; g < 12; g++) {
   const inp = dm.locator('input[aria-label$="initiative"]').first();
   if (!(await inp.count())) break;
