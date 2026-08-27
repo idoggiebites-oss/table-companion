@@ -171,6 +171,14 @@ switch, the monster piles, and the DM's spell lookup.
   by the app's own rule and still worth a way for a player to say "this one is
   ranged".
 
+- **Clean encounter.** Improved Initiative resets for the next fight in one
+  press: drop the NPCs, keep the party, clear what was done to them. Scenes
+  cover the prepared case and nothing covers the improvised one. Parked
+  rather than dropped — the judgement was that Scenes may already be enough,
+  and a table would tell us in one session.
+- **A note that belongs to a creature.** Theirs survive the encounter; ours
+  are per-scene and per-player. Same judgement, same test.
+
 - **A save spell aimed at more than one creature is still one claim.** Burning
   Hands catches three goblins and arrives as one row against one target; the
   DM resolves it once and applies the rest by hand, or uses Area damage, which
@@ -178,11 +186,13 @@ switch, the monster piles, and the DM's spell lookup.
 
 ## Known and unfixed
 
-- **44px is a rule the code keeps forgetting.** Three separate controls have
-  shipped too small to press — background chips at 30, feat rows at 39, and
-  the skills table's tick at 18, which was the only way to train a skill.
-  `verify-guidance` now measures every button, select and input on three
-  screens, but nothing stops a new one being added at 33.
+- **44px is a rule the code keeps forgetting.** Four separate controls have
+  shipped too small to press — background chips at 30, feat rows at 39, the
+  skills table's tick at 18 (the only way to train a skill), and a creature's
+  rename button, which was written with `min-height: 0` in the same commit
+  that added it. Each one looked like text rather than a control.
+  `verify-guidance` measures three screens and `verify-group` measures the
+  fight, but nothing stops a new one being added at 33 somewhere else.
 
 - **`verify-turns`'s "one move, not two" is racy.** It presses Next turn and
   End turn on two devices "at the same instant" and asserts the fight moves
