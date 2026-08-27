@@ -24,7 +24,9 @@ import { Doll } from "./Doll.js";
 import { Drawer } from "./Drawer.js";
 import { acBoons, boonsFor, describeBoon } from "../domain/boons.js";
 import { armourClass, attacksFromEquipment } from "../domain/equipment.js";
-import { equippedItems, indexItems } from "../domain/items.js";
+import {
+  equippedItems, indexItems, mergeItems,
+} from "../domain/items.js";
 import { resolveAttack } from "../domain/attack.js";
 import { loadEquipment } from "../store/srd.js";
 import { StateCard } from "./StateCard.js";
@@ -144,7 +146,11 @@ export function Sheet({
   // live here where both are in hand. The build stays "imported base plus
   // deltas" and never learns about a shield.
   const items = useCatalogue(loadEquipment, true);
-  const catalogue = useMemo(() => indexItems(items ?? []), [items]);
+  // The DM's own things are items like any other.
+  const catalogue = useMemo(
+    () => indexItems(mergeItems(items ?? [], campaign.homebrewItems)),
+    [items, campaign.homebrewItems],
+  );
   const worn = useMemo(
     () => equippedItems(state.inventory, state.equipped, catalogue),
     [state.inventory, state.equipped, catalogue],
@@ -327,6 +333,7 @@ export function Sheet({
         </div>
         <div className="card-body">
           <Doll
+            homebrew={campaign.homebrewItems}
             who={who}
             inventory={state.inventory}
             equipped={state.equipped}

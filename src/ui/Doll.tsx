@@ -14,7 +14,7 @@
 import { useMemo, useState } from "react";
 import type { EventBody } from "../domain/events.js";
 import {
-  equippedItems, indexItems, type Item, type Stack,
+  equippedItems, indexItems, mergeItems, type Item, type Stack,
 } from "../domain/items.js";
 import { displacedBy, usesBothHands } from "../domain/equipment.js";
 import { Popover } from "./Popover.js";
@@ -26,16 +26,22 @@ import { loadEquipment } from "../store/srd.js";
 import { useCatalogue } from "./Inventory.js";
 
 export function Doll({
-  who, inventory, equipped, append,
+  who, inventory, equipped, append, homebrew,
 }: {
   who: string;
   inventory: readonly Stack[];
   equipped: readonly string[];
+  /** The DM's own things, which are items like any other. */
+  homebrew?: Readonly<Record<string, Item>> | undefined;
   append: (body: EventBody) => void;
 }) {
   const [open, setOpen] = useState<SlotId | null>(null);
   const items = useCatalogue(loadEquipment, true);
-  const catalogue = useMemo(() => indexItems(items ?? []), [items]);
+  // The DM's own things are items like any other.
+  const catalogue = useMemo(
+    () => indexItems(mergeItems(items ?? [], homebrew)),
+    [items, homebrew],
+  );
   const on = useMemo(
     () => equippedItems(inventory, equipped, catalogue),
     [inventory, equipped, catalogue],

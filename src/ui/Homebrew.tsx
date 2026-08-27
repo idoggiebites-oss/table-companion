@@ -1,5 +1,5 @@
 /**
- * Homebrew creatures.
+ * Homebrew.
  *
  * The legal escape hatch. Everything outside SRD 5.1 — which is most published
  * monsters — can only reach this app by being typed, so this is not a
@@ -22,6 +22,7 @@ import {
   averageHp, formatCr, parseDice, suggestXp, type Statblock,
 } from "../domain/statblock.js";
 import { loadMonsters } from "../store/srd.js";
+import { HomebrewItem } from "./HomebrewItem.js";
 
 const CR_CHOICES = [0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20];
 
@@ -45,7 +46,12 @@ export function Homebrew({
   state: CampaignState;
   append: (body: EventBody) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  /*
+   * Creatures or things. Two tools rather than one form with a mode buried
+   * in it, because they share nothing but the word "homebrew" — a creature
+   * has hit dice and a challenge rating, a sword has damage and a price.
+   */
+  const [open, setOpen] = useState<null | "creature" | "item">(null);
   const [f, setF] = useState(blank);
   const [srd, setSrd] = useState<Statblock[] | null>(null);
   /** Set once the DM types an XP themselves; their number is not overwritten. */
@@ -109,10 +115,34 @@ export function Homebrew({
     <section className="card">
       <div className="card-hd">
         <span className="label">Homebrew</span>
-        <button onClick={() => setOpen((v) => !v)}>{open ? "Hide" : "Add a creature"}</button>
+        <span className="row">
+          <button
+            aria-pressed={open === "creature"}
+            className={open === "creature" ? "on" : ""}
+            onClick={() => setOpen(open === "creature" ? null : "creature")}
+          >
+            A creature
+          </button>
+          {/*
+            * The half that did not exist. A DM who invents a sword wants it
+            * to BE a sword — carried, equipped, swung, priced, sold — and it
+            * used to be a line in somebody's notes.
+            */}
+          <button
+            aria-pressed={open === "item"}
+            className={open === "item" ? "on" : ""}
+            onClick={() => setOpen(open === "item" ? null : "item")}
+          >
+            A thing
+          </button>
+        </span>
       </div>
 
-      {mine.length > 0 && (
+      {open === "item" && (
+        <HomebrewItem mine={state.homebrewItems} append={append} />
+      )}
+
+      {open !== "item" && mine.length > 0 && (
         <div className="saved">
           {mine.map((m) => (
             <div className="sv-row" key={m.id}>
@@ -126,7 +156,7 @@ export function Homebrew({
         </div>
       )}
 
-      {open && (
+      {open === "creature" && (
         <div className="card-body">
           <div className="row" style={{ gap: 8 }}>
             <input

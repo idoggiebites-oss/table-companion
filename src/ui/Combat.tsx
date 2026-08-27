@@ -584,7 +584,7 @@ export function Combat({
   // rather than asking for "your attack bonus".
   const seated = seat.kind === "player" ? state.builds[seat.characterId] : undefined;
   const seatedState = seated ? state.characters[seated.id] : undefined;
-  const { attacks: playerAttacks } = useAttacks(seated, seatedState);
+  const { attacks: playerAttacks } = useAttacks(seated, seatedState, state.homebrewItems);
 
   if (!combat) {
     return (

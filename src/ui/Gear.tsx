@@ -18,20 +18,32 @@ import { describeAttack, resolveAttack } from "../domain/attack.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import { armourClass, attacksFromEquipment } from "../domain/equipment.js";
 import type { EventBody } from "../domain/events.js";
-import { equippedItems, indexItems } from "../domain/items.js";
+import {
+  equippedItems, indexItems, mergeItems, type Item,
+} from "../domain/items.js";
 import type { CharacterState } from "../domain/project.js";
 import { loadEquipment } from "../store/srd.js";
 import { Inventory, useCatalogue } from "./Inventory.js";
 
 export function Gear({
-  build, state, append,
+  build, state, append, homebrew,
 }: {
   build: EffectiveBuild;
   state: CharacterState;
+  /** The DM's own things, which are items like any other. */
+  homebrew?: Readonly<Record<string, Item>> | undefined;
   append: (body: EventBody) => void;
 }) {
   const items = useCatalogue(loadEquipment, true);
-  const catalogue = useMemo(() => indexItems(items ?? []), [items]);
+  // The DM's own things are items like any other.
+  /*
+   * One merged list, used for both looking a thing up by id and searching
+   * for it by name. Merging into only the index was the bug: a homebrew
+   * sword already in the bag resolved, and one you were trying to FIND did
+   * not exist.
+   */
+  const all = useMemo(() => mergeItems(items ?? [], homebrew), [items, homebrew]);
+  const catalogue = useMemo(() => indexItems(all), [all]);
   const worn = useMemo(
     () => equippedItems(state.inventory, state.equipped, catalogue),
     [state.inventory, state.equipped, catalogue],
@@ -82,7 +94,7 @@ export function Gear({
         equipped={state.equipped}
         coins={state.coins}
         catalogue={catalogue}
-        items={items ?? []}
+        items={all}
         editable
         append={append}
       />

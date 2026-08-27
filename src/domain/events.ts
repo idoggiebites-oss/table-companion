@@ -19,6 +19,7 @@ import type { Progression } from "./progression.js";
 import type { AttackClaim } from "./attackflow.js";
 import type { Ability } from "./abilities.js";
 import type { Boon } from "./boons.js";
+import type { Item } from "./items.js";
 import type { Stack } from "./items.js";
 import type { KnownSpell } from "./spells.js";
 import type { Npc } from "./npc.js";
@@ -316,6 +317,15 @@ export type DomainEvent = Meta &
     | { readonly type: "stashCoinsSplit"; readonly among: readonly CharacterId[] }
     | { readonly type: "homebrewSaved"; readonly statblock: Statblock }
     | { readonly type: "homebrewDeleted"; readonly statblockId: string }
+    /*
+     * A thing the DM made up. Carried whole rather than by reference,
+     * because there is nowhere else for it to live — a homebrew sword has no
+     * catalogue entry to point at, and a character carrying one after the
+     * campaign is exported would otherwise be carrying an id that resolves
+     * to nothing.
+     */
+    | { readonly type: "homebrewItemSaved"; readonly item: Item }
+    | { readonly type: "homebrewItemDeleted"; readonly itemId: string }
     | {
         readonly type: "economySpent";
         readonly who: CharacterId;

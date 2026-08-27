@@ -73,6 +73,21 @@ export interface Stack {
 
 export type Catalogue = Readonly<Record<string, Item>>;
 
+/**
+ * The catalogue with the DM's own things in it.
+ *
+ * Homebrew first, so a name collision resolves to the version this table
+ * actually made — the same order mergeStatblocks uses, and for the same
+ * reason: if the DM wrote their own Longsword, they meant theirs.
+ */
+export function mergeItems(
+  shipped: readonly Item[],
+  homebrew: Readonly<Record<string, Item>> | undefined,
+): Item[] {
+  const mine = Object.values(homebrew ?? {});
+  return mine.length === 0 ? [...shipped] : [...mine, ...shipped];
+}
+
 export function indexItems(items: readonly Item[]): Catalogue {
   return Object.fromEntries(items.map((i) => [i.id, i]));
 }

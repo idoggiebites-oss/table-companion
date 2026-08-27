@@ -671,7 +671,7 @@ export function App() {
                     coins={mineState.coins}
                     append={append}
                   />
-                  <Gear build={mine} state={mineState} append={append} />
+                  <Gear build={mine} state={mineState} homebrew={state.homebrewItems} append={append} />
                   {/* Content is device-local, so every device needs its own
                       way in — not just the DM's. */}
                   <Sources />

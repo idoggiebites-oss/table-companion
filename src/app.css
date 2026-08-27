@@ -2300,3 +2300,19 @@ textarea,
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* ---- writing up a thing ---- */
+/*
+ * The panel that says what the APP reads off a homebrew item, as opposed to
+ * what was typed into the form above it. A DM inventing a sword finds out
+ * here that they left the damage die blank, rather than three sessions later
+ * when somebody swings it.
+ */
+.hb-reads {
+  margin-top: 14px; padding: 10px 12px;
+  border: 1px solid var(--line); border-left: 2px solid var(--gold);
+  border-radius: 0 var(--r-card) var(--r-card) 0;
+  background: var(--panel);
+}
+.hb-line { margin: 4px 0 0; font-size: 0.84rem; line-height: 1.45; }
+.hb-line:first-of-type { margin-top: 6px; }

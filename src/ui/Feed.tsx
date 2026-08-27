@@ -76,6 +76,10 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `${e.combatant.name} arrives`;
     case "combatantRenamed":
       return `Now called ${e.name}`;
+    case "homebrewItemSaved":
+      return `${e.item.name} written up`;
+    case "homebrewItemDeleted":
+      return "A homebrew item was deleted";
     case "combatEnded":
       return "Combat ended";
     case "progressionSet":

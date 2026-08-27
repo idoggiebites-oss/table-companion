@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 818 unit tests, 57 browser suites, ~1,090 assertions, run against a
+**Proof.** 829 unit tests, 58 browser suites, ~1,090 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -101,6 +101,16 @@ spread across the other modules.
    the other side of the screen.
 
 ## Done since this list was written
+
+**The homebrew tool makes things, not only creatures.** A magic sword used to
+live in somebody's notes: it could not be carried, equipped, swung, priced or
+sold, and the app had no idea it was a weapon. Homebrew items are produced in
+the same shape the catalogue produces, so every rule that reads an item reads
+these — the attack path, the armour-class derivation with its dexterity cap,
+the hands rule, the shop shelf and press-and-hold all work without being told
+homebrew exists. The form's read-back panel is built by the same function that
+saves, because a preview assembled separately drifts.
+
 
 **A shopkeeper can run out.** The stock entry has carried a quantity since it
 was written and the buy path already decremented the shelf; the setup form

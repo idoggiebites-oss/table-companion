@@ -26,7 +26,7 @@ import type { AttackClaim } from "./attackflow.js";
 import type { CheckRequest } from "./checks.js";
 import type { Boon } from "./boons.js";
 import type { KnownSpell } from "./spells.js";
-import { addItem, removeItem, type Stack } from "./items.js";
+import { addItem, removeItem, type Stack , type Item } from "./items.js";
 import { sellOne, type Npc } from "./npc.js";
 import { levelForXp, type Progression } from "./progression.js";
 import type { Statblock } from "./statblock.js";
@@ -80,6 +80,11 @@ export interface CampaignState {
   readonly scenes: Readonly<Record<string, Scene>>;
   /** The DM's own creatures, by statblock id. */
   readonly homebrew: Readonly<Record<string, Statblock>>;
+  /**
+   * Things the DM made up, in the shape the catalogue uses — so that every
+   * rule that reads an item reads these without knowing they are homebrew.
+   */
+  readonly homebrewItems: Readonly<Record<string, Item>>;
   /**
    * What each player wrote down, by character. Kept whole — a note is edited,
    * not appended to, so the last save is the note.
@@ -510,6 +515,16 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         ...state,
         homebrew: { ...state.homebrew, [e.statblock.id]: e.statblock },
       };
+    case "homebrewItemSaved":
+      return {
+        ...state,
+        homebrewItems: { ...state.homebrewItems, [e.item.id]: e.item },
+      };
+    case "homebrewItemDeleted": {
+      const rest = { ...state.homebrewItems };
+      delete rest[e.itemId];
+      return { ...state, homebrewItems: rest };
+    }
     case "homebrewDeleted": {
       const rest = { ...state.homebrew };
       delete rest[e.statblockId];
@@ -958,7 +973,7 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
 
 export const EMPTY_STATE: CampaignState = {
   sources: {}, builds: {}, characters: {}, combat: null,
-  encounters: {}, scenes: {}, homebrew: {}, notes: {}, progression: "xp",
+  encounters: {}, scenes: {}, homebrew: {}, homebrewItems: {}, notes: {}, progression: "xp",
   npcs: {}, openTrader: null, stash: { items: [], coins: 0 }, claims: [], checks: [],
 };
 

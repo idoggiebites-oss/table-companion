@@ -48,7 +48,7 @@ await dm.page.selectOption('select[aria-label="Seat"]', "dm");
 await dm.page.waitForSelector(".pm-name");
 
 await go(dm.page, "prep");
-await dm.page.getByRole("button", { name: "Add a creature" }).click();
+await dm.page.getByRole("button", { name: "A creature" }).click();
 await dm.page.waitForSelector('input[aria-label="Creature name"]', { timeout: 20000 });
 
 await dm.page.locator('input[aria-label="Creature name"]').fill("Bandit Warlord");

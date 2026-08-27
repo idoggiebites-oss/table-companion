@@ -14,7 +14,7 @@
 
 import { useMemo, useState } from "react";
 import type { EventBody } from "../domain/events.js";
-import { searchItems, type Item } from "../domain/items.js";
+import { mergeItems, searchItems, type Item } from "../domain/items.js";
 import { formatPrice, parseCoins } from "../domain/money.js";
 import {
   describeStock, makeNpcId, UNLIMITED, type Npc, type StockEntry,
@@ -47,9 +47,18 @@ export function Npcs({
   const [picked, setPicked] = useState<Item | null>(null);
 
   const items = useCatalogue(loadEquipment, open && draft.trader);
+  /*
+   * The DM's own things are for sale too. A shopkeeper who cannot stock the
+   * sword the DM invented last week is a shopkeeper with the wrong stock —
+   * and the sword already IS an item everywhere else.
+   */
+  const shelf = useMemo(
+    () => mergeItems(items ?? [], state.homebrewItems),
+    [items, state.homebrewItems],
+  );
   const results = useMemo(
-    () => (find ? searchItems(items ?? [], { text: find }).slice(0, 8) : []),
-    [items, find],
+    () => (find ? searchItems(shelf, { text: find }).slice(0, 8) : []),
+    [shelf, find],
   );
 
   const all = Object.values(state.npcs);
