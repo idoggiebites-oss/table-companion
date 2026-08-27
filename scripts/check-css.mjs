@@ -193,3 +193,37 @@ if (problems.length > 0) {
 console.log(
   `check-css: ${owner.size} classes claimed across ${parsed.length} sections, no collisions`,
 );
+
+/* --- the 44px rule, checked where it is written ------------------------
+
+   Four controls have shipped too small to press: background chips at 30,
+   feat rows at 39, the skills table's proficiency circle at 18 (the only way
+   to train a skill), and a creature's rename button at 0. Each was found by
+   somebody at a table tapping twice and reporting it as a different bug.
+
+   The browser suites measure this, but only on the screens they happen to
+   visit — which is how `.cnd-list .cnd` sat at 40 and `.sc-said button` at
+   36 without either being noticed. A stylesheet can be read whole, so it is:
+   any min-height under 44 has to say why, on the same line, and the reason
+   is then in the diff where a reviewer sees it.
+
+   `tap-ok:` is the escape hatch, deliberately ugly. Decorative rings drawn
+   inside a full-size hit area are the legitimate case. */
+const TAP = 44;
+const undersized = [];
+cssText.split("\n").forEach((line, i) => {
+  const m = /min-height:\s*(\d+(?:\.\d+)?)px/.exec(line);
+  if (!m) return;
+  if (Number(m[1]) >= TAP) return;
+  if (/tap-ok:/.test(line)) return;
+  undersized.push(`${i + 1}: ${line.trim()}`);
+});
+if (undersized.length > 0) {
+  console.error(
+    `check-css: ${undersized.length} control(s) under ${TAP}px with no "tap-ok:" reason\n` +
+      undersized.map((x) => `  ${x}`).join("\n"),
+  );
+  process.exitCode = 1;
+} else {
+  console.log(`check-css: no min-height under ${TAP}px without a stated reason`);
+}

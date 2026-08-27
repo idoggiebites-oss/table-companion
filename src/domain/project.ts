@@ -563,10 +563,27 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       if (state.combat === null) return state;
       const had = state.combat.tags[e.combatantId] ?? [];
       if (had.includes(e.tag)) return state;
+      /*
+       * Remember who gave it. Help expires "before the start of YOUR next
+       * turn" — the helper's — and without this the only expiry available
+       * was the helped creature's own turn, which is the instant the
+       * advantage is meant to be used.
+       */
+      const helper =
+        e.tag === "helped" && e.source
+          ? state.combat.order.find(
+              (c) =>
+                c.id === e.source ||
+                (c.source.kind === "character" && c.source.characterId === e.source),
+            )
+          : undefined;
       return {
         ...state,
         combat: {
           ...state.combat,
+          ...(helper
+            ? { helpedBy: { ...state.combat.helpedBy, [e.combatantId]: helper.id } }
+            : {}),
           tags: { ...state.combat.tags, [e.combatantId]: [...had, e.tag] },
         },
       };

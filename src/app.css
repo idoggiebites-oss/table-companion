@@ -1288,7 +1288,7 @@ html, body { overscroll-behavior-y: none; }
   max-height: 62vh; overflow-y: auto;
 }
 .cnd-list { display: flex; flex-wrap: wrap; gap: 7px; }
-.cnd-list .cnd { min-height: 40px; padding: 6px 12px; font-size: 0.78rem; }
+.cnd-list .cnd { min-height: 44px; padding: 6px 12px; font-size: 0.78rem; }
 .cnd.add { color: var(--muted); min-width: 26px; }
 
 .offer, .shove-ask { display: flex; flex-direction: column; gap: 8px; }
@@ -1787,7 +1787,7 @@ html, body { overscroll-behavior-y: none; }
   background: var(--raised); color: var(--ink-dim);
   font-family: var(--display); font-size: 0.92rem; line-height: 1.45;
 }
-.sc-said button { flex: 0 0 auto; min-height: 36px; }
+.sc-said button { flex: 0 0 auto; min-height: 44px; }
 .sc-draft { margin-top: 10px; }
 /* A rule only where there is something above to be ruled off from. */
 .sc-draft.under { padding-top: 12px; border-top: 1px solid var(--gold-dim); }
@@ -2202,4 +2202,18 @@ html, body { overscroll-behavior-y: none; }
   display: block; width: 100%; margin-top: 6px;
   font-size: 0.78rem; color: var(--ink-dim);
   background: none; border: 1px solid var(--line);
+}
+
+/* ---- what the room does to a roll ---- */
+/*
+ * terrain.ts has known since it was written that fog hides you and wind
+ * drowns you out, and the check panels never asked it — so a Stealth roll in
+ * fog was a plain d20 on the one screen that exists to say otherwise.
+ *
+ * Named rather than only applied: "Advantage: it hides you too" teaches the
+ * rule while it is being used, and "advantage" alone teaches nothing.
+ */
+.stance-why {
+  margin: 6px 0 0; font-size: 0.84rem; line-height: 1.45;
+  color: var(--accent);
 }

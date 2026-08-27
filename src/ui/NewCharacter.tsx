@@ -15,12 +15,17 @@ import { HIT_DIE } from "../domain/classes.js";
 import { CLASS_IDS, type ClassId } from "../domain/resources.js";
 import { AttacksEditor } from "./AttacksEditor.js";
 import { ImportPanel } from "./ImportPanel.js";
-import { kiraSample } from "./sample.js";
+import { bramSample, kiraSample } from "./sample.js";
 
 const titleCase = (s: string) => s[0]!.toUpperCase() + s.slice(1);
 const spaced = (s: string) => s.replace(/([A-Z])/g, " $1").toLowerCase();
 
-export function NewCharacter({ onCreate }: { onCreate: (c: Character) => void }) {
+export function NewCharacter({
+  onCreate,
+}: {
+  /** `sit` false means "hold this one, but stay where you are". */
+  onCreate: (c: Character, starting?: undefined, sit?: boolean) => void;
+}) {
   /**
    * Folded away by default. This form is thirty-odd fields, and it was the
    * first thing on an empty table — a wall of inputs in front of a DM who
@@ -116,6 +121,21 @@ export function NewCharacter({ onCreate }: { onCreate: (c: Character) => void })
             </button>
             <button type="button" onClick={() => onCreate(kiraSample())}>
               Load sample
+            </button>
+            {/*
+              * Somebody to stand next to.
+              *
+              * Help is a thing you do FOR somebody, and a table of one has
+              * nobody to do it for — so a whole class of behaviour was not
+              * only untested but unreachable. Kept separate from the sample
+              * rather than folded into it: "load the sample" means one known
+              * character on twenty screens, and quietly making it two would
+              * change what every one of them is showing.
+              *
+              * Held but not sat in, because you are already somebody.
+              */}
+            <button type="button" onClick={() => onCreate(bramSample(), undefined, false)}>
+              Add an ally
             </button>
           </span>
         </div>

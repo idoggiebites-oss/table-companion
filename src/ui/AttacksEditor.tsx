@@ -121,6 +121,21 @@ export function AttacksEditor({
               onClick={() => patch(i, { damage: { ...a.damage, addAbility: !a.damage.addAbility } })}>
               Ability mod to damage
             </button>
+            {/*
+              * Melee or ranged, which the app needs for exactly one question:
+              * a prone target is easy to hit up close and hard to hit from
+              * across the room, and wind troubles an arrow and not a sword.
+              *
+              * An absent range reads as melee — the commoner case — so a
+              * hand-typed longbow was quietly a sword, and the wind never
+              * touched it. Now it can be said.
+              */}
+            <button type="button" className={`chip${a.range === "ranged" ? " on" : ""}`}
+              aria-pressed={a.range === "ranged"}
+              aria-label={`Attack ${i + 1} is ranged`}
+              onClick={() => patch(i, { range: a.range === "ranged" ? "melee" : "ranged" })}>
+              Ranged
+            </button>
             <span className="atk-preview num">
               {damageFormula(a.damage.count, a.damage.die, a.bonus)}
               {a.damage.addAbility ? " + ability" : ""} {a.damageType}

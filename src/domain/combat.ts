@@ -109,6 +109,15 @@ export interface Combat {
    */
   readonly tags: Readonly<Record<string, readonly StanceTag[]>>;
   /**
+   * Who is helping whom: helped combatant id → the helper's combatant id.
+   *
+   * Help expires "before the start of your next turn", where "your" is the
+   * HELPER's. Without knowing who gave it, the only expiry available was the
+   * helped creature's own turn — which is the instant the advantage is meant
+   * to be used, so Help never once worked.
+   */
+  readonly helpedBy?: Readonly<Record<string, string>>;
+  /**
    * A reaction the DM has offered and nobody has answered yet. One at a time:
    * the table is waiting on it, so a queue would mean the table is waiting on
    * several things and cannot see which.
@@ -390,13 +399,40 @@ export function advance(combat: Combat, from: number): Combat {
   if (opening) {
     delete moved[opening.id];
     delete reactions[opening.id];
-    // Dodge lasts "until your next turn", and this is that turn. Help is
-    // spent by then too — an ally who never swung has lost the moment.
-    delete tags[opening.id];
+    /*
+     * Dodge lasts "until the start of your next turn", and this is that
+     * turn — so it goes.
+     *
+     * Help does NOT, and clearing it here was the whole feature failing
+     * silently. Being helped and then having your turn is exactly when the
+     * advantage is meant to be used; deleting the tag the moment the helped
+     * creature's turn opens deleted it one instant before it could apply.
+     * The rule times it off the HELPER's next turn, not the helped one's,
+     * which is what `helpedBy` below does.
+     *
+     * Hidden is left alone for the same reason: you do not stop being unseen
+     * because it became your go.
+     */
+    tags[opening.id] = (tags[opening.id] ?? []).filter((t) => t !== "dodging");
+    if (tags[opening.id]!.length === 0) delete tags[opening.id];
+    /*
+     * And the help this creature GAVE expires now, because "before the start
+     * of your next turn" has arrived. An ally who never swung has lost the
+     * moment, which is the rule and also the reason Help is a real decision.
+     */
+    for (const [id, who] of Object.entries(combat.helpedBy ?? {})) {
+      if (who !== opening.id) continue;
+      tags[id] = (tags[id] ?? []).filter((t) => t !== "helped");
+      if (tags[id]!.length === 0) delete tags[id];
+    }
   }
   // An offer nobody answered dies with the turn that raised it. Leaving it up
   // would have a player answering a question about a moment that has passed.
-  const base = { ...combat, moved, reactions, tags, offer: null };
+  const helpedBy = { ...(combat.helpedBy ?? {}) };
+  for (const [id, who] of Object.entries(helpedBy)) {
+    if (who === opening?.id) delete helpedBy[id];
+  }
+  const base = { ...combat, moved, reactions, tags, helpedBy, offer: null };
   return next >= combat.order.length
     ? { ...base, turn: 0, round: combat.round + 1 }
     : { ...base, turn: next };

@@ -49,7 +49,8 @@ export function Spells({
   onCast?: (c: {
     spell: KnownSpell;
     atLevel: number;
-    target: Combatant;
+    /** Everyone the spell caught — a blast is one roll and several saves. */
+    targets: readonly Combatant[];
     toHit: number | null;
     damage: number;
     damageType: string;

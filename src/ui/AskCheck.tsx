@@ -16,6 +16,8 @@ import { useState } from "react";
 import { SKILL_IDS, SKILLS, ABILITIES } from "../domain/abilities.js";
 import { describeAsk, outstanding, passed } from "../domain/checks.js";
 import type { EventBody } from "../domain/events.js";
+import { checkEffects } from "../domain/terrain.js";
+import { combine, describeReasons } from "../domain/stance.js";
 import type { CampaignState } from "../domain/project.js";
 
 const spaced = (s: string) => s.replace(/([A-Z])/g, " $1").toLowerCase();
@@ -34,6 +36,15 @@ export function AskCheck({
 
   const builds = Object.values(state.builds);
   const everyone = builds.map((b) => b.id);
+
+  /*
+   * What the room will do to this roll, said before it is asked. terrain.ts
+   * has known since it was written that fog hides you and wind drowns you
+   * out; nothing asked it, so the DM found out from the players or not at all.
+   */
+  const roomReasons =
+    state.combat && kind === "skill" ? checkEffects(state.combat.scene, what) : [];
+  const roomWill = describeReasons(combine(roomReasons), roomReasons);
 
   function ask() {
     const target = only.length > 0 ? only : everyone;
@@ -126,6 +137,10 @@ export function AskCheck({
               onChange={(e) => setDc(e.target.value)}
             />
           </div>
+          {/* What the room will do to it, before it is asked. The DM is the
+              one adjudicating, and finding out afterwards is finding out from
+              the players. */}
+          {roomWill && <p className="stance-why">{roomWill}</p>}
           <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
             Leave the DC blank to keep it to yourself — they will roll and you
             decide.

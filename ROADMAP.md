@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 813 unit tests, 55 browser suites, ~1,120 assertions, run against a
+**Proof.** 816 unit tests, 56 browser suites, ~1,090 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -101,6 +101,33 @@ spread across the other modules.
    the other side of the screen.
 
 ## Done since this list was written
+
+**Help had never once worked.** Being helped and then having your turn deleted
+the advantage one instant before it could apply: `advance` cleared every stance
+tag on the creature whose turn was opening, and Help times off the HELPER's
+next turn, not the helped one's. Nothing noticed because the sample table had
+one person in it, so the only reachable outcome was "nobody else is in this
+fight". There is an ally to load now — a separate press, because "load the
+sample" means one known character on twenty screens — and `verify-help` walks
+the whole chain including the expiry.
+
+**The room reaches checks.** `checkEffects` had known since it was written that
+fog hides you and wind drowns you out, and neither check panel asked it. Both
+do now, and both name the reason rather than only applying it.
+
+**A hand-typed attack can say it is ranged**, so wind troubles an arrow and a
+prone target is harder to hit from across the room.
+
+**A blast is one decision and several claims.** Burning Hands caught three
+goblins and arrived as one row; one roll of damage with each creature saving
+for itself is the rule, so the caster picks who else it caught and the DM gets
+a row each.
+
+**The 44px rule is checked where it is written.** Two live violations were
+sitting outside the three screens the browser suite visits. `check-css` now
+reads the stylesheet whole and fails on any `min-height` under 44 without a
+stated `tap-ok:` reason.
+
 
 **Three from Improved Initiative, filtered through the laws.** Identical
 creatures roll once — one player and six goblins was seven prompts and is now
@@ -163,13 +190,6 @@ switch, the monster piles, and the DM's spell lookup.
 
 ## Noted, for when combat comes round again
 
-- **The room does not reach checks yet.** `checkEffects` knows that fog hides
-  you and wind drowns you out, and the DM's check panel does not ask it. A
-  Stealth roll in fog should say so.
-- **A hand-typed attack states no reach**, so the room treats it as melee —
-  which is why wind does not trouble the sample character's longbow. Correct
-  by the app's own rule and still worth a way for a player to say "this one is
-  ranged".
 
 - **Clean encounter.** Improved Initiative resets for the next fight in one
   press: drop the NPCs, keep the party, clear what was done to them. Scenes
@@ -179,10 +199,6 @@ switch, the monster piles, and the DM's spell lookup.
 - **A note that belongs to a creature.** Theirs survive the encounter; ours
   are per-scene and per-player. Same judgement, same test.
 
-- **A save spell aimed at more than one creature is still one claim.** Burning
-  Hands catches three goblins and arrives as one row against one target; the
-  DM resolves it once and applies the rest by hand, or uses Area damage, which
-  takes the whole blast and asks who saved. Two paths to the same fight.
 
 ## Known and unfixed
 
@@ -194,18 +210,10 @@ switch, the monster piles, and the DM's spell lookup.
   `verify-guidance` measures three screens and `verify-group` measures the
   fight, but nothing stops a new one being added at 33 somewhere else.
 
-- **`verify-turns`'s "one move, not two" is racy.** It presses Next turn and
-  End turn on two devices "at the same instant" and asserts the fight moves
-  once. When the sync lands between the two clicks the second device reads an
-  already-advanced turn, sends a valid `from`, and the fight moves twice —
-  the app behaving correctly on the input it got. Passes on re-run.
-
-- **Help is untested end to end.** The sample campaign has one character, so
-  the browser suite proves the step exists and says "nobody else is in this
-  fight" honestly. Needs a two-character fixture.
-- **The dev server dies under repeated full-suite runs**, serving the 30MB
-  compendium. Suites are re-run against a restarted server; production is
-  fine.
+- **`verify-turns`'s race is arranged, not raced for.** The player goes
+  offline before pressing, which is what "at the same instant" means in a
+  distributed system. Deterministic across repeated runs, but it proves the
+  invariant on one interleaving rather than on a real collision.
 
 ---
 

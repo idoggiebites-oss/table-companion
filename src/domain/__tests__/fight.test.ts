@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  advance, awaitingRolls, beginCombat, hasReaction, isSurprised, movementLeft,
-  setInitiative, sortOrder, stageCombat, type Combatant,
-} from "../combat.js";
+import { advance, awaitingRolls, beginCombat, hasReaction, isSurprised, movementLeft, setInitiative, sortOrder, stageCombat, startCombat, type Combatant } from "../combat.js";
 
 const pc = (id: string, initiative: number | null, extra: Partial<Combatant> = {}): Combatant => ({
   id, name: id, initiative,
@@ -151,5 +148,46 @@ describe("a creature's reaction", () => {
     const c = { ...start(), turn: 1, reactions: { g: true } };
     const next = advance(c, 1); // wraps to the character
     expect(hasReaction(next, "g")).toBe(false);
+  });
+});
+
+/* --- Help expires off the HELPER's turn ----------------------------------
+
+   `advance` cleared every stance tag on the creature whose turn was opening,
+   which meant being helped and then having your go deleted the advantage one
+   instant before it could apply. Help had never once worked, and nothing
+   noticed because the sample table had one person in it. */
+describe("help lasts until the helper's next turn", () => {
+  const roll = (id: string, name: string, initiative: number) => ({
+    id, name, initiative,
+    source: { kind: "creature" as const, maxHp: 10 },
+    controller: { kind: "dm" as const },
+    disclosure: "exact" as const,
+  });
+  const staged = () => {
+    const c = startCombat([roll("a", "Helper", 20), roll("b", "Helped", 15), roll("c", "Ogre", 5)]);
+    return { ...c, tags: { b: ["helped"] as const }, helpedBy: { b: "a" } };
+  };
+
+  it("survives the helped creature's own turn, which is when it is used", () => {
+    const after = advance(staged(), 0);
+    expect(after.order[after.turn]?.name).toBe("Helped");
+    expect(after.tags["b"]).toContain("helped");
+  });
+
+  it("and is gone by the time the helper goes again", () => {
+    let c = advance(staged(), 0); // → Helped
+    c = advance(c, 1); // → Ogre
+    c = advance(c, 2); // → round 2, Helper
+    expect(c.order[c.turn]?.name).toBe("Helper");
+    expect(c.tags["b"] ?? []).not.toContain("helped");
+  });
+
+  /* Dodge is the one that DOES end on your own turn — "until the start of
+     your next turn" — so the fix must not have made every tag permanent. */
+  it("but dodge still ends when your turn opens", () => {
+    const c = { ...startCombat([roll("a", "A", 20), roll("b", "B", 10)]), tags: { b: ["dodging"] as const } };
+    const after = advance(c, 0);
+    expect(after.tags["b"] ?? []).not.toContain("dodging");
   });
 });

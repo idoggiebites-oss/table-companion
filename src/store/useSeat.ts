@@ -32,6 +32,8 @@ export interface SeatState {
   readonly setSeat: (seat: Seat) => void;
   /** Remembers a character as this device's, and sits in it. */
   readonly claim: (id: CharacterId) => void;
+  /** Hold it, but stay where you are. */
+  readonly claimOnly: (id: CharacterId) => void;
   readonly release: (id: CharacterId) => void;
 }
 
@@ -63,6 +65,19 @@ export function useSeat(): SeatState {
     void writeMeta(SEAT_KEY, { kind: "player", characterId: id } satisfies Seat);
   }, []);
 
+  /*
+   * Hold it without sitting in it. Loading a sample party means this device
+   * holds both characters and sits in the first, not the last.
+   */
+  const claimOnly = useCallback((id: CharacterId) => {
+    setMine((cur) => {
+      if (cur.includes(id)) return cur;
+      const next = [...cur, id];
+      void writeMeta(MINE_KEY, next);
+      return next;
+    });
+  }, []);
+
   const release = useCallback((id: CharacterId) => {
     setMine((cur) => {
       const next = cur.filter((x) => x !== id);
@@ -71,5 +86,5 @@ export function useSeat(): SeatState {
     });
   }, []);
 
-  return { seat, mine, setSeat, claim, release };
+  return { seat, mine, setSeat, claim, claimOnly, release };
 }

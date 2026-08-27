@@ -65,6 +65,11 @@ await dm.page.getByRole("button", { name: "Add creature" }).click();
 // Initiative is rolled after staging now, not typed on the setup panel.
 await dm.page.getByRole("button", { name: "Roll for initiative" }).click();
 await dm.page.waitForSelector('input[aria-label="Kira Vance initiative"]');
+/* Identical creatures roll as one group now, and "Goblin 1/2/3" are three of
+   the same goblin however they were typed. This suite wants them at three
+   different initiatives on purpose — which is exactly what Split is for. */
+await dm.page.getByRole("button", { name: "Roll each Goblin separately" }).click();
+await dm.page.waitForTimeout(300);
 for (const [name, roll] of [["Kira Vance", 16], ["Goblin 1", 15], ["Goblin 2", 14], ["Goblin 3", 13]]) {
   await dm.page.locator(`input[aria-label="${name} initiative"]`).fill(String(roll));
   await dm.page.getByRole("button", { name: `Set ${name} initiative` }).click();

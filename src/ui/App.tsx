@@ -51,7 +51,7 @@ import { Shop } from "./Shop.js";
 import { UpdateBar } from "./UpdateBar.js";
 
 export function App() {
-  const { seat, mine: myCharacters, setSeat, claim } = useSeat();
+  const { seat, mine: myCharacters, setSeat, claim, claimOnly } = useSeat();
   /** Null until you pick one, so the sensible default can change under you. */
   const [tab, setTab] = useState<TabId | null>(null);
   /** Said yes to a reaction from another screen; the fight opens the swing. */
@@ -184,31 +184,44 @@ export function App() {
    * because a spell can now be cast from the turn as well as from the Spells
    * tab and the two must reach the DM's queue identically.
    */
+  /*
+   * One claim per creature it caught.
+   *
+   * Burning Hands catches three goblins and used to arrive as a single row
+   * against a single target — the DM resolved it once and applied the other
+   * two by hand, or reached for Area damage, which is a different tool for
+   * the same fight. One roll of damage, each creature saving for itself, is
+   * the rule; so the blast is one decision on the caster's screen and three
+   * rows on the DM's, which is what the DM actually has to adjudicate.
+   */
   const sendSpell = (c: {
     spell: { name: string };
-    target: { id: string; name: string };
+    targets: readonly { id: string; name: string }[];
     toHit: number | null;
     damage: number;
     damageType: string;
     save?: { ability: string; dc: number; half: boolean };
   }) => {
     if (!mine) return;
-    append({
-      type: "attackClaimed",
-      claim: {
-        id: `sp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-        who: mine.id,
-        whoName: mine.name,
-        targetId: c.target.id,
-        targetName: c.target.name,
-        weapon: c.spell.name,
-        toHit: c.toHit,
-        damage: c.damage,
-        damageType: c.damageType,
-        ...(c.save ? { save: c.save } : {}),
-        at: Date.now(),
-      },
-    });
+    const at = Date.now();
+    for (const [i, target] of c.targets.entries()) {
+      append({
+        type: "attackClaimed",
+        claim: {
+          id: `sp-${at.toString(36)}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+          who: mine.id,
+          whoName: mine.name,
+          targetId: target.id,
+          targetName: target.name,
+          weapon: c.spell.name,
+          toHit: c.toHit,
+          damage: c.damage,
+          damageType: c.damageType,
+          ...(c.save ? { save: c.save } : {}),
+          at,
+        },
+      });
+    }
   };
 
   const home: TabId =
@@ -285,6 +298,15 @@ export function App() {
       equip?: readonly string[];
       spells?: readonly KnownSpell[];
     },
+    /*
+     * Whether to sit in it.
+     *
+     * Making a character means sitting in it, which is right and was the only
+     * behaviour. Loading a sample PARTY is not making two characters — it is
+     * putting a table on the screen — and seating the device in whoever
+     * happened to be loaded last is nobody's intention.
+     */
+    sit = true,
   ) {
     append({ type: "characterAdded", character: c });
     // Worn and wielded straight away: a kit in a pack gives no attacks and no
@@ -317,7 +339,10 @@ export function App() {
      * dmRole rather than dmView: a device with no room at all reads as the DM
      * by default, and that is exactly the person who wants their own sheet.
      */
-    if (dmRole !== true) claim(c.base.id);
+    if (dmRole !== true) {
+      if (sit) claim(c.base.id);
+      else claimOnly(c.base.id);
+    }
   }
 
   if (!ready) return <div className="app"><p className="faint">Loading…</p></div>;
@@ -429,7 +454,8 @@ export function App() {
         state.checks
           .filter((c) => c.who.includes(mine.id))
           .map((c) => (
-            <AnswerCheck key={c.id} check={c} build={mine} append={append} />
+            <AnswerCheck key={c.id} check={c} build={mine} append={append}
+              {...(state.combat ? { scene: state.combat.scene } : {})} />
           ))}
 
       {/* Somebody has joined a campaign that already has characters. They are

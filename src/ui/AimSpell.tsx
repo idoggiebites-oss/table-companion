@@ -47,7 +47,15 @@ export function AimSpell({
    * no target, or nothing to roll — which is still a cast.
    */
   onDone: (aim: {
-    target: Combatant;
+    /*
+     * Everyone it caught, not one of them.
+     *
+     * Burning Hands catches three goblins and arrived as a single row against
+     * a single target; the DM resolved it once and did the other two by hand.
+     * One damage roll, each creature saving for itself, is the rule — so the
+     * aim carries a list and the caller makes one claim each.
+     */
+    targets: readonly Combatant[];
     toHit: number | null;
     damage: number;
     damageType: string;
@@ -58,6 +66,8 @@ export function AimSpell({
   onCancel: () => void;
 }) {
   const [target, setTarget] = useState<Combatant | null>(null);
+  /** Everyone else in the blast, for a spell that asks them all to save. */
+  const [also, setAlso] = useState<readonly string[]>([]);
   const [toHit, setToHit] = useState("");
   const [damage, setDamage] = useState("");
 
@@ -148,9 +158,49 @@ export function AimSpell({
     );
   }
 
+  const caught = [target, ...targets.filter((c) => also.includes(c.id))];
+
   return (
     <div className="swing-step">
-      <span className="label">{spell.name} at {target.name}</span>
+      <span className="label">
+        {spell.name} at {caught.map((c) => c.name).join(", ")}
+      </span>
+
+      {/*
+        * Who else it caught. A save spell is an area, and one damage roll is
+        * shared by everyone in it — each of them saving separately, which is
+        * the rule and also why this is a list rather than a second cast.
+        *
+        * Only for saves: an attack roll is aimed at one creature, and asking
+        * "who else" would invite a second to-hit that was never rolled.
+        */}
+      {kind.kind === "save" && targets.length > 1 && (
+        <>
+          <span className="label cr-sub">Who else it catches</span>
+          <div className="chips">
+            {targets
+              .filter((c) => c.id !== target.id)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  className={`chip${also.includes(c.id) ? " on" : ""}`}
+                  aria-pressed={also.includes(c.id)}
+                  aria-label={`${spell.name} also catches ${c.name}`}
+                  onClick={() =>
+                    setAlso((v) =>
+                      v.includes(c.id) ? v.filter((x) => x !== c.id) : [...v, c.id],
+                    )
+                  }
+                >
+                  {c.name}
+                </button>
+              ))}
+          </div>
+          <p className="faint" style={{ fontSize: ".8rem", margin: "6px 0 0" }}>
+            One roll of damage, and each of them saves for themselves.
+          </p>
+        </>
+      )}
 
       {kind.kind === "attack" && (
         <>
@@ -211,7 +261,7 @@ export function AimSpell({
           }
           onClick={() =>
             onDone({
-              target,
+              targets: caught,
               toHit: kind.kind === "attack" ? num(toHit) : null,
               damage: num(damage) ?? 0,
               damageType,

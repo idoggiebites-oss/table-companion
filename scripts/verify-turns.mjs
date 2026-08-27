@@ -109,14 +109,39 @@ ok("dm advanced to the player", await activeName(dm), "Kira Vance");
 ok("player is offered one once it is their turn",
   await player.page.getByRole("button", { name: "End turn" }).count(), 1);
 
-// THE clause from the build plan: two devices press at the same instant,
-// both naming turn 1, and the fight moves exactly one step.
-await Promise.all([
-  dm.page.getByRole("button", { name: "Next turn" }).click(),
-  player.page.getByRole("button", { name: "End turn" }).click(),
-]);
-await dm.page.waitForTimeout(1500);
+/* THE clause from the build plan: two devices press at the same instant,
+   both naming turn 1, and the fight moves exactly one step.
+
+   This used to be two clicks inside a Promise.all and a hope. When the sync
+   landed between them the player's device read an already-advanced turn,
+   sent a valid `from` for it, and the fight moved twice — the app behaving
+   correctly on the input it got, and the suite failing anyway. A test that
+   fails on correct behaviour is worse than no test.
+
+   So the race is arranged rather than raced for. The player goes offline,
+   which is what "at the same instant" means in a distributed system: they
+   provably cannot have seen the DM's advance. Their press queues and flushes
+   on reconnect, naming turn 1 — and `advance` drops a `from` that is not the
+   current turn, which is the invariant this exists to prove. */
+await player.ctx.setOffline(true);
+await player.page.waitForTimeout(300);
+await player.page.getByRole("button", { name: "End turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
+await dm.page.waitForTimeout(800);
+ok("the DM's press moves the fight", await activeName(dm), "Ambusher");
+await player.ctx.setOffline(false);
+// Long enough for the reconnect, the replay, and the stale press to be
+// dropped — a flush that has not happened yet proves nothing.
+await player.page.waitForTimeout(2500);
 ok("one move, not two", await activeName(dm), "Ambusher");
+/* The player's device agrees — but not by naming who is up. The Ambusher is
+   hidden from them, so no row on their screen is the active one, and that is
+   the ladder working rather than a stale render. What they can see is that
+   the turn is no longer theirs. */
+ok("the player is back on the same log",
+  await player.page.locator(".rb-status").innerText(), "LIVE · 2 JOINED");
+ok("and their turn is over, so nothing is offered to end",
+  await player.page.getByRole("button", { name: "End turn" }).count(), 0);
 ok("both devices agree on the turn", await dm.page.locator(".cbt.on").count(), 1);
 
 // the active creature is hidden from the players, so they see no active row —
