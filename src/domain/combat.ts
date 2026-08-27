@@ -24,6 +24,11 @@ export type CombatantSource =
       readonly kind: "creature";
       readonly maxHp: number;
       readonly ac?: number;
+      /**
+       * Where the rest of it is, so the fight can show the whole creature
+       * rather than the three fields that used to survive staging.
+       */
+      readonly statblockId?: string;
       /** What it can do, so the DM taps rather than reads and types. */
       readonly attacks?: readonly {
         readonly name: string;

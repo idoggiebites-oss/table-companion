@@ -323,7 +323,16 @@ export function App() {
   if (!ready) return <div className="app"><p className="faint">Loading…</p></div>;
 
   return (
-    <div className={`app${twoUp ? " two" : ""}`}>
+    /*
+     * The DM gets more of the screen than a player does.
+     *
+     * The pinned column was drawn for a player glancing at the order while
+     * they read their sheet. A DM is not glancing: the fight IS their work
+     * surface, and it now carries a whole statblock. Most DMs run this from a
+     * laptop or a propped-up tablet, so the room is there — it was just being
+     * spent on the wrong side.
+     */
+    <div className={`app${twoUp ? " two" : ""}${twoUp && dmView ? " dm" : ""}`}>
       <UpdateBar />
       <RoomBar
         room={room}

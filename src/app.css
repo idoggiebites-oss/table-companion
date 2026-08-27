@@ -2100,3 +2100,69 @@ html, body { overscroll-behavior-y: none; }
 @media (prefers-reduced-motion: reduce) {
   .cr-steps, .cr-steps.back { animation: none; }
 }
+
+/* ---- a creature's turn, whole ---- */
+/*
+ * Staging kept three fields and dropped the rest — 17 of 57 entries across
+ * seven common monsters, Multiattack among them. The statblock now sits in
+ * the fight, so reading a trait does not mean leaving the one screen a DM
+ * cannot leave.
+ */
+.sb-turn { border-top: 1px solid var(--line); padding-top: 12px; }
+.sb-turn-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; gap: 12px; min-height: 44px;
+  background: none; border: 0; padding: 0 0 6px;
+}
+/*
+ * An action is a control; a trait is a fact. Only the ones carrying numbers
+ * become buttons, and tapping one names the die rather than throwing it.
+ */
+/*
+ * Buttons in this app are uppercase, which is right for a four-word control
+ * and wrong for two sentences of rules text: "MELEE WEAPON ATTACK: +4 TO HIT,
+ * REACH 5 FT." is a statblock shouting. The name keeps the treatment, the
+ * prose does not.
+ */
+.sb-act {
+  display: block; width: 100%; text-align: left; text-transform: none;
+  letter-spacing: normal;
+  padding: 9px 10px; margin: 4px 0; min-height: 44px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--ink); font: inherit;
+}
+.sb-act:hover { border-color: var(--accent); }
+.sb-act-n { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sb-act-n b { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.86rem; }
+.sb-act-n .faint { font-size: 0.82rem; }
+.sb-act-d {
+  display: block; margin-top: 3px;
+  font-size: 0.82rem; line-height: 1.45; color: var(--ink-dim);
+}
+
+/*
+ * A DM's fight is not a glance.
+ *
+ * The pinned column was sized for a player watching the order while they read
+ * their own sheet. A DM's fight carries the order, the claims and now a whole
+ * statblock, and most of them run this from a laptop or a propped tablet —
+ * the room was there and was being spent on the wrong side.
+ */
+@media (min-width: 1024px) {
+  .app.two.dm { grid-template-columns: minmax(430px, 520px) minmax(0, 1fr); }
+}
+/*
+ * Wider still, and the statblock stops pushing the order off the screen:
+ * two columns inside the fight, so who is up and what it can do are both
+ * visible at once. This is the layout a DM screen has always had on paper.
+ */
+@media (min-width: 1500px) {
+  .app.two.dm { grid-template-columns: minmax(760px, 900px) minmax(0, 1fr); }
+  .app.two.dm .pane-pin .sb-turn {
+    border-top: 0; border-left: 1px solid var(--line);
+    padding-top: 0; padding-left: 16px;
+  }
+  .app.two.dm .pane-pin > .card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .app.two.dm .pane-pin > .card > .card-hd { grid-column: 1 / -1; }
+  .app.two.dm .pane-pin > .card > .sb-turn { grid-column: 2; grid-row: 2 / 99; }
+}

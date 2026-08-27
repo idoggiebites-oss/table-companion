@@ -11,12 +11,26 @@ import type { Combatant } from "./combat.js";
 import type { Encounter } from "./encounter.js";
 import { instanceLabel, rollHp, type Statblock } from "./statblock.js";
 
-/** A monster as the fight will carry it — no statblock, just what is needed. */
+/**
+ * A monster as the fight will carry it.
+ *
+ * "Just what is needed" turned out to be a thirtieth of the creature: across
+ * seven common monsters, 17 of 57 entries survived this boundary. Multiattack
+ * is dropped from nearly every statblock in the game, and a goblin arrives
+ * without Nimble Escape.
+ *
+ * The fix is an id rather than a copy. The catalogue is already loaded in the
+ * fight, so the whole statblock is one lookup away — and a corrected monster
+ * corrects the fights that are already running, which copying it into the log
+ * would not.
+ */
 export interface StagedCreature {
   readonly name: string;
   readonly maxHp: number;
   readonly ac?: number;
   readonly attacks?: readonly { name: string; toHit?: number; dice?: string; type?: string }[];
+  /** Where the rest of it is. Absent for anything staged before this existed. */
+  readonly statblockId?: string;
 }
 
 /** Which side, if either, walked into it. */
@@ -36,7 +50,7 @@ export function creaturesFrom(
         // An unknown statblock lands as 1, which is visible as wrong rather
         // than plausible — the same choice the encounter builder makes.
         maxHp: sb ? (entry.hpMode === "rolled" ? rollHp(sb.hitDice) : sb.hp) : 1,
-        ...(sb ? { ac: sb.ac } : {}),
+        ...(sb ? { ac: sb.ac, statblockId: sb.id } : {}),
         // Its actions come with it, so the DM taps rather than reads a
         // statblock aloud and types the numbers off it.
         ...(sb
@@ -90,6 +104,9 @@ export function combatantsFor({
         kind: "creature" as const,
         maxHp: c.maxHp,
         ...(c.ac ? { ac: c.ac } : {}),
+        // The same field was dropped twice: once staging a creature out of an
+        // encounter, and again turning it into a combatant here.
+        ...(c.statblockId ? { statblockId: c.statblockId } : {}),
         ...(c.attacks?.length ? { attacks: c.attacks } : {}),
       },
       controller: { kind: "dm" as const },

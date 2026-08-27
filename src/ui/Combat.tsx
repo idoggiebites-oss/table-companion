@@ -15,10 +15,12 @@
 import { ConditionStrip } from "./Conditions.js";
 import { SceneSet } from "./SceneSet.js";
 import { Num } from "./Num.js";
+import { useWide } from "./useWide.js";
 import { describeRoom, isOpenGround, type Room } from "../domain/terrain.js";
 import type { KnownSpell } from "../domain/spells.js";
-import { useEffect, useState } from "react";
-import { mergeStatblocks, type Statblock } from "../domain/statblock.js";
+import { useEffect, useMemo, useState } from "react";
+import { mergeStatblocks, type Statblock, type StatblockAction } from "../domain/statblock.js";
+import { actionNumbers, StatblockView } from "./StatblockView.js";
 import { combatantsFor, creaturesFrom, type StagedCreature } from "../domain/stage.js";
 import { loadMonsters } from "../store/srd.js";
 import {
@@ -458,7 +460,54 @@ export function Combat({
   const [offerTo, setOfferTo] = useState<readonly string[]>([]);
   const [offerWhy, setOfferWhy] = useState("");
   const [dmPicking, setDmPicking] = useState<null | "target" | "reactor">(null);
+  /** The action the DM tapped off a statblock, carried into the swing. */
+  const [using, setUsing] = useState<StatblockAction | null>(null);
+  /*
+   * Open where there is room for it.
+   *
+   * A propped tablet or a laptop has a column to spare and the statblock
+   * should simply be there. A phone does not: open by default, it pushed
+   * Next turn below the fold, which taxes every turn to make one of them
+   * easier. Closed, the header still says whose statblock is waiting.
+   */
+  const wide = useWide();
+  const [sbOpen, setSbOpen] = useState(wide);
   const [reactor, setReactor] = useState<Combatant | null>(null);
+  /*
+   * The active creature's full statblock, looked up rather than copied.
+   *
+   * Above the early return, because hooks are: this block first sat beside
+   * the code that uses it, after `if (!combat)`, and every fight that ended
+   * crashed the tab with "rendered more hooks than during the previous
+   * render". The boundary caught it, which is why it was a report and not a
+   * white screen — but the fix is placement, not catching.
+   *
+   * An id rather than a copy means a corrected monster corrects a running
+   * fight, and the log stays small.
+   */
+  const activeSrc = (() => {
+    const c = state.combat;
+    if (!c || c.phase !== "active") return undefined;
+    return (reactor ?? c.order[c.turn])?.source;
+  })();
+  const needId =
+    seat.kind === "dm" && activeSrc?.kind === "creature" ? activeSrc.statblockId : undefined;
+  /*
+   * Loaded on demand and only for the DM: a player never sees this, and the
+   * service worker has the file from the moment the fight was staged.
+   */
+  const [book, setBook] = useState<Statblock[] | null>(null);
+  useEffect(() => {
+    if (!needId || book) return;
+    loadMonsters().then(setBook, () => setBook([]));
+  }, [needId, book]);
+  const activeBlock = useMemo(
+    () =>
+      needId
+        ? (mergeStatblocks(book ?? [], state.homebrew).find((m) => m.id === needId) ?? null)
+        : null,
+    [needId, book, state.homebrew],
+  );
   const combat = state.combat;
 
   // What the seated player is holding, so the walkthrough can name the weapon
@@ -505,6 +554,14 @@ export function Combat({
   }
 
   const active = activeCombatant(combat);
+  /*
+   * The active creature's full statblock, looked up rather than copied. The
+   * catalogue is already here — it is what staged the fight — so carrying an
+   * id costs nothing and means a corrected monster corrects a running fight.
+   *
+   * Only for whoever is actually up, and only when it is a creature: a
+   * player's turn belongs to the player, and their sheet is on their phone.
+   */
   /** Who follows, so a player can see their own turn coming. */
   const upNext = combat.order.length > 1
     ? combat.order[(combat.turn + 1) % combat.order.length]
@@ -593,7 +650,17 @@ export function Combat({
           panel that vanished. */}
       {target && (
         <div className="swing">
-          <span className="label">Attacking {target.name}</span>
+          <span className="label">
+            Attacking {target.name}
+            {/*
+              * What was tapped, and what it takes to land it. The app names
+              * the die and holds the modifier; the number comes from a person
+              * throwing something. That is the whole of law one.
+              */}
+            {using && (
+              <span className="faint"> · {using.name} {actionNumbers(using)}</span>
+            )}
+          </span>
           {/* What the attacker can do, with the numbers already read off its
               statblock — the DM's turn should not be slower than a player's. */}
           {(reactor ?? active)?.source.kind === "creature" &&
@@ -628,11 +695,12 @@ export function Combat({
               );
               setTarget(null);
               setDealt(0);
+              setUsing(null);
             }}
           >
             It hits
           </button>
-          <button onClick={() => setTarget(null)}>Missed</button>
+          <button onClick={() => { setTarget(null); setUsing(null); }}>Missed</button>
         </div>
       )}
 
@@ -903,6 +971,49 @@ export function Combat({
           );
         })}
       </div>
+
+      {/*
+        * The creature whose turn it is, whole.
+        *
+        * Staging kept its hit points, its armour class and the actions that
+        * deal damage — 17 of 57 entries across seven common monsters. The
+        * rest was readable in the Book tab, which means leaving the fight on
+        * the one screen you cannot leave. Multiattack is dropped from nearly
+        * every statblock in the game, so the app was quietest about the line
+        * that says how many times to swing.
+        *
+        * DM only, and for the same reason the Book tab is: a player who can
+        * read the statblock knows the armour class, which is what the
+        * disclosure ladder exists to withhold.
+        */}
+      {seat.kind === "dm" && activeBlock && (
+        <div className="card-body sb-turn">
+          <button
+            className="sb-turn-hd"
+            aria-expanded={sbOpen}
+            aria-label={`${activeBlock.name} statblock`}
+            onClick={() => setSbOpen(!sbOpen)}
+          >
+            <span className="label">{active?.name ?? activeBlock.name}</span>
+            <span className="faint">{sbOpen ? "Hide" : "Show"}</span>
+          </button>
+          {sbOpen && (
+            <StatblockView
+              m={activeBlock}
+              onAct={(a) => {
+                /*
+                 * Tapping an action does not roll it. It carries the numbers
+                 * into the swing — which die, which modifier — and asks the
+                 * table for the result, the same as every other roll here.
+                 */
+                setUsing(a);
+                setDealt(0);
+                if (!target) setDmPicking("target");
+              }}
+            />
+          )}
+        </div>
+      )}
 
       {seat.kind === "dm" && (
         <div className="card-body" style={{ paddingBottom: 0 }}>

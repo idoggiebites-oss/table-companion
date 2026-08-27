@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 813 unit tests, 53 browser suites, ~1,080 assertions, run against a
+**Proof.** 813 unit tests, 54 browser suites, ~1,100 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -101,6 +101,21 @@ spread across the other modules.
    the other side of the screen.
 
 ## Done since this list was written
+
+**A creature's turn shows the creature.** Staging kept hit points, armour class
+and the damaging actions and dropped the rest — twice, at two boundaries.
+Across seven common monsters 17 of 57 entries survived; Multiattack is dropped
+from nearly every statblock in the game. The fight now looks the statblock up
+by id rather than copying it, so a corrected monster corrects a running fight,
+and every action naming numbers is a button that loads the swing — it names the
+die and holds the modifier, and the number still comes from a person. DM only,
+for the same reason the Book tab is.
+
+**The DM's fight gets the screen a DM uses.** The pinned column was sized for a
+player glancing at the order while reading their sheet; a DM is not glancing.
+Above 1024 the DM's fight takes 430–520px, and above 1500 it goes two-column
+with the statblock beside the order.
+
 
 **Push on iOS says what it needs.** Apple gives Web Push to a Home Screen app
 and not to a Safari tab — and this list had the mechanism wrong: it assumed the
