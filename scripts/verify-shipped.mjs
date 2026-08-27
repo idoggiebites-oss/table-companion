@@ -354,14 +354,29 @@ const sizes = await page.evaluate(async () => {
     sameSlots: JSON.stringify(slots(full.rows)) === JSON.stringify(slots(slim.rows)),
     sameIds:
       JSON.stringify(full.rows.map((c) => c.id)) === JSON.stringify(slim.rows.map((c) => c.id)),
-    // The text is what was dropped, and dropping it is the whole point.
-    slimHasText: slim.rows.some((c) => (c.features ?? []).some((f) => "text" in f)),
+    /*
+     * The descriptions are what made the full file six megabytes, and a
+     * sheet reads none of them. The slim copy keeps them for exactly one
+     * kind of row — the CHOICES, and only the game's own — because a picker
+     * that hands over a list of names and nothing else sends the person
+     * holding it to a wiki.
+     */
+    textOnChoices: slim.rows.every((c) =>
+      (c.features ?? []).every(
+        (f) => !("text" in f) || (/^.{3,40}?:\s/.test(f.name) && !/\((HB|TP|UA)\)/.test(f.name)),
+      ),
+    ),
+    described: slim.rows.reduce(
+      (n, c) => n + (c.features ?? []).filter((f) => "text" in f).length, 0,
+    ),
   };
 });
 ok("every class is in the slim file", sizes.sameIds, true);
 ok("with the same feature names, at the same levels", sizes.samePairs, true);
 ok("and the same slot table", sizes.sameSlots, true);
-ok("carrying none of the descriptions", sizes.slimHasText, false);
+ok("carrying descriptions only where a choice is made", sizes.textOnChoices, true);
+ok("which is a few hundred rows, not thirty thousand",
+  sizes.described > 300 && sizes.described < 1200, true);
 ok("which is most of the file",
   sizes.slimBytes < sizes.fullBytes / 5, true);
 console.log(

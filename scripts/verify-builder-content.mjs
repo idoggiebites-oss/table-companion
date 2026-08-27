@@ -264,11 +264,51 @@ ok("and so are backgrounds", bgGroups.slice(0, 3),
 
 await atStep(page, "Scores");
 
-/* The rest are not gone, they are behind the switch that always meant this. */
-ok("the rest are one press away", await toggle.count(), 1);
-await toggle.click();
+/* A fighting style is not a subclass, and was being placed as one — so all
+   eleven landed in a single "elsewhere" heap with nothing to tell a
+   Player's Handbook style from a Tasha's one. */
+await atStep(page, "Class");
+await page.getByRole("button", { name: "Fighter", exact: true }).click();
 await page.waitForTimeout(500);
-const opened = await archetypes.first().evaluate(
+await atStep(page, "Race");
+await page.selectOption('select[aria-label="Race"]', "human");
+await page.waitForTimeout(600);
+
+/* Subraces went through none of this: no switch, no headings. A human was
+   offered "Mark of Finding" and "Mark of Finding (WGtE)" one after the
+   other — the same dragonmark from the book and from the playtest. */
+const subs = await page.locator('select[aria-label="Subrace"]').evaluate((el) => ({
+  groups: [...el.querySelectorAll("optgroup")].map((g) => g.label),
+  names: [...el.querySelectorAll("option")].map((o) => o.textContent),
+}));
+ok("subraces are grouped by book as well", subs.groups, ["Player's Handbook", "Eberron"]);
+ok("and the playtest duplicates are behind the switch",
+  subs.names.some((n) => /WGtE|\(TP\)/.test(n)), false);
+
+await atStep(page, "Scores");
+const styleGroups = await page.locator('select[aria-label="Fighting Style"]').evaluate(
+  (el) => [...el.querySelectorAll("optgroup")].map((g) => `${g.label}:${g.children.length}`),
+);
+ok("fighting styles are placed as styles, not as subclasses",
+  styleGroups, ["Player's Handbook:6", "Tasha's:5"]);
+
+/* And what a choice DOES, where the choice is made. The slim class file
+   carries the first few lines for official choices — 679 rows, a fifth of a
+   megabyte — because a list of names and nothing else sends you to a wiki. */
+await page.selectOption('select[aria-label="Fighting Style"]', { label: "Dueling" });
+await page.waitForTimeout(400);
+const said = await page.locator(".chooser", { hasText: "Fighting Style" })
+  .locator(".cr-blurb").innerText();
+ok("choosing one says what it does", /\+2 bonus to damage/i.test(said), true);
+ok("and which book it is from", /Player's Handbook/.test(said), true);
+
+/* The rest are not gone, they are behind the switch that always meant this. */
+const martial = page.locator(".chooser", { hasText: "Martial Archetype" }).first();
+const more = martial.getByRole("button", { name: "Show homebrew and third-party content" });
+ok("the rest are one press away", await more.count(), 1);
+await more.click();
+await page.waitForTimeout(600);
+const opened = await page.locator('select[aria-label="Martial Archetype"]').evaluate(
   (el) => [...el.querySelectorAll("optgroup option")].length,
 );
 ok("and turning it on brings them back", opened > 50, true);

@@ -39,6 +39,7 @@ import { proficiencyBonus } from "../domain/abilities.js";
 import { deriveClass } from "../domain/classes-from-compendium.js";
 import { consolidateRaces } from "../domain/races.js";
 import { loadBundled, loadBundledClassIndex } from "./bundled.js";
+import type { ClassIndexRow, CompendiumClass } from "../import/compendium.js";
 import { mergeById, readContent } from "./content.js";
 
 export interface ClassLevel {
@@ -48,6 +49,14 @@ export interface ClassLevel {
   readonly cantrips: number;
   readonly known: number;
   readonly features: readonly string[];
+  /**
+   * What a CHOICE says about itself, by feature name.
+   *
+   * Only the rows that offer one — "Martial Archetype: Champion" — and only
+   * the game's own; see classIndex. A picker that hands over a list of names
+   * and nothing else sends the person holding it to a wiki.
+   */
+  readonly texts?: Readonly<Record<string, string>>;
   readonly asi: boolean;
 }
 export type ClassLevels = Readonly<Record<string, readonly ClassLevel[]>>;
@@ -213,7 +222,7 @@ export function loadClassLevels(): Promise<ClassLevels> {
     Promise.all([
       loadBundledClassIndex().then((slim) => slim ?? loadBundled("class")),
       readContent("class"),
-    ]).then(([a, b]) => mergeById(a, b)),
+    ]).then(([a, b]) => mergeById(a, b) as (ClassIndexRow | CompendiumClass)[]),
   ]).then(([srd, extra]) => {
     const out: Record<string, readonly ClassLevel[]> = { ...srd };
     for (const c of extra) {
@@ -227,11 +236,17 @@ export function loadClassLevels(): Promise<ClassLevels> {
          * merged in while the numbers are left alone.
          */
         out[c.id] = shipped.map((row) => {
-          const also = c.features
-            .filter((f) => f.level === row.level)
-            .map((f) => f.name)
-            .filter((n) => !row.features.includes(n));
-          return also.length > 0 ? { ...row, features: [...row.features, ...also] } : row;
+          const here = c.features.filter((f) => f.level === row.level);
+          const also = here.map((f) => f.name).filter((n) => !row.features.includes(n));
+          const texts = Object.fromEntries(
+            here
+              .map((f) => [f.name, (f as { text?: string }).text] as const)
+              .filter((pair): pair is readonly [string, string] => Boolean(pair[1])),
+          );
+          const said = Object.keys(texts).length > 0 ? { texts } : {};
+          return also.length > 0 || Object.keys(texts).length > 0
+            ? { ...row, features: [...row.features, ...also], ...said }
+            : row;
         });
         continue;
       }
@@ -242,6 +257,12 @@ export function loadClassLevels(): Promise<ClassLevels> {
         cantrips: 0,
         known: 0,
         features: c.features.filter((f) => f.level === i + 1).map((f) => f.name),
+        texts: Object.fromEntries(
+          c.features
+            .filter((f) => f.level === i + 1)
+            .map((f) => [f.name, (f as { text?: string }).text] as const)
+            .filter((pair): pair is readonly [string, string] => Boolean(pair[1])),
+        ),
         asi: [4, 8, 12, 16, 19].includes(i + 1),
       }));
     }

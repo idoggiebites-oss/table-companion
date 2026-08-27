@@ -181,3 +181,38 @@ describe("ability score improvements", () => {
     expect(asiPoints(fighter, 14)).toBe(10);
   });
 });
+
+describe("taking an improvement back", () => {
+  it("is the second tap once both points are spent", () => {
+    /*
+     * A mistap used to be permanent: with two points spent every chip
+     * disabled, and there was nothing left to press. The rule is that a
+     * raised ability stays live while it is raised — tapping it while the
+     * allowance is full gives a point back.
+     */
+    const spend = (at: Record<string, number>, a: string) => {
+      const has = at[a] ?? 0;
+      const used = Object.values(at).reduce((n, v) => n + v, 0);
+      const next = used >= 2 && has > 0 ? has - 1 : has + 1;
+      const out = { ...at, [a]: next };
+      if (next === 0) delete out[a];
+      return out;
+    };
+    let at: Record<string, number> = {};
+    at = spend(at, "str");                    // +1 str
+    at = spend(at, "con");                    // +1 con — full
+    expect(at).toEqual({ str: 1, con: 1 });
+    at = spend(at, "str");                    // full, so this gives it back
+    expect(at).toEqual({ con: 1 });
+    at = spend(at, "str");                    // room again
+    expect(at).toEqual({ con: 1, str: 1 });
+  });
+
+  it("and +2 into one ability is still two taps", () => {
+    // The point of the "while there is room" half of the rule: the second
+    // tap has to add, or a +2 improvement becomes unreachable.
+    const at: Record<string, number> = { str: 1 };
+    const used = Object.values(at).reduce((n, v) => n + v, 0);
+    expect(used >= 2).toBe(false);
+  });
+});

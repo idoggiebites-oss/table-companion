@@ -228,6 +228,9 @@ put("race", "phb", [
   "Human", "Variant Human",
   "Dragonborn", "Gnome", "Forest Gnome", "Rock Gnome",
   "Half-Elf", "Half-Orc", "Tiefling",
+  // As the picker shows a subrace, with the parent's name taken off.
+  "Standard", "Variant", "Hill", "Mountain", "High", "Wood", "Lightfoot",
+  "Stout", "Forest", "Rock", "Dark",
 ]);
 put("race", "scag", [
   "Ghostwise Halfling", "Svirfneblin", "Deep Gnome",
@@ -266,6 +269,14 @@ put("race", "erlw", [
   "Halfling, Mark of Hospitality", "Human, Mark of Finding",
   "Human, Mark of Handling", "Human, Mark of Making",
   "Human, Mark of Passage", "Human, Mark of Sentinel",
+  /*
+   * And the same twelve as the builder shows them. A subrace is listed under
+   * its parent, so the picker strips the parent's name off the front —
+   * "Mark of Finding", not "Human, Mark of Finding".
+   */
+  "Mark of Warding", "Mark of Shadow", "Mark of Scribing", "Mark of Detection",
+  "Mark of Storm", "Mark of Finding", "Mark of Healing", "Mark of Hospitality",
+  "Mark of Handling", "Mark of Making", "Mark of Passage", "Mark of Sentinel",
 ]);
 put("race", "egw", [
   "Draconblood", "Ravenite", "Pallid Elf", "Lotusden Halfling",

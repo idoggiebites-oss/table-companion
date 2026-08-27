@@ -132,6 +132,9 @@ export interface ClassIndexRow {
  * Kept beside the parser rather than in the build script, so the shape the
  * app reads and the shape the deploy writes cannot drift apart.
  */
+/** A row that offers a choice: "Martial Archetype: Champion". */
+const TELLS = /^.{3,40}?:\s/;
+
 export function classIndex(
   classes: readonly CompendiumClass[],
 ): ClassIndexRow[] {
@@ -140,7 +143,13 @@ export function classIndex(
     name: c.name,
     hitDie: c.hitDie,
     slots: c.slots,
-    features: c.features.map((f) => ({ level: f.level, name: f.name })),
+    features: c.features.map((f) => ({
+      level: f.level,
+      name: f.name,
+      ...(TELLS.test(f.name) && !/\((HB|TP|UA)\)/.test(f.name) && f.text
+        ? { text: f.text.slice(0, 400) }
+        : {}),
+    })),
   }));
 }
 

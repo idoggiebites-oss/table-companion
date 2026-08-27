@@ -1157,13 +1157,20 @@ html, body { overscroll-behavior-y: none; }
 .menu-row:last-of-type { border-bottom: 0; }
 .menu-row.off { opacity: 0.45; }
 .menu-hd {
-  display: flex; align-items: baseline; gap: 8px; width: 100%;
+  /*
+   * Wrapping, because the right-hand note is sometimes a sentence:
+   * "proficiency with medium armor", "charisma 13 or higher". Held on one
+   * line it pushed the row wider than the box, and the list scrolled
+   * sideways with the names cut off at both edges.
+   */
+  display: flex; align-items: baseline; gap: 8px; width: 100%; flex-wrap: wrap;
   padding: 10px 12px; border: 0; background: none; text-align: left;
 }
-.menu-hd .nm { flex: 1 1 auto; color: var(--ink); }
+.menu-hd .nm { flex: 1 1 auto; min-width: 0; color: var(--ink); }
 /* The cost sits with the name, because that is the question being answered. */
 .menu-hd .cost {
-  flex: 0 0 auto; font-size: 0.56rem; letter-spacing: 0.12em;
+  flex: 0 1 auto; min-width: 0; text-align: right;
+  font-size: 0.56rem; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--muted);
 }
 .menu-more { padding: 0 12px 12px; }
@@ -1277,7 +1284,10 @@ html, body { overscroll-behavior-y: none; }
 .feat-pick { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 /* The list scrolls inside itself: eight hundred and fifty rows must not
    push the rest of the level-up off the screen. */
-.feat-scroll { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
+.feat-scroll {
+  max-height: 340px; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain;
+}
 .feat-took { margin-top: 8px; }
 
 /* ---- languages and tools: nothing to roll, but it has to be there ---- */

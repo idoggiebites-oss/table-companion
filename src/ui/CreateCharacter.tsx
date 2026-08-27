@@ -77,7 +77,7 @@ import { Num } from "./Num.js";
 import { PickList } from "./PickList.js";
 import { SpellPick } from "./SpellPick.js";
 import { choicesBy, findChoices } from "../domain/subclass.js";
-import { byBook } from "../domain/books.js";
+import { bookOf, byBook } from "../domain/books.js";
 import type { CompendiumFeat } from "../import/compendium.js";
 import {
   indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
@@ -481,7 +481,13 @@ export function CreateCharacter({
    */
   const classChoices = useMemo(() => {
     const table = klass && levels ? (levels[klass.id] ?? []) : [];
-    const feats = table.flatMap((row) => row.features.map((n) => ({ level: row.level, name: n })));
+    const feats = table.flatMap((row) =>
+      row.features.map((n) => ({
+        level: row.level,
+        name: n,
+        ...(row.texts?.[n] ? { text: row.texts[n]! } : {}),
+      })),
+    );
     return choicesBy(findChoices(feats), level);
   }, [klass, levels, level]);
   const picksDone = classChoices.every((c) => classPicks[c.of]);
@@ -988,18 +994,41 @@ export function CreateCharacter({
                 )}
               </>
             )}
-            {race && race.subraces.length > 0 && (
-              <select
-                aria-label="Subrace"
-                value={subraceId}
-                style={{ marginTop: 8 }}
-                onChange={(e) => setSubraceId(e.target.value)}
-              >
-                {race.subraces.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            )}
+{/*
+              * Subraces went through none of this: no switch, no headings.
+              * A human offered "Mark of Finding" and "Mark of Finding (WGtE)"
+              * one after the other — the same dragonmark twice, once from
+              * Eberron and once from the playtest that preceded it — with
+              * somebody's "Umbral (TP)" underneath.
+              */}
+            {race && race.subraces.length > 0 && (() => {
+              const own = race.subraces.filter((s) => isCore(s.name));
+              const shown = homebrew || own.length === 0 ? race.subraces : own;
+              const hidden = race.subraces.length - own.length;
+              return (
+                <>
+                  <select
+                    aria-label="Subrace"
+                    value={subraceId}
+                    style={{ marginTop: 8 }}
+                    onChange={(e) => setSubraceId(e.target.value)}
+                  >
+                    {byBook(shown, "race").map(([book, list]) => (
+                      <optgroup key={book} label={book}>
+                        {list.map((x) => (
+                          <option key={x.id} value={x.id}>{x.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  {hidden > 0 && (
+                    <div className="row" style={{ marginTop: 8 }}>
+                      <HomebrewToggle on={homebrew} hidden={hidden} onChange={setHomebrew} />
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/*
               * The half the race leaves to you.
@@ -1721,7 +1750,7 @@ export function CreateCharacter({
                         * books.ts — and without it a list of thirty officials
                         * is thirty names with no shape.
                         */}
-                      {byBook(shown).map(([book, options]) => (
+                      {byBook(shown, /fighting style/i.test(c.of) ? "style" : "subclass").map(([book, options]) => (
                         <optgroup key={book} label={book}>
                           {options.slice(0, 120).map((o) => (
                             <option key={o.name} value={o.name}>{o.name}</option>
@@ -1729,6 +1758,26 @@ export function CreateCharacter({
                         </optgroup>
                       ))}
                     </select>
+                    {/*
+                      * What it does, once one is chosen. Every other step
+                      * says something about the choice you just made; this
+                      * one handed over a name and left you to look it up.
+                      */}
+                    {(() => {
+                      const took = c.options.find((o) => o.name === classPicks[c.of]);
+                      if (!took?.text) return null;
+                      const book = bookOf(
+                        took.name,
+                        /fighting style/i.test(c.of) ? "style" : "subclass",
+                      );
+                      return (
+                        <p className="cr-blurb" style={{ marginTop: 8 }}>
+                          {book && <b>{book.short} · </b>}
+                          {took.text.slice(0, 260)}
+                          {took.text.length > 260 ? "…" : ""}
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -1785,21 +1834,35 @@ export function CreateCharacter({
                             key={a}
                             className={`chip${added > 0 ? " on" : ""}`}
                             /*
-                             * Two points, full stop. The old rule only
-                             * stopped abilities that had not been touched
-                             * yet — so after +1 and +1 the two raised ones
-                             * stayed live, and a level 4 improvement could
-                             * be spent seven times.
+                             * Two points, full stop — and once they are
+                             * spent, tapping a raised one gives a point
+                             * back. A mistap used to be permanent: every
+                             * chip disabled, nothing to press, and no way
+                             * back short of starting the character again.
                              */
-                            disabled={at.feat !== undefined || used >= 2 || total >= 20}
-                            aria-label={`Level ${lvl} raise ${a}`}
+                            disabled={
+                              at.feat !== undefined
+                              || (used >= 2 && added === 0)
+                              || (total >= 20 && added === 0)
+                            }
+                            aria-label={
+                              used >= 2 && added > 0
+                                ? `Level ${lvl} take back ${a}`
+                                : `Level ${lvl} raise ${a}`
+                            }
                             onClick={() =>
-                              setImprovements((cur) => ({
-                                ...cur,
-                                [lvl]: {
-                                  abilities: { ...(cur[lvl]?.abilities ?? {}), [a]: added + 1 },
-                                },
-                              }))
+                              setImprovements((cur) => {
+                                const now = cur[lvl]?.abilities ?? {};
+                                const has = now[a] ?? 0;
+                                const spent = Object.values(now).reduce(
+                                  (n, v) => n + (v ?? 0), 0,
+                                );
+                                // Full, and this one is raised: give it back.
+                                const next = spent >= 2 && has > 0 ? has - 1 : has + 1;
+                                const abilities = { ...now, [a]: next };
+                                if (next === 0) delete abilities[a];
+                                return { ...cur, [lvl]: { abilities } };
+                              })
                             }
                           >
                             {a} {total}
