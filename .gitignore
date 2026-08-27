@@ -5,6 +5,10 @@ dist
 worker-configuration.d.ts
 .wrangler
 
+# The VAPID private key for push, for local runs. The deployed one is a
+# wrangler secret; this file is the same key and must never be committed.
+.dev.vars
+
 # Built from a compendium by scripts/build-compendium.mjs. These are the
 # published books: they belong on the machine doing the deploying, not here.
 public/content/

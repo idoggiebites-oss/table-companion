@@ -1987,3 +1987,11 @@ html, body { overscroll-behavior-y: none; }
 }
 .ready-state { margin: 8px 0 0; font-size: 0.86rem; color: var(--ink-dim); }
 .ready-state .hurtnow { color: var(--bloodied); }
+
+/* ---- "tell me when it's my turn" ---- */
+.buzz { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.buzz-go { min-height: 46px; }
+.buzz-go.on { border-color: var(--gold); background: var(--gold-wash); color: var(--ink); }
+/* Every reason it might not work is a sentence, not a disabled control. */
+.buzz-say, .buzz-no { font-size: 0.78rem; color: var(--muted); margin: 0; }
+.buzz-no { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }

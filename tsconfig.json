@@ -25,6 +25,7 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "src"
+    "src",
+    "worker/__tests__"
   ]
 }

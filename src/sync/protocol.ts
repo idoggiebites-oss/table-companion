@@ -23,11 +23,47 @@ export interface StoredEvent {
   readonly event: DomainEvent;
 }
 
+/** A browser's push subscription, as the Push API hands it over. */
+export interface PushSub {
+  readonly endpoint: string;
+  readonly p256dh: string;
+  readonly auth: string;
+}
+
 export type ClientMessage =
   /** Sent on connect: "I have up to `since`; send me the rest." */
   | { readonly t: "sync"; readonly since: number }
   /** Push local events. Safe to repeat — ids make it idempotent. */
-  | { readonly t: "append"; readonly events: readonly DomainEvent[] };
+  | { readonly t: "append"; readonly events: readonly DomainEvent[] }
+  /**
+   * "Buzz this phone when these characters are being waited for."
+   *
+   * Kept per character rather than per device: a player who picks up a spare
+   * phone should get their own turn, and a device that has claimed nobody has
+   * nothing to be told about.
+   */
+  | {
+      readonly t: "watch";
+      readonly sub: PushSub;
+      readonly characters: readonly string[];
+    }
+  | { readonly t: "unwatch"; readonly endpoint: string }
+  /**
+   * "Somebody is being waited for."
+   *
+   * Worked out on the device that appended the events, because it is the one
+   * holding the projection — and it is awake by definition, since it is the
+   * DM pressing the button. The room server holds a log and has never had to
+   * understand it; that stays true.
+   */
+  | {
+      readonly t: "nudge";
+      readonly nudges: readonly {
+        readonly to: string;
+        readonly title: string;
+        readonly body: string;
+      }[];
+    };
 
 export type ServerMessage =
   | {

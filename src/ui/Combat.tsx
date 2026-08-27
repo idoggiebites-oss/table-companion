@@ -417,7 +417,7 @@ function InitiativeRow({
 }
 
 export function Combat({
-  state, seat, append, onCast, takeReaction, onReactionOpened,
+  state, seat, append, onCast, takeReaction, onReactionOpened, buzz,
 }: {
   state: CampaignState;
   seat: Seat;
@@ -435,6 +435,8 @@ export function Combat({
   /** Said yes to a reaction from another screen — open the swing on arrival. */
   takeReaction?: boolean;
   onReactionOpened?: () => void;
+  /** The "tell me when it's my turn" control, owned by the app. */
+  buzz?: React.ReactNode;
 }) {
   const [hit, setHit] = useState(5);
   const [area, setArea] = useState(false);
@@ -472,7 +474,10 @@ export function Combat({
         {seat.kind === "dm" ? (
           <StartCombat state={state} append={append} />
         ) : seated && seatedState ? (
-          <Readiness build={seated} state={seatedState} attacks={playerAttacks} />
+          <>
+            <Readiness build={seated} state={seatedState} attacks={playerAttacks} />
+            {buzz && <div className="card-body" style={{ paddingTop: 0 }}>{buzz}</div>}
+          </>
         ) : (
           <div className="card-body"><p className="faint" style={{ margin: 0 }}>No fight yet.</p></div>
         )}

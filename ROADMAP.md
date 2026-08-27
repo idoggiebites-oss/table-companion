@@ -21,6 +21,13 @@ recently.
 Live sync, works offline and catches up. Every action is an event; anything
 can be undone. Device-local content and seats never enter the log.
 
+**Notifications.** Three moments buzz a phone: your turn, initiative, and a
+roll the DM asked you for. Nothing else — a notification that arrives when
+nothing is being asked of you teaches people to swipe them away. Web Push,
+written against the standards rather than a library, so the key stays in a
+secret and the payload is unreadable to the push service carrying it. Off
+until asked for, and every reason it might not work is a sentence.
+
 **Combat.** Whose turn it is said in words with the next name beside it, the
 round and turn counted, and one primary control that names who it hands to.
 Damage and healing on the creature's own row. Reinforcements: something walks
@@ -69,8 +76,9 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 742 unit tests, 50 browser suites, ~950 assertions, run against a
-real build on two devices.
+**Proof.** 759 unit tests, 52 browser suites, ~988 assertions, run against a
+real build on two devices — including the push path end to end, decrypted at
+the far end with the key a browser would have used.
 
 ---
 
@@ -127,6 +135,11 @@ switch, the monster piles, and the DM's spell lookup.
   takes the whole blast and asks who saved. Two paths to the same fight.
 
 ## Known and unfixed
+
+- **Push on iOS needs the app installed to the home screen.** Apple only
+  delivers to an installed PWA, and the app does not yet say so at the moment
+  a player turns notifications on from Safari — where the button works, the
+  subscription succeeds, and nothing ever arrives.
 
 - **Help is untested end to end.** The sample campaign has one character, so
   the browser suite proves the step exists and says "nobody else is in this

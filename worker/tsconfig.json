@@ -5,6 +5,12 @@
     "types": [],
     "jsx": "preserve"
   },
+  /*
+   * The worker's own tests run in node, not in the runtime, so they are
+   * checked against node's WebCrypto types by the root config — not against
+   * the Workers ones, where the peer key is spelled "$public".
+   */
+  "exclude": ["../worker/__tests__"],
   "include": [
     "../worker",
     "../worker-configuration.d.ts",

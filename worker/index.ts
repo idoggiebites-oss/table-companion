@@ -24,6 +24,29 @@ import {
   type ServerMessage,
   type StoredEvent,
 } from "../src/sync/protocol.js";
+import { send, type PushKeys } from "./push.js";
+
+interface PushRow extends Record<string, SqlStorageValue> {
+  readonly endpoint: string;
+  readonly p256dh: string;
+  readonly auth: string;
+  readonly characters: string;
+}
+
+/**
+ * The VAPID pair, or nothing.
+ *
+ * The private half is a secret and the public half is not — it is handed to
+ * every browser that subscribes. Absent, the whole feature is off.
+ */
+function pushKeys(env: Env): PushKeys | null {
+  if (!env.VAPID_PRIVATE || !env.VAPID_PUBLIC) return null;
+  return {
+    privateKey: env.VAPID_PRIVATE,
+    publicKey: env.VAPID_PUBLIC,
+    subject: env.VAPID_SUBJECT ?? "mailto:nobody@example.com",
+  };
+}
 
 export interface Env {
   ROOM: DurableObjectNamespace<Room>;
@@ -35,6 +58,15 @@ export interface Env {
    * fails open rather than closed.
    */
   SITE_PASSPHRASE?: string;
+  /**
+   * Web Push. The private half is a secret; the public half is handed to
+   * every browser that subscribes and is served at /api/push/key. Leave them
+   * unset and no phone is ever buzzed — see pushKeys.
+   */
+  VAPID_PRIVATE?: string;
+  VAPID_PUBLIC?: string;
+  /** Who a push service should complain to. A mailto: or an https: URL. */
+  VAPID_SUBJECT?: string;
 }
 
 /**
@@ -78,6 +110,19 @@ export class Room extends DurableObject<Env> {
           seq INTEGER PRIMARY KEY AUTOINCREMENT,
           id TEXT NOT NULL UNIQUE,
           payload TEXT NOT NULL
+        );
+        /*
+         * Which phones to buzz, and for whom. Keyed by endpoint because that
+         * is what the browser gives back when it revokes one, and carrying
+         * the characters as a list because a device can hold two of them —
+         * a player running a familiar, a DM covering for somebody absent.
+         */
+        CREATE TABLE IF NOT EXISTS pushes (
+          endpoint TEXT PRIMARY KEY,
+          p256dh TEXT NOT NULL,
+          auth TEXT NOT NULL,
+          characters TEXT NOT NULL,
+          added INTEGER NOT NULL
         );
       `);
       // Rooms created before the DM seat was restricted predate the column.
@@ -248,6 +293,7 @@ export class Room extends DurableObject<Env> {
 
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+
     const token = url.searchParams.get("token") ?? "";
 
     if (request.headers.get("Upgrade") !== "websocket") {
@@ -266,6 +312,41 @@ export class Room extends DurableObject<Env> {
     this.ctx.acceptWebSocket(server);
 
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /** Every phone that asked about this character. */
+  private watchers(character: string): PushRow[] {
+    return this.ctx.storage.sql
+      .exec<PushRow>("SELECT endpoint, p256dh, auth, characters FROM pushes")
+      .toArray()
+      .filter((row) => {
+        try {
+          return (JSON.parse(row.characters) as string[]).includes(character);
+        } catch {
+          return false;
+        }
+      });
+  }
+
+  private async buzz(nudges: readonly { to: string; title: string; body: string }[]) {
+    const keys = pushKeys(this.env);
+    // No key, no push: a deployment built without one sends nothing rather
+    // than failing at the moment somebody's turn comes round.
+    if (!keys) return;
+    for (const n of nudges.slice(0, 8)) {
+      for (const row of this.watchers(n.to)) {
+        const { gone } = await send(
+          { endpoint: row.endpoint, p256dh: row.p256dh, auth: row.auth },
+          JSON.stringify({ title: n.title, body: n.body }),
+          keys,
+        );
+        // The browser threw the subscription away; so should we, or every
+        // future nudge pays for a delivery that cannot land.
+        if (gone) {
+          this.ctx.storage.sql.exec("DELETE FROM pushes WHERE endpoint = ?", row.endpoint);
+        }
+      }
+    }
   }
 
   private send(ws: WebSocket, msg: ServerMessage): void {
@@ -320,6 +401,40 @@ export class Room extends DurableObject<Env> {
       return;
     }
 
+    if (msg.t === "watch") {
+      const { endpoint, p256dh, auth } = msg.sub ?? {};
+      if (typeof endpoint !== "string" || typeof p256dh !== "string" || typeof auth !== "string") {
+        this.send(ws, { t: "error", code: "bad-sub", message: "Not a subscription." });
+        return;
+      }
+      this.ctx.storage.sql.exec(
+        `INSERT INTO pushes (endpoint, p256dh, auth, characters, added)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(endpoint) DO UPDATE SET
+           p256dh = excluded.p256dh, auth = excluded.auth,
+           characters = excluded.characters, added = excluded.added`,
+        endpoint, p256dh, auth,
+        JSON.stringify((msg.characters ?? []).slice(0, 8)),
+        Date.now(),
+      );
+      return;
+    }
+
+    if (msg.t === "unwatch") {
+      this.ctx.storage.sql.exec("DELETE FROM pushes WHERE endpoint = ?", msg.endpoint);
+      return;
+    }
+
+    if (msg.t === "nudge") {
+      /*
+       * The sending device worked out who is being waited for; this end knows
+       * only which phones asked to hear about whom. Deliberately not awaited
+       * by the socket: a slow push service must not hold up the log.
+       */
+      this.ctx.waitUntil(this.buzz(msg.nudges ?? []));
+      return;
+    }
+
     this.send(ws, { t: "error", code: "unknown", message: "Unknown message." });
   }
 
@@ -347,6 +462,18 @@ export default {
     if (gate.response) return gate.response;
 
     const url = new URL(request.url);
+
+    /*
+     * The key a browser needs to make a subscription. Public by definition —
+     * it is in every push message this deployment ever sends — and absent
+     * when the feature is off, which is how the client knows not to ask.
+     */
+    if (url.pathname === "/api/push/key") {
+      return env.VAPID_PUBLIC
+        ? Response.json({ key: env.VAPID_PUBLIC })
+        : new Response("push is not configured", { status: 404 });
+    }
+
     const path = url.pathname;
 
     if (path === "/api/rooms" && request.method === "POST") {

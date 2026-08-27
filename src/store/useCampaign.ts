@@ -15,8 +15,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { makeEvent, type DomainEvent, type EventBody } from "../domain/events.js";
 import { EMPTY_STATE, project, type CampaignState } from "../domain/project.js";
+import { nudgesFor } from "../domain/nudge.js";
 import { RoomConnection, type ConnectionStatus } from "../sync/client.js";
-import type { RoomCredentials, StoredEvent } from "../sync/protocol.js";
+import type { PushSub, RoomCredentials, StoredEvent } from "../sync/protocol.js";
 import {
   appendLocal,
   clearLog,
@@ -37,6 +38,12 @@ export interface Campaign {
   readonly revert: (target: string) => void;
   readonly reset: () => void;
   readonly reverted: ReadonlySet<string>;
+  /**
+   * Ask the room to buzz this phone when these characters are being waited
+   * for — and to stop. See domain/nudge.ts for what earns a buzz.
+   */
+  readonly watch: (sub: PushSub, characters: readonly string[]) => void;
+  readonly unwatch: (endpoint: string) => void;
   /** Null when playing solo. */
   readonly room: RoomCredentials | null;
   readonly status: ConnectionStatus;
@@ -148,11 +155,17 @@ export function useCampaign(actor = "local"): Campaign {
     };
   }, [openConnection]);
 
+  /** Events this device appended whose nudges have not gone out yet. */
+  const unsent = useRef<DomainEvent[]>([]);
+
   const append = useCallback((body: EventBody) => {
     const event = makeEvent(body, actorRef.current);
     setPending((prev) => [...prev, event]);
     void appendLocal(event);
     conn.current?.push(event);
+    // Worked out below, once the projection has caught up: "whose turn is it"
+    // is only answerable after the turn has moved.
+    unsent.current.push(event);
     return event;
   }, []);
 
@@ -226,14 +239,42 @@ export function useCampaign(actor = "local"): Campaign {
 
   const state = useMemo(() => (log.length ? project(log) : EMPTY_STATE), [log]);
 
+  /*
+   * Buzz whoever is being waited for.
+   *
+   * Only for events THIS device appended, and only once the state they
+   * produced exists — the device that pressed the button is the one holding
+   * the projection, and it is awake by definition. The room server carries
+   * the message and never has to understand it.
+   */
+  useEffect(() => {
+    const mine = unsent.current;
+    if (mine.length === 0) return;
+    unsent.current = [];
+    const held = new Set(log.map((e) => e.id));
+    const landed = mine.filter((e) => held.has(e.id));
+    if (landed.length === 0) return;
+    conn.current?.nudge(
+      nudgesFor(landed, state, (id) => state.builds[id]?.name ?? "Someone"),
+    );
+  }, [state, log]);
+
   const reverted = useMemo(() => {
     const s = new Set<string>();
     for (const e of log) if (e.type === "reverted") s.add(e.target);
     return s;
   }, [log]);
 
+  /** Ask the room to buzz this phone about these characters, or to stop. */
+  const watch = useCallback((sub: PushSub, characters: readonly string[]) => {
+    conn.current?.watch(sub, characters);
+  }, []);
+  const unwatch = useCallback((endpoint: string) => {
+    conn.current?.unwatch(endpoint);
+  }, []);
+
   return {
-    ready, log, state, append, revert, reset, reverted,
+    ready, log, state, append, revert, reset, reverted, watch, unwatch,
     room, status, members, dmRole, dmKey, claimDm, joinRoom, leaveRoom,
   };
 }

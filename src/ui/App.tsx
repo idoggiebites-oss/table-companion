@@ -34,6 +34,7 @@ import { Tabs, type TabDef } from "./Tabs.js";
 import { Gear } from "./Gear.js";
 import { Recap } from "./Recap.js";
 import { Notes } from "./Notes.js";
+import { Buzz } from "./Buzz.js";
 import { loadSpells } from "../store/srd.js";
 
 /** Device-local, like the seat — never in the log. */
@@ -64,7 +65,7 @@ export function App() {
   // another's sheet acceptable rather than merely convenient.
   const campaign = useCampaign(actorKey(seat));
   const {
-    ready, log, state, append, revert, reset, reverted,
+    ready, log, state, append, revert, reset, reverted, watch, unwatch,
     room, status, members, dmRole, dmKey, claimDm, joinRoom, leaveRoom,
   } = campaign;
 
@@ -508,6 +509,13 @@ export function App() {
               onCast={sendSpell}
               takeReaction={takingReaction}
               onReactionOpened={() => setTakingReaction(false)}
+              buzz={
+                <Buzz
+                  characters={myCharacters}
+                  onWatch={(sub) => watch(sub, myCharacters)}
+                  onUnwatch={unwatch}
+                />
+              }
             />
           )}
 

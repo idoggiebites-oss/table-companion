@@ -13,7 +13,9 @@
  */
 
 import type { DomainEvent } from "../domain/events.js";
-import type { ClientMessage, ServerMessage, StoredEvent } from "./protocol.js";
+import type {
+  ClientMessage, PushSub, ServerMessage, StoredEvent,
+} from "./protocol.js";
 
 export type ConnectionStatus = "offline" | "connecting" | "online";
 
@@ -150,6 +152,26 @@ export class RoomConnection {
     if (!this.send({ t: "append", events: [event] })) {
       // Offline: it stays queued and goes out on the next connect.
     }
+  }
+
+  /**
+   * "Buzz this phone when these characters are being waited for."
+   *
+   * Re-sent on every reconnect by the caller, because a subscription the
+   * room has forgotten is a phone that silently stops ringing — and the
+   * failure looks exactly like a quiet session.
+   */
+  watch(sub: PushSub, characters: readonly string[]): boolean {
+    return this.send({ t: "watch", sub, characters });
+  }
+
+  unwatch(endpoint: string): boolean {
+    return this.send({ t: "unwatch", endpoint });
+  }
+
+  /** Somebody is being waited for. Worked out here; delivered by the room. */
+  nudge(nudges: readonly { to: string; title: string; body: string }[]): void {
+    if (nudges.length > 0) this.send({ t: "nudge", nudges });
   }
 
   close(): void {

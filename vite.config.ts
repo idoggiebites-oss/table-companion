@@ -49,6 +49,12 @@ export default defineConfig({
             },
           },
         ],
+        /*
+         * The push handlers. Workbox writes the precache and the routing and
+         * has no opinion about notifications; this adds the two listeners it
+         * does not generate, without taking over the whole service worker.
+         */
+        importScripts: ["/push-sw.js"],
         cleanupOutdatedCaches: true,
         /*
          * Claim the page that installed us, so the app is offline-capable
