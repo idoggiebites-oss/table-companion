@@ -125,19 +125,69 @@ ok("a guild artisan gets one of each",
 ok("and is asked for one of each",
   /1 language and 1 tool to choose\./.test(artisan), true);
 
+/* --- what a background hands you outright --------------------------------
+
+   The bug this section exists for: the card said "Gladiator gives you
+   Disguise kits" and the finished sheet had no disguise kit on it. The
+   background's own tools were read, shown in the sentence, and then passed
+   along as an empty list — so the one part of the line that is NOT a
+   decision was the part that never arrived.
+
+   Checked as "given, and therefore not asked": a granted tool must be
+   absent from the picker, because offering something you already have is
+   the other way to get this wrong. */
+const criminalGrant = await pickBackground("Criminal");
+ok("a granted tool is stated as given", /thieves' tools/i.test(criminalGrant), true);
+await openPick(page, "Gaming sets");
+ok("and is not also offered as a choice",
+  await card.getByRole("button", { name: /^Use Thieves' Tools$/ }).count(), 0);
+ok("the picker offers the family that IS the choice",
+  await card.getByRole("button", { name: "Use Dice Set" }).count(), 1);
+
+/* Two asks for the same family are one question. A bard who took the
+   gladiator background is asked for three musical instruments and then for
+   one, and the second row is identical to the first — which reads as a bug
+   and lets the same flute answer both. */
+await atStep(page, "Class");
+await page.getByRole("button", { name: "Bard", exact: true }).click();
+await page.waitForTimeout(500);
+const gladiator = await pickBackground("Gladiator");
+ok("a bard-gladiator is asked for instruments once, not twice",
+  await card.getByRole("button", { name: /^Musical instruments, \d+ chosen$/ }).count(), 1);
+ok("for the two lines added together",
+  /4 tools to choose\./.test(gladiator), true);
+
+// Back to the rogue and the acolyte for the rest of this suite's arithmetic.
+await atStep(page, "Class");
+await page.getByRole("button", { name: "Rogue", exact: true }).click();
+await page.waitForTimeout(500);
+for (const sk of ["Stealth", "Perception", "Acrobatics", "Deception"]) {
+  await atStep(page, "Skills");
+  const btn = page.getByRole("button", { name: `Train ${sk.toLowerCase()}` });
+  if (await btn.count()) await btn.first().click();
+}
 // Back to the acolyte for the rest of this suite's arithmetic.
 await pickBackground("Acolyte");
 await page.screenshot({ path: `${OUT}/80-tongues.png`, fullPage: true });
 
 /* The tool list is the compendium's, not one somebody typed out — checked
    against a background that actually grants a tool, since an acolyte's
-   picker is correctly absent. */
+   picker is correctly absent.
+
+   And it is the list the book asked for. "One type of artisan's tools" was
+   fifty-four tools with an allowance of one, which is not that question: it
+   let a guild artisan come away proficient with a set of dice. The row says
+   which family it is, because the label is the question. */
 await pickBackground("Guild Artisan");
-await openPick(page, "Tools");
+ok("a picker is named for what was asked for, not just 'tools'",
+  await card.getByRole("button", { name: /^Artisan's tools, \d+ chosen$/ }).count(), 1);
+await openPick(page, "Artisan's tools");
 const tools = await card.locator('.pl-row[aria-label^="Use "]').allInnerTexts();
-ok("tools come from the item catalogue", tools.length > 30, true);
+ok("tools come from the item catalogue", tools.length > 10, true);
 ok("and are the mundane ones, not treasure",
-  tools.some((t) => /Herbalism Kit/i.test(t)) && !tools.some((t) => /legendary/i.test(t)), true);
+  tools.some((t) => /Smith's Tools/i.test(t)) && !tools.some((t) => /legendary/i.test(t)), true);
+ok("narrowed to the family the book named",
+  tools.some((t) => /Herbalism Kit|Dice Set/i.test(t)), false);
 
 /* An acolyte's two are both languages — the tool list is offered as reading,
    not as a choice, and taking one is refused. */
@@ -172,17 +222,19 @@ ok("and the whole step fits in about two screens", shape.screens < 2.6, true);
    Checked on a background that grants a tool, since an acolyte has no tool
    list to open. */
 await pickBackground("Guild Artisan");
-await openPick(page, "Tools");
+await openPick(page, "Languages");
 await page.waitForTimeout(300);
 const opened = await page.evaluate(() => ({
   screens: document.documentElement.scrollHeight / window.innerHeight,
   rows: document.querySelectorAll(".pl-row").length,
   boxed: (() => { const e = document.querySelector(".pl-rows"); return !!e && e.scrollHeight > e.clientHeight; })(),
 }));
-ok("opening fifty-odd tools offers all of them", opened.rows > 40, true);
+// Languages, since narrowing means no tool list is long enough to overflow.
+ok("opening the long list offers all of it", opened.rows > 12, true);
 ok("inside a box rather than down the page", opened.boxed, true);
 ok("so the step barely grows", opened.screens < 3, true);
 
+await openPick(page, "Languages");
 ok("two picks fills the background's allowance",
   (await card.locator(".card-hd .faint").innerText()).trim(), "2 of 2");
 ok("and a third is refused rather than silently ignored",

@@ -32,7 +32,8 @@ import {
   canAfford, POINT_BUY_BUDGET, POINT_BUY_MIN, pointsSpent, STANDARD_ARRAY,
 } from "../domain/non-srd.js";
 import {
-  gather, isMundaneTool, languagesFromTrait, toolsFromClass, ALL_LANGUAGES,
+  gather, isMundaneTool, kindsNamed, languagesFromTrait, resolveTool, toolKind,
+  toolsFromClass, ALL_LANGUAGES, type ToolKind,
 } from "../domain/proficiencies.js";
 import { effectsOf } from "../domain/featvariants.js";
 import { sensesFrom } from "../domain/senses.js";
@@ -109,6 +110,26 @@ const PRIORITY: Partial<Record<ClassId, Ability[]>> = {
   warlock: ["cha", "con", "dex", "wis", "int", "str"],
   wizard: ["int", "con", "dex", "wis", "cha", "str"],
 };
+
+/**
+ * What to call a picker that offers one family of tools.
+ *
+ * "Tools" over a list of ten instruments is the app declining to repeat what
+ * the book just said — the row is the answer to "one type of musical
+ * instrument", and it should say so.
+ */
+function labelFor(kinds: readonly ToolKind[]): string {
+  const words: Record<ToolKind, string> = {
+    "artisan tools": "Artisan's tools",
+    "gaming set": "Gaming sets",
+    instrument: "Musical instruments",
+    tools: "Tools",
+  };
+  if (kinds.length === 0) return "Tools";
+  if (kinds.length === 1) return words[kinds[0]!];
+  return kinds.map((k) => words[k].toLowerCase()).join(" or ")
+    .replace(/^./, (c) => c.toUpperCase());
+}
 
 export function CreateCharacter({
   onCreate, onCancel,
@@ -191,7 +212,7 @@ export function CreateCharacter({
   const [step, setStep] = useState(0);
   /** Whether other people's material is in the lists. Device-local. */
   const [homebrew, setHomebrew] = useHomebrew();
-  const [pickedTools, setPickedTools] = useState<string[]>([]);
+  const [toolsByAsk, setToolsByAsk] = useState<Record<string, string[]>>({});
   const [bgId, setBgId] = useState("");
   const [bgFilter, setBgFilter] = useState("");
   const [backgrounds, setBackgrounds] = useState<BackgroundEntry[]>([]);
@@ -346,11 +367,105 @@ export function CreateCharacter({
   const langPicks = raceLangs.choose + bgGives.languages;
   const toolPicks =
     classTools.choose + bgGives.toolChoices.reduce((n, c) => n + c.count, 0);
-  const toolOptions = useMemo(
-    () =>
-      [...new Set((gear ?? []).filter((i) => isMundaneTool(i.detail)).map((i) => i.name))]
-        .sort((a, b) => a.localeCompare(b)),
-    [gear],
+
+  /** Every tool anyone can be proficient with, carrying its family. */
+  const toolOptions = useMemo(() => {
+    const seen = new Map<string, { name: string; kind: ToolKind }>();
+    for (const i of gear ?? []) {
+      if (!isMundaneTool(i.detail) || seen.has(i.name)) continue;
+      const kind = toolKind(i.detail);
+      if (kind) seen.set(i.name, { name: i.name, kind });
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [gear]);
+
+  /*
+   * What the background hands over outright, spelled the way the equipment
+   * list spells it.
+   *
+   * This was read, shown in the sentence, and then dropped: the card said
+   * "Gladiator gives you Disguise kits" and the finished sheet had no
+   * disguise kit on it, because the background's own tools were passed along
+   * as an empty list. Nothing about it is a choice, so nothing about it
+   * should be asked.
+   */
+  const bgTools = useMemo(
+    () => bgGives.tools.map((t) => resolveTool(t, toolOptions.map((o) => o.name))),
+    [bgGives, toolOptions],
+  );
+
+  /*
+   * One picker per thing actually asked for.
+   *
+   * "One type of musical instrument" was a list of fifty-four tools with an
+   * allowance of one — which is not the question the book asked, and leaves
+   * a gladiator free to come away proficient with a plough. A phrase naming
+   * a family narrows to it; one naming none is a genuinely open choice and
+   * keeps the whole list.
+   *
+   * Asks are kept separate rather than pooled because two of them can name
+   * overlapping families — a monk's "artisan's tools or a musical
+   * instrument" beside an entertainer's instrument — and a shared pool
+   * cannot say which pick answered which question.
+   */
+  const toolAsks = useMemo(() => {
+    const asks: {
+      readonly id: string;
+      readonly of: string;
+      readonly kinds: readonly ToolKind[];
+      readonly max: number;
+      readonly note?: string;
+    }[] = [];
+    if (klass && classTools.choose > 0) {
+      asks.push({
+        id: "class",
+        of: klass.name,
+        kinds: kindsNamed(classTools.choiceOf ?? classTools.stated ?? ""),
+        max: classTools.choose,
+        ...(classTools.stated ? { note: classTools.stated } : {}),
+      });
+    }
+    bgGives.toolChoices.forEach((c, i) => {
+      asks.push({
+        id: `bg${i}`,
+        of: bgName.trim() || "Background",
+        kinds: kindsNamed(c.of),
+        max: c.count,
+      });
+    });
+
+    /*
+     * Two asks for the same family are one question.
+     *
+     * A bard who took the gladiator background is asked for three musical
+     * instruments and then for one, and the second row is identical to the
+     * first — which reads as a bug and lets the same flute answer both. Four
+     * instruments is what the two lines add up to, so that is what to ask.
+     */
+    const merged = new Map<string, (typeof asks)[number]>();
+    for (const ask of asks) {
+      const sig = [...ask.kinds].sort().join("|");
+      const had = merged.get(sig);
+      merged.set(sig, had
+        ? { ...had, max: had.max + ask.max, of: `${had.of} · ${ask.of}` }
+        : ask);
+    }
+    return [...merged.values()];
+  }, [klass, classTools, bgGives, bgName]);
+
+  const pickedTools = useMemo(
+    () => [...new Set(toolAsks.flatMap((a) => toolsByAsk[a.id] ?? []))],
+    [toolAsks, toolsByAsk],
+  );
+
+  /** What each ask offers: its families, or everything when it named none. */
+  const optionsForAsk = useCallback(
+    (kinds: readonly ToolKind[]) =>
+      (kinds.length === 0
+        ? toolOptions
+        : toolOptions.filter((o) => kinds.includes(o.kind))
+      ).map((o) => o.name),
+    [toolOptions],
   );
 
   const table = klass && levels ? levels[klass.id] : undefined;
@@ -599,7 +714,8 @@ export function CreateCharacter({
             spellSlots: klass.spellcasting?.slots ?? [],
           } satisfies ClassChoice,
           background: {
-            name: bgName, skills: bgSkills, tools: [],
+            name: bgName, skills: bgSkills,
+            tools: bgTools,
           } satisfies BackgroundChoice,
           // Granted and chosen, merged — Common arrives from more than one
           // source and should appear on the sheet once.
@@ -1773,17 +1889,20 @@ export function CreateCharacter({
                 onChange={setPickedLangs}
               />
             )}
-            {toolPicks > 0 && (
+            {toolAsks.map((ask) => (
               <PickList
-                label="Tools"
+                key={ask.id}
+                label={labelFor(ask.kinds)}
                 verb="Use"
-                options={toolOptions}
-                chosen={pickedTools}
-                max={toolPicks}
-                onChange={setPickedTools}
-                {...(classTools.stated ? { note: classTools.stated } : {})}
+                options={optionsForAsk(ask.kinds)}
+                chosen={toolsByAsk[ask.id] ?? []}
+                max={ask.max}
+                onChange={(next) =>
+                  setToolsByAsk((prev) => ({ ...prev, [ask.id]: next }))
+                }
+                {...(ask.note ? { note: ask.note } : {})}
               />
-            )}
+            ))}
           </div>
         </section>
       )}

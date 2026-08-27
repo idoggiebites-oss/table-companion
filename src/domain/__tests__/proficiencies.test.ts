@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  gather, isMundaneTool, languagesFromTrait, toolsFromClass,
+  gather, isMundaneTool, kindsNamed, languagesFromTrait, resolveTool, toolsFromClass,
 } from "../proficiencies.js";
 
 describe("a race's languages", () => {
@@ -101,5 +101,65 @@ describe("gathering what came from several places", () => {
 
   it("tolerates the absent", () => {
     expect(gather(undefined, ["Common"], undefined)).toEqual(["Common"]);
+  });
+});
+
+/* --- a line that both grants and asks -------------------------------------
+
+   Read as one thing, half of it was thrown away. An artificer's line names
+   thieves' tools and tinker's tools outright and THEN asks for a set of
+   artisan's tools; the whole line matched "one", so all three became a single
+   choice and two granted proficiencies vanished off the sheet. */
+describe("a tool line that does two things at once", () => {
+  it("grants what it names and asks for what it counts", () => {
+    const g = toolsFromClass(
+      "Thieves' Tools, Tinker's Tools, one type of Artisan's Tools of your choice",
+    );
+    expect(g.known).toEqual(["Thieves' Tools", "Tinker's Tools"]);
+    expect(g.choose).toBe(1);
+  });
+
+  it("names the choice, so a picker can be narrowed to it", () => {
+    expect(kindsNamed(toolsFromClass("Three Musical Instrument of your choice").choiceOf ?? ""))
+      .toEqual(["instrument"]);
+  });
+
+  /* The same mistake in the generous direction: an "or" is one pick among
+     several, and reading its parts as granted hands out all of them. */
+  it("reads an or-list as one pick, not three grants", () => {
+    const g = toolsFromClass("Poisoner's Kit, Herbalism Kit, or Alchemist's Supplies");
+    expect(g.known).toEqual([]);
+    expect(g.choose).toBe(1);
+  });
+
+  it("still grants a plain list", () => {
+    expect(toolsFromClass("Smith's Tools, Cartographer's Tools").known)
+      .toEqual(["Smith's Tools", "Cartographer's Tools"]);
+  });
+
+  /* A monk's "artisan's tools OR a musical instrument" is one pick across two
+     families, and both belong in the list it offers. */
+  it("keeps both families when the choice spans them", () => {
+    const g = toolsFromClass(
+      "Any one type of Artisan's Tools or any one Musical Instrument of your choice",
+    );
+    expect(g.choose).toBe(1);
+    expect(kindsNamed(g.choiceOf ?? "")).toEqual(["artisan tools", "instrument"]);
+  });
+});
+
+describe("naming a tool the way the equipment list names it", () => {
+  /* Backgrounds say "Disguise kits" where the item is a "Disguise Kit", and a
+     sheet carrying the sentence's spelling does not line up with the gear. */
+  it("matches across plural and punctuation", () => {
+    const have = ["Disguise Kit", "Thieves' Tools", "Dice Set"];
+    expect(resolveTool("Disguise kits", have)).toBe("Disguise Kit");
+    expect(resolveTool("thieves' tools", have)).toBe("Thieves' Tools");
+  });
+
+  /* "Vehicles (land)" is a real proficiency and not an item. Keeping the
+     book's spelling is better than dropping it. */
+  it("keeps what it cannot match", () => {
+    expect(resolveTool("vehicles (land)", ["Disguise Kit"])).toBe("vehicles (land)");
   });
 });

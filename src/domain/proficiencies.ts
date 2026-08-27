@@ -41,6 +41,12 @@ export interface Granted {
    * the sheet verbatim rather than dropped or guessed at.
    */
   readonly stated?: string;
+  /**
+   * The part of the line that is the choice, so a picker can be narrowed to
+   * what was actually asked for. An artificer's line names three tools and
+   * only one of them is a decision.
+   */
+  readonly choiceOf?: string;
 }
 
 const NONE: Granted = { known: [], choose: 0 };
@@ -111,14 +117,97 @@ export function toolsFromClass(text: string): Granted {
   const t = (text ?? "").trim();
   if (t === "" || /^none$/i.test(t)) return NONE;
 
-  const counted = /\b(one|two|three|four|any)\b/i.exec(t);
-  if (counted || /\bof your choice\b/i.test(t)) {
-    return { known: [], choose: WORD_COUNT[(counted?.[1] ?? "one").toLowerCase()] ?? 1, stated: t };
+  /*
+   * A line can do both at once, and reading it as one thing threw half of it
+   * away: an artificer gets thieves' tools and tinker's tools OUTRIGHT and
+   * then picks a set of artisan's tools. The whole line matched "one", so
+   * all three became a single choice and two granted proficiencies vanished.
+   *
+   * Unless the line is an "or". "Thieves' tools, tinker's tools, or one type
+   * of gaming set" is one pick among three, and reading its parts as granted
+   * hands out all three — the same mistake in the generous direction.
+   */
+  const alternatives = /\bor\b/i.test(t);
+  const parts = alternatives
+    ? [t]
+    : t.split(",").map((x) => x.trim()).filter(Boolean);
+
+  const known: string[] = [];
+  const asked: string[] = [];
+  let choose = 0;
+  for (const part of parts) {
+    const counted = /\b(one|two|three|four|any)\b/i.exec(part);
+    // An "or" is a choice whether or not it counts itself: an apothecary's
+    // "poisoner's kit, herbalism kit, or alchemist's supplies" names no
+    // number and is still one pick, not three grants.
+    if (alternatives || counted || /\byour choice\b|\bchoose\b/i.test(part)) {
+      choose += WORD_COUNT[(counted?.[1] ?? "one").toLowerCase()] ?? 1;
+      asked.push(part);
+      continue;
+    }
+    known.push(part);
   }
 
-  // A plain list of named tools: "Thieves' Tools", "Herbalism Kit, Poisoner's Kit"
-  const named = t.split(",").map((x) => x.trim()).filter(Boolean);
-  return named.length > 0 ? { known: named, choose: 0 } : { known: [], choose: 0, stated: t };
+  if (known.length === 0 && choose === 0) return { known: [], choose: 0, stated: t };
+  return {
+    known,
+    choose,
+    ...(choose > 0 ? { stated: t, choiceOf: asked.join(", ") } : {}),
+  };
+}
+
+/**
+ * The families a tool can belong to, which is what a line means when it says
+ * "one type of" something. The compendium states it in `detail`.
+ */
+export type ToolKind = "artisan tools" | "gaming set" | "instrument" | "tools";
+
+export function toolKind(detail: string | undefined): ToolKind | null {
+  const d = (detail ?? "").trim().toLowerCase();
+  if (d === "artisan tools") return "artisan tools";
+  if (d === "gaming set") return "gaming set";
+  if (d === "instrument") return "instrument";
+  if (d === "tools" || d === "tool") return "tools";
+  return null;
+}
+
+/**
+ * Which families a phrase names — "one type of musical instrument" is ten
+ * things to choose between, not fifty-four.
+ *
+ * Naming none of them is the answer for "one type of tool of your choice",
+ * and reads as no narrowing rather than as an empty list: a picker with
+ * nothing in it is worse than a long one.
+ */
+export function kindsNamed(said: string): ToolKind[] {
+  const t = (said ?? "").toLowerCase();
+  const out: ToolKind[] = [];
+  if (/\bartisan/.test(t)) out.push("artisan tools");
+  if (/\bgaming set/.test(t)) out.push("gaming set");
+  if (/\binstrument/.test(t)) out.push("instrument");
+  return out;
+}
+
+/**
+ * A tool named in prose, matched to the thing it is.
+ *
+ * Backgrounds say "Disguise kits" where the item is a "Disguise Kit", and a
+ * sheet carrying the sentence's spelling does not line up with the equipment
+ * list. Normalisation is applied to both sides, so it need only be
+ * consistent, not linguistically right — "thieves' tools" and "thieve tool"
+ * meet in the middle.
+ *
+ * Anything with no match is kept as written. "Vehicles (land)" is a real
+ * proficiency and not an item, and dropping it would be worse than spelling
+ * it the way the book did.
+ */
+export function resolveTool(name: string, options: readonly string[]): string {
+  const norm = (x: string) =>
+    x.toLowerCase().replace(/[^a-z\s]/g, "").replace(/s\b/g, "")
+      .replace(/\s+/g, " ").trim();
+  const want = norm(name);
+  if (want === "") return name.trim();
+  return options.find((o) => norm(o) === want) ?? name.trim();
 }
 
 /**

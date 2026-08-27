@@ -68,6 +68,14 @@ describe("assembling", () => {
     expect(base.race).toBe("Wood Elf");
   });
 
+  /* The background's own tools reach the sheet.
+     This fixture has carried "Herbalism kit" since it was written and nothing
+     ever checked it arrived — which is exactly how the builder came to pass
+     an empty list here and lose every tool a background grants. */
+  it("carries the background's tools onto the sheet", () => {
+    expect(base.toolProficiencies).toContain("Herbalism kit");
+  });
+
   it("merges overlapping skills instead of doubling them", () => {
     // Survival was picked by both the class and the background.
     expect(base.skillProficiencies.filter((s) => s === "survival")).toHaveLength(1);

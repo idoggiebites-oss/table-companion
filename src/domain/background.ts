@@ -82,8 +82,20 @@ function readTools(said: string): { fixed: string[]; choices: ToolChoice[] } {
       });
       continue;
     }
-    if (/of your choice/i.test(part)) {
-      choices.push({ of: part.replace(/\s*of your choice/i, "").trim(), count: 1 });
+    /*
+     * "Your choice of a gaming set or a musical instrument" puts the words in
+     * the other order, and matching only the one order granted the whole
+     * sentence as a tool with that name.
+     */
+    if (/your choice|^choose\b/i.test(part)) {
+      choices.push({
+        of: part
+          .replace(/\b(?:of\s+)?your choice(?:\s+of)?\b/gi, " ")
+          .replace(/^\s*choose\s*/i, "")
+          .replace(/\s+/g, " ")
+          .trim(),
+        count: 1,
+      });
       continue;
     }
     fixed.push(part);
