@@ -13,7 +13,17 @@ import { createServer } from "node:http";
 import { webcrypto as crypto } from "node:crypto";
 import { WebSocket } from "ws";
 
-const URL_BASE = process.env.URL ?? "http://127.0.0.1:8787";
+const URL_BASE = (process.env.URL ?? "http://127.0.0.1:8787").replace(/\/$/, "");
+
+/*
+ * Local only, and not for want of trying: the subscription's endpoint is a
+ * server on this machine, and a deployed Worker cannot reach it. Against a
+ * real deployment this proves nothing, so it says so rather than failing.
+ */
+if (!/^https?:\/\/(127\.0\.0\.1|localhost)/.test(URL_BASE)) {
+  console.log("SKIP  push delivery is testable locally only — a deployed Worker cannot reach this machine");
+  process.exit(0);
+}
 const errors = [];
 const ok = (label, got, want) => {
   const pass = JSON.stringify(got) === JSON.stringify(want);
