@@ -210,6 +210,14 @@ h1 { font-size: 1.2rem; margin: 0; letter-spacing: -0.01em; font-weight: 500; wh
 h2 { font-size: 1.1rem; margin: 0 0 10px; font-weight: 500; }
 
 button {
+  /*
+   * 44px, everywhere a thumb goes.
+   *
+   * The base was 33 and selects were 40, which is how a feat had to be
+   * tapped twice, and how the background chips behaved before them. The
+   * exceptions are marked `pill` — badges that are read rather than pressed.
+   */
+  min-height: 44px;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 500;
@@ -228,6 +236,7 @@ button:disabled { color: var(--faint); cursor: default; }
 button:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
 
 input, select {
+  min-height: 44px;
   font: inherit;
   font-size: 0.95rem;
   color: var(--ink);
@@ -321,13 +330,26 @@ section.card {
 .pool:last-child { border-bottom: 0; }
 .pool .nm { flex: 1 1 120px; font-size: 0.94rem; color: var(--ink-dim); min-width: 0; }
 .pool .ct { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.86rem; color: var(--muted); }
-.pips { display: flex; gap: 5px; flex-wrap: wrap; }
+.pips { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+/*
+ * A small mark with a thumb-sized hit area.
+ *
+ * The mark is 15px on purpose — a row of hit dice is a row of dice, not a row
+ * of buttons. But the button underneath it has to be 44, and making the mark
+ * itself 44 turned the row into a squashed ribbon. So the button is the
+ * target and the ::before is the pip.
+ */
 .pip {
-  width: 15px; height: 15px; border-radius: 1px; padding: 0; min-width: 0;
+  position: relative; width: 26px; min-width: 0; min-height: 44px; padding: 0;
+  background: none; border: 0; border-radius: 0;
+}
+.pip::before {
+  content: ""; position: absolute; inset: 50% auto auto 50%;
+  width: 15px; height: 15px; margin: -8px 0 0 -8px; border-radius: 1px;
   background: var(--raised); border: 1px solid var(--faint);
 }
-.pip.on { background: var(--ink-dim); border-color: var(--ink-dim); }
-.pip.dice { transform: rotate(45deg); }
+.pip.on::before { background: var(--ink-dim); border-color: var(--ink-dim); }
+.pip.dice::before { transform: rotate(45deg); }
 
 /* ---- chips ---- */
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -1163,8 +1185,17 @@ html, body { overscroll-behavior-y: none; }
    * line it pushed the row wider than the box, and the list scrolled
    * sideways with the names cut off at both edges.
    */
-  display: flex; align-items: baseline; gap: 8px; width: 100%; flex-wrap: wrap;
-  padding: 10px 12px; border: 0; background: none; text-align: left;
+  /*
+   * 44px, because this is a row somebody taps.
+   *
+   * At 39 it was the background chips again: a tap that lands a couple of
+   * pixels off does nothing, so a feat had to be tapped, missed, and tapped
+   * again — which reads as "tap the one you want, then tap another one to
+   * confirm it". This project has now hit the same 44px in three places.
+   */
+  display: flex; align-items: center; gap: 8px; width: 100%; flex-wrap: wrap;
+  min-height: 44px; padding: 10px 12px; border: 0; background: none;
+  text-align: left;
 }
 .menu-hd .nm { flex: 1 1 auto; min-width: 0; color: var(--ink); }
 /* The cost sits with the name, because that is the question being answered. */

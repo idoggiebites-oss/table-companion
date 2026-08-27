@@ -128,6 +128,37 @@ for (let i = 0; i < 2; i++) {
 ok("and once stable it says what happens next",
   /stable/i.test(await page.locator(".down-help").innerText()), true);
 
+
+/* --- every control a thumb can hit ---------------------------------------
+
+   Three times now this app has shipped a control too small to press: the
+   background chips at 30px, the feat rows at 39, and the skills table's
+   proficiency circle at 18 — the only way to train a skill. Each was found by
+   somebody at a table tapping twice and reporting it as a different bug ("I
+   tap three to select two", "I tap one feat then another to confirm it").
+
+   So it is measured here rather than remembered. */
+const undersized = async (where) => {
+  const bad = await page.evaluate(() => {
+    const out = [];
+    for (const el of document.querySelectorAll("button, select, input")) {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0 || r.height >= 44) continue;
+      out.push(`${(el.className || el.tagName).toString().split(" ")[0]} ${Math.round(r.height)}px`);
+    }
+    return [...new Set(out)];
+  });
+  ok(`nothing under 44px on ${where}`, bad, []);
+};
+
+await go(page, "sheet");
+await undersized("the sheet");
+await page.getByRole("button", { name: /^Skills, / }).click();
+await page.waitForTimeout(300);
+await undersized("the skills drawer");
+await go(page, "gear");
+await undersized("gear");
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

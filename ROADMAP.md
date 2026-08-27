@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 791 unit tests, 52 browser suites, ~1,020 assertions, run against a
+**Proof.** 791 unit tests, 52 browser suites, ~1,025 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -143,6 +143,12 @@ switch, the monster piles, and the DM's spell lookup.
   takes the whole blast and asks who saved. Two paths to the same fight.
 
 ## Known and unfixed
+
+- **44px is a rule the code keeps forgetting.** Three separate controls have
+  shipped too small to press — background chips at 30, feat rows at 39, and
+  the skills table's tick at 18, which was the only way to train a skill.
+  `verify-guidance` now measures every button, select and input on three
+  screens, but nothing stops a new one being added at 33.
 
 - **`verify-turns`'s "one move, not two" is racy.** It presses Next turn and
   End turn on two devices "at the same instant" and asserts the fight moves
