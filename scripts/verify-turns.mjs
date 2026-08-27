@@ -61,7 +61,7 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
 // DM sets up a fight: Kira plus two goblins
 // Setup names who is in the fight; initiative is rolled after staging.
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin Boss");
 
@@ -103,7 +103,7 @@ ok("player is offered no end-turn control while waiting",
   await player.page.getByRole("button", { name: "End turn" }).count(), 0);
 
 // advance to Kira, so BOTH devices have an enabled button naming the same turn
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await player.page.waitForTimeout(900);
 ok("dm advanced to the player", await activeName(dm), "Kira Vance");
 ok("player is offered one once it is their turn",
@@ -112,7 +112,7 @@ ok("player is offered one once it is their turn",
 // THE clause from the build plan: two devices press at the same instant,
 // both naming turn 1, and the fight moves exactly one step.
 await Promise.all([
-  dm.page.getByRole("button", { name: "Advance turn" }).click(),
+  dm.page.getByRole("button", { name: "Next turn" }).click(),
   player.page.getByRole("button", { name: "End turn" }).click(),
 ]);
 await dm.page.waitForTimeout(1500);
@@ -127,14 +127,15 @@ ok("player still knows how far away they are",
   (await player.page.locator(".turns-away").innerText()).toLowerCase(), "2 turns away");
 
 // wrapping increments the round on both
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await player.page.waitForTimeout(900);
 ok("round advanced for the dm", await round(dm), "2");
 ok("round advanced for the player", await round(player), "2");
 
 // creature damage crosses to the player as vague health
 await dm.page.locator('input[aria-label="Creature damage"]').fill("12");
-await dm.page.locator(".cbt", { hasText: "Goblin Boss" }).locator(".hitbtn").click();
+// Two buttons on the row now: the quick "−N" and the row's own number.
+await dm.page.locator(".cbt", { hasText: "Goblin Boss" }).locator(".hitbtn").first().click();
 await player.page.waitForTimeout(800);
 ok("dm sees the exact number",
   await dm.page.locator(".cbt", { hasText: "Goblin Boss" }).locator(".hp").innerText(), "9/21");

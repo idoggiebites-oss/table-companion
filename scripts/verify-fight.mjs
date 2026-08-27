@@ -135,7 +135,7 @@ await sitAs(p2.page, "Bel Ashcroft");
 await dm.page.waitForTimeout(1800);
 
 // --- the DM decides who is in it -----------------------------------------
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 ok("both characters are offered", await dm.page.locator(".chips .chip").count() >= 2, true);
 // The party split: Bel is on the roof and not in this fight.
 await dm.page.getByRole("button", { name: "Bel Ashcroft", exact: true }).click();
@@ -239,7 +239,7 @@ ok("confirming is what applies it",
 ok("and clears the queue", await dm.page.locator(".claim").count(), 0);
 
 // --- surprise -------------------------------------------------------------
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await dm.page.waitForTimeout(900);
 ok("the surprised side is told it cannot act",
   (await dm.page.locator(".card", { hasText: "Round" }).innerText()).toLowerCase().includes("goblin"), true);
@@ -265,13 +265,13 @@ await p1.page.waitForTimeout(1200);
 await go(p1.page, "sheet");
 ok("and it lands on the player's own sheet",
   (await p1.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "6 / 12");
-await go(p1.page, "fight");
+await go(p1.page, "combat");
 
 
 // --- the DM's opportunity attack ------------------------------------------
 // Off-turn the attacker is NOT whoever is active — attributing it to them
 // would credit the player whose turn provoked it.
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await dm.page.waitForTimeout(700);
 ok("off a creature's turn the DM is offered a reaction, not an action",
   await dm.page.getByRole("button", { name: "Opportunity attack" }).count(), 1);
@@ -289,7 +289,7 @@ await dm.page.getByRole("button", { name: "It hits" }).click();
 await p1.page.waitForTimeout(1200);
 await go(p1.page, "sheet");
 ok("it lands", (await p1.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "4 / 12");
-await go(p1.page, "fight");
+await go(p1.page, "combat");
 
 // One reaction, like everyone else's.
 await dm.page.getByRole("button", { name: "Opportunity attack" }).click();
@@ -299,7 +299,7 @@ ok("and a creature only gets one until its turn comes round",
 await dm.page.getByRole("button", { name: "Cancel" }).click();
 
 // Back to the creature's turn, so the PLAYER is the one waiting.
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await dm.page.waitForTimeout(700);
 
 // --- the opportunity attack the reaction pip was always for ---------------

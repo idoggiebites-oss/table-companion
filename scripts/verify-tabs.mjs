@@ -78,7 +78,7 @@ await dm.page.waitForTimeout(800);
 
 ok("the DM's sections are their responsibilities",
   (await tabsOf(dm.page)).map((t) => t.toLowerCase()),
-  ["fight", "party", "prep", "book", "log"]);
+  ["combat", "party", "prep", "book", "log"]);
 // Never "Fight" when there is no fight — that is a dead screen with
 // "No fight yet" on it.
 ok("and an empty table opens on the party, not on a fight that is not happening",
@@ -126,7 +126,7 @@ await p1.page.waitForTimeout(600);
    turn, which is why it is a tab rather than a corner of the log. */
 ok("a player gets different sections",
   (await tabsOf(p1.page)).map((t) => t.toLowerCase()),
-  ["fight", "sheet", "gear", "notes", "log"]);
+  ["combat", "sheet", "gear", "notes", "log"]);
 ok("and lands on their own sheet", await activeTab(p1.page), "sheet");
 ok("there is no prep or reference for them",
   await p1.page.locator('[data-tab="prep"], [data-tab="book"]').count(), 0);
@@ -151,7 +151,7 @@ ok("so does the DM", await dm.page.locator(".feed").count(), 1);
 
 // --- nothing urgent may hide behind a tab --------------------------------
 await go(p1.page, "gear");
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 await dm.page.getByRole("button", { name: "Roll for initiative" }).click();
@@ -159,8 +159,8 @@ await p1.page.waitForTimeout(1800);
 
 // A fight starting is combat focus mode: it moves you, rather than leaving a
 // dot on a tab you are not looking at.
-ok("a fight starting pulls the player to it", await activeTab(p1.page), "fight");
-ok("and the DM too", await activeTab(dm.page), "fight");
+ok("a fight starting pulls the player to it", await activeTab(p1.page), "combat");
+ok("and the DM too", await activeTab(dm.page), "combat");
 
 await dm.page.locator('input[aria-label="Kira Vance initiative"]').fill("18");
 await dm.page.getByRole("button", { name: "Set Kira Vance initiative" }).click();
@@ -169,7 +169,7 @@ await dm.page.getByRole("button", { name: "Set Goblin initiative" }).click();
 await dm.page.getByRole("button", { name: "Begin", exact: true }).click();
 await p1.page.waitForTimeout(1500);
 ok("your turn marks the fight tab",
-  await p1.page.locator('[data-tab="fight"] .tab-dot').count(), 1);
+  await p1.page.locator('[data-tab="combat"] .tab-dot').count(), 1);
 
 // A concentration save is owed NOW, which is the one thing allowed to take
 // the screen from wherever you are.

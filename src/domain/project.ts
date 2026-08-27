@@ -16,7 +16,7 @@ import {
   type Character, type CharacterId, type EffectiveBuild,
 } from "./build.js";
 import {
-  activeCombatant, advance, beginCombat, FRESH_ECONOMY, setInitiative,
+  activeCombatant, advance, beginCombat, FRESH_ECONOMY, joinCombat, setInitiative,
   stageCombat, startCombat,
   type Combat, type Economy,
 } from "./combat.js";
@@ -248,6 +248,10 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
     case "initiativeRolled":
       return state.combat
         ? { ...state, combat: setInitiative(state.combat, e.combatantId, e.value) }
+        : state;
+    case "combatantJoined":
+      return state.combat
+        ? { ...state, combat: joinCombat(state.combat, e.combatant) }
         : state;
     case "combatBegan":
       return state.combat ? { ...state, combat: beginCombat(state.combat) } : state;
@@ -659,13 +663,20 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       if (state.combat === null) return state;
       const current = state.combat.creatureHp[e.combatantId];
       if (current === undefined) return state;
+      /*
+       * A negative amount is healing, which is how the DM's row heals a
+       * creature back — and healing has a ceiling. Without it a ghoul patched
+       * up twice reads 30/22, which is not a state the game has.
+       */
+      const at = state.combat.order.find((c) => c.id === e.combatantId);
+      const max = at?.source.kind === "creature" ? at.source.maxHp : Infinity;
       return {
         ...state,
         combat: {
           ...state.combat,
           creatureHp: {
             ...state.combat.creatureHp,
-            [e.combatantId]: Math.max(0, current - e.amount),
+            [e.combatantId]: Math.min(max, Math.max(0, current - e.amount)),
           },
         },
       };

@@ -85,7 +85,7 @@ await dm.page.waitForTimeout(700);
 ok("closing it clears both sides", await p1.page.locator(".ask-mine").count(), 0);
 
 // --- what your turn actually offers --------------------------------------
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 await dm.page.getByRole("button", { name: "Roll for initiative" }).click();

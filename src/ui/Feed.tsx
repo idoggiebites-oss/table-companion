@@ -72,6 +72,8 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
     }
     case "combatStarted":
       return `Combat began · ${e.order.length} in initiative`;
+    case "combatantJoined":
+      return `${e.combatant.name} arrives`;
     case "combatEnded":
       return "Combat ended";
     case "progressionSet":

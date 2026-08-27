@@ -46,7 +46,7 @@ const join = player.locator(".join-row", { hasText: "Kira Vance" });
 if (await join.count()) await join.first().click();
 await player.waitForSelector(".hp-big", { timeout: 20000 });
 
-await go(dm, "fight");
+await go(dm, "combat");
 await dm.getByRole("button", { name: "Add creature" }).click();
 await dm.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 await dm.locator('input[aria-label="Creature 1 hp"]').fill("20");
@@ -58,7 +58,7 @@ for (const [n, v] of [["Kira Vance", 20], ["Goblin", 5]]) {
 }
 await dm.getByRole("button", { name: "Begin", exact: true }).click();
 await player.waitForSelector(".pt.acting", { timeout: 20000 });
-await go(player, "fight");
+await go(player, "combat");
 
 // --- nothing said, nothing changed ---------------------------------------
 ok("a fight starts on open ground",

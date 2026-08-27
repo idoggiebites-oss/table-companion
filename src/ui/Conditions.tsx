@@ -21,13 +21,15 @@ import type { ConditionId } from "../domain/edition.js";
 import { rulesFor } from "../domain/edition.js";
 
 export function ConditionStrip({
-  on, editable, onAdd, onRemove,
+  on, editable, onAdd, onRemove, who,
 }: {
   on: readonly ConditionId[];
   /** The DM, on a creature. Everyone else is reading. */
   editable: boolean;
   onAdd: (c: ConditionId) => void;
   onRemove: (c: ConditionId) => void;
+  /** Whose they are, for the sheet's title. */
+  who?: string | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const all = rulesFor("2014").conditions;
@@ -57,23 +59,39 @@ export function ConditionStrip({
           {open ? "−" : "+"}
         </button>
       )}
+      {/*
+        * A sheet at the foot of the screen, not fourteen chips shoved into
+        * the initiative track. Opening it used to push every row below it
+        * down half a screen, mid-fight, while somebody was reading them.
+        */}
       {open && (
-        <div className="cnd-pick">
-          {all
-            .filter((c) => !on.includes(c))
-            .map((c) => (
-              <button
-                key={c}
-                className="cnd"
-                onClick={() => {
-                  onAdd(c);
-                  setOpen(false);
-                }}
-              >
-                {c}
-              </button>
-            ))}
-        </div>
+        <>
+          <button
+            className="cnd-back"
+            aria-label="Close the conditions"
+            onClick={() => setOpen(false)}
+          />
+          <div className="cnd-pick" role="dialog" aria-label={`Conditions for ${who ?? "it"}`}>
+            <span className="label">What is wrong with {who ?? "it"}</span>
+            <div className="cnd-list">
+              {all
+                .filter((c) => !on.includes(c))
+                .map((c) => (
+                  <button
+                    key={c}
+                    className="cnd"
+                    onClick={() => {
+                      onAdd(c);
+                      setOpen(false);
+                    }}
+                  >
+                    {c}
+                  </button>
+                ))}
+            </div>
+            <button onClick={() => setOpen(false)}>Done</button>
+          </div>
+        </>
       )}
     </div>
   );

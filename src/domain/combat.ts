@@ -181,14 +181,62 @@ function seedHp(order: readonly Combatant[]): Record<string, number> {
   return hp;
 }
 
+/**
+ * Two creatures called Ghoul are two creatures nobody can tell apart.
+ *
+ * The encounter builder has numbered its instances since it was written; a
+ * DM typing two rows by hand got "Ghoul" and "Ghoul" — same row in the
+ * track, same name in the log, and the same aria-label, which is how the
+ * screenshots for this work turned up the problem in the first place.
+ *
+ * Only duplicates are touched, and only within one staging: a lone ghoul is
+ * a Ghoul, not a Ghoul 1.
+ */
+export function numberDuplicates(order: readonly Combatant[]): Combatant[] {
+  const seen = new Map<string, number>();
+  for (const c of order) seen.set(c.name, (seen.get(c.name) ?? 0) + 1);
+  const used = new Map<string, number>();
+  return order.map((c) => {
+    if ((seen.get(c.name) ?? 0) < 2) return c;
+    const n = (used.get(c.name) ?? 0) + 1;
+    used.set(c.name, n);
+    return { ...c, name: `${c.name} ${n}` };
+  });
+}
+
+/**
+ * Something arrives after the fight has started.
+ *
+ * Reinforcements are ordinary at a table and were impossible here: the only
+ * way in was to cancel the fight and stage it again, which throws away every
+ * hit point already spent. It drops into the order by its initiative, and if
+ * it lands before the current turn the pointer moves with it so nobody's go
+ * is skipped or repeated.
+ */
+export function joinCombat(combat: Combat, arrival: Combatant): Combat {
+  const at = combat.order[combat.turn];
+  const order = sortOrder(numberDuplicates([...combat.order, arrival]));
+  const turn = at ? Math.max(0, order.findIndex((c) => c.id === at.id)) : combat.turn;
+  return {
+    ...combat,
+    order,
+    turn,
+    creatureHp:
+      arrival.source.kind === "creature"
+        ? { ...combat.creatureHp, [arrival.id]: arrival.source.maxHp }
+        : combat.creatureHp,
+  };
+}
+
 /** The roster, before anyone has rolled. */
 export function stageCombat(order: readonly Combatant[]): Combat {
+  const numbered = numberDuplicates(order);
   return {
     phase: "rolling",
     round: 1,
     turn: 0,
-    order: [...order],
-    creatureHp: seedHp(order),
+    order: numbered,
+    creatureHp: seedHp(numbered),
     moved: {},
     reactions: {},
     creatureConditions: {},

@@ -691,10 +691,15 @@ html, body { overscroll-behavior-y: none; }
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  position: relative; flex: 1 0 auto; padding: 12px 14px;
+  /*
+   * Six of these now, and six at 14px of padding needed 416px on a phone
+   * that has 354. A tab you have to swipe to is a tab a first-timer does not
+   * know exists — the row still scrolls, but it should not have to.
+   */
+  position: relative; flex: 1 0 auto; padding: 12px 8px;
   /* A tab is an underline, not a box — the base radius bent it into a bowl. */
   border: 0; border-radius: 0; border-bottom: 2px solid transparent; background: none;
-  color: var(--muted); font-size: 0.64rem; letter-spacing: 0.12em;
+  color: var(--muted); font-size: 0.62rem; letter-spacing: 0.08em;
   text-transform: uppercase; white-space: nowrap;
 }
 /* Active is luminance, never a hue — the same rule the initiative track uses. */
@@ -801,8 +806,11 @@ html, body { overscroll-behavior-y: none; }
 
 .track { border-top: 1px solid var(--rule); }
 .cbt {
-  display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto;
-  gap: 12px; align-items: center;
+  /* Five columns: initiative, who, health, the quick hit, and the row's own
+     number. The last two used to wrap onto lines of their own, which made
+     every creature three rows tall. */
+  display: grid; grid-template-columns: 38px minmax(0, 1fr) auto auto auto;
+  gap: 8px 10px; align-items: center;
   padding: 11px 16px; border-bottom: 1px solid var(--rule);
   border-left: 2px solid transparent;
 }
@@ -816,6 +824,7 @@ html, body { overscroll-behavior-y: none; }
 .cbt.on .nm { color: #fff; font-weight: 500; }
 .cbt.on .i, .cbt.on .hp { color: var(--ink); }
 .disc, .hitbtn { padding: 4px 8px; font-size: 0.55rem; }
+
 .disc { background: transparent; color: var(--steel); border-color: var(--rule); }
 /* Turn distance: brightness carries "it's you", never a hue. */
 .turns-away { color: var(--faint); }
@@ -1208,19 +1217,32 @@ html, body { overscroll-behavior-y: none; }
 .stance.advantage { border-left-color: var(--unharmed); }
 .stance.disadvantage { border-left-color: var(--damage); }
 
-.conds { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+/* Under the name on an initiative row, not in a column of its own — and
+   never on a line by itself, which made every creature three rows tall. */
+.conds { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
 .cnd {
   padding: 2px 7px; border-radius: var(--r-pill); border: 1px solid var(--rule);
   background: transparent; color: var(--muted);
   font-size: 0.7rem; letter-spacing: 0.02em;
 }
 .cnd.on { color: var(--ink-dim); border-color: var(--bloodied); }
-.cnd.add { color: var(--muted); min-width: 26px; }
-.cnd-pick {
-  flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 5px;
-  padding: 8px; margin-top: 4px;
-  background: var(--ground); border: 1px solid var(--rule); border-radius: var(--r-control);
+/* The picker is a sheet under the thumb, like the roll pad — not fourteen
+   chips wedged into the initiative track, shoving every row below it down. */
+.cnd-back {
+  position: fixed; inset: 0; z-index: 29;
+  background: #0009; border: 0; border-radius: 0; padding: 0;
 }
+.cnd-pick {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--panel); border-top: 1px solid var(--gold);
+  border-radius: var(--r-card) var(--r-card) 0 0;
+  max-height: 62vh; overflow-y: auto;
+}
+.cnd-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.cnd-list .cnd { min-height: 40px; padding: 6px 12px; font-size: 0.78rem; }
+.cnd.add { color: var(--muted); min-width: 26px; }
 
 .offer, .shove-ask { display: flex; flex-direction: column; gap: 8px; }
 .offer-row { text-align: left; padding: 9px 11px; }
@@ -1890,3 +1912,78 @@ html, body { overscroll-behavior-y: none; }
 .nt:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
 /* Said plainly, beside the button, rather than promised in a heading. */
 .nt-who { font-size: 0.76rem; color: var(--muted); }
+
+/* ---- whose turn it is, and the one press that moves it ---- */
+/*
+ * A highlight on a row is legible while you are looking at the list and
+ * useless the moment you look up at the table. This says it in words, with
+ * the next name beside it — "you are after the ghoul" is the question a
+ * player asks more than any other.
+ */
+.up {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 11px 16px; border-bottom: 1px solid var(--rule);
+  background: var(--gold-wash);
+}
+.up .k {
+  display: block; font-family: var(--mono); font-size: 0.54rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+}
+.up-now .n { font-family: var(--display); font-size: 1.15rem; color: var(--gold); }
+.up-next { text-align: right; }
+.up-next .n { font-size: 0.9rem; color: var(--ink-dim); }
+
+/* The control a DM presses forty times an evening. It was one of five. */
+.next-turn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 100%; min-height: 54px; padding: 9px 12px;
+  border-color: var(--gold); background: var(--gold-wash); color: var(--ink);
+  font-size: 0.72rem; letter-spacing: 0.14em;
+}
+.next-turn small {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.06em;
+  text-transform: none; color: var(--muted);
+}
+.next-turn:disabled { border-color: var(--rule); background: transparent; }
+/* And the one that cannot be undone by pressing it again keeps its distance. */
+.end-it { color: var(--muted); }
+
+/* A number that belongs to one row, rather than one box feeding every row. */
+.hitbtn.more { min-width: 34px; }
+.hurt-row {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 7px;
+  margin-top: 7px; padding-top: 8px; border-top: 1px solid var(--rule);
+}
+.hurt-row .faint { font-family: var(--mono); font-size: 0.66rem; }
+
+/* The number every row's "−N" spends. Naked, it read as a stray input. */
+.quick {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 10px 4px 12px; border-radius: var(--r-control);
+  border: 1px solid var(--rule); background: var(--raised);
+}
+.quick .k {
+  font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.quick input { width: 56px; border: 0; background: transparent; padding: 4px 0; }
+
+/* Reinforcements. */
+.arrive { border-top: 1px solid var(--gold-dim); }
+
+/* ---- between fights, which is most of a session ---- */
+.ready-say { margin: 0 0 14px; font-size: 0.9rem; color: var(--ink-dim); }
+.ready-part + .ready-part { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.ready-pools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ready-pool {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 7px 11px; border-radius: var(--r-control);
+  background: var(--raised); border: 1px solid var(--rule);
+}
+.ready-pool .num { font-family: var(--mono); font-size: 0.95rem; color: var(--ink); }
+.ready-pool .k {
+  font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
+.ready-state { margin: 8px 0 0; font-size: 0.86rem; color: var(--ink-dim); }
+.ready-state .hurtnow { color: var(--bloodied); }

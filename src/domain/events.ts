@@ -133,6 +133,11 @@ export type DomainEvent = Meta &
         readonly attackerWho?: CharacterId;
         readonly against: string;
       }
+    /**
+     * Reinforcements. A creature that walks in on round three, dropped into
+     * the order at its own initiative rather than by restaging the fight.
+     */
+    | { readonly type: "combatantJoined"; readonly combatant: Combatant }
     | { readonly type: "combatEnded" }
     /** How this campaign advances. A setting, not a preference. */
     | { readonly type: "progressionSet"; readonly mode: Progression }

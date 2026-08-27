@@ -65,7 +65,7 @@ await player.waitForSelector(".seatbar", { timeout: 20000 });
 const join = player.locator(".join-row", { hasText: "Kira Vance" });
 if (await join.count()) await join.first().click();
 await player.waitForSelector(".hp-big", { timeout: 20000 });
-await go(player, "fight");
+await go(player, "combat");
 await player.waitForTimeout(1500);
 
 /* Kira is a ranger with slots, so she is a caster — and out of a fight the
@@ -97,10 +97,10 @@ const after = pulled.filter((p) => p.who === "player");
 ok("opening them pulls the slim file, not the six-megabyte one",
   after.some((p) => p.file.endsWith("content/class-index.json"))
   && !after.some((p) => p.file.endsWith("content/class.json")), true);
-await go(player, "fight");
+await go(player, "combat");
 
 // --- staged, not begun ---------------------------------------------------
-await go(dm, "fight");
+await go(dm, "combat");
 await dm.getByRole("button", { name: "Add creature" }).click();
 await dm.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 await dm.locator('input[aria-label="Creature 1 hp"]').fill("20");

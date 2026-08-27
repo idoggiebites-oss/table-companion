@@ -45,6 +45,7 @@ import {
 import { AreaDamage } from "./AreaDamage.js";
 import { healthStep, VAGUE_LABEL } from "./HpBar.js";
 import { PlayerTurn } from "./PlayerTurn.js";
+import { Readiness } from "./Readiness.js";
 import { useAttacks } from "./useAttacks.js";
 
 const nextDisclosure = (d: Disclosure): Disclosure =>
@@ -249,6 +250,79 @@ function RoomLine({ scene }: { scene: Room }) {
   );
 }
 
+/**
+ * Something walks in on round three.
+ *
+ * Reinforcements are ordinary at a table and were impossible here: the only
+ * way to add a creature was to cancel the fight and stage it again, throwing
+ * away every hit point already spent. Three fields, because that is what the
+ * order needs — a name, how much it can take, and where it goes.
+ */
+function Arrival({
+  onAdd, onCancel,
+}: {
+  onAdd: (c: Combatant) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [hp, setHp] = useState(10);
+  const [init, setInit] = useState("");
+
+  const roll = Number(init);
+  const ready = name.trim() !== "" && Number.isFinite(roll) && init.trim() !== "";
+
+  return (
+    <div className="card-body arrive">
+      <span className="label">What arrives</span>
+      <div className="row" style={{ marginTop: 8 }}>
+        <input
+          value={name}
+          aria-label="Arrival name"
+          placeholder="Ghoul"
+          style={{ flex: "2 1 130px", width: "auto" }}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          type="number" min={1} value={hp}
+          aria-label="Arrival hit points"
+          style={{ flex: "0 0 74px", width: "auto" }}
+          onChange={(e) => setHp(Math.max(1, +e.target.value || 1))}
+        />
+        <input
+          type="number" value={init}
+          aria-label="Arrival initiative"
+          placeholder="d20"
+          style={{ flex: "0 0 74px", width: "auto" }}
+          onChange={(e) => setInit(e.target.value)}
+        />
+      </div>
+      <div className="row" style={{ marginTop: 10 }}>
+        <button
+          disabled={!ready}
+          onClick={() =>
+            onAdd({
+              id: `cr-${Date.now().toString(36)}`,
+              name: name.trim(),
+              initiative: roll,
+              source: { kind: "creature", maxHp: hp },
+              controller: { kind: "dm" },
+              disclosure: "vague",
+              surprised: false,
+              speed: 30,
+            })
+          }
+        >
+          It joins the fight
+        </button>
+        <button onClick={onCancel}>Never mind</button>
+      </div>
+      <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
+        It drops into the order at that initiative. Nobody's turn is skipped.
+      </p>
+    </div>
+  );
+}
+
 function Rolling({
   combat, seat, append,
 }: {
@@ -374,6 +448,11 @@ export function Combat({
    * active would credit the player whose turn provoked it.
    */
   const [offering, setOffering] = useState(false);
+  /** Reinforcements: the form for something walking in mid-fight. */
+  const [something, setSomething] = useState(false);
+  /** Which row has its own number open, and what it says. */
+  const [hurting, setHurting] = useState<string | null>(null);
+  const [amount, setAmount] = useState(5);
   const [offerTo, setOfferTo] = useState<readonly string[]>([]);
   const [offerWhy, setOfferWhy] = useState("");
   const [dmPicking, setDmPicking] = useState<null | "target" | "reactor">(null);
@@ -392,6 +471,8 @@ export function Combat({
         <div className="card-hd"><span className="label">Combat</span></div>
         {seat.kind === "dm" ? (
           <StartCombat state={state} append={append} />
+        ) : seated && seatedState ? (
+          <Readiness build={seated} state={seatedState} attacks={playerAttacks} />
         ) : (
           <div className="card-body"><p className="faint" style={{ margin: 0 }}>No fight yet.</p></div>
         )}
@@ -419,6 +500,10 @@ export function Combat({
   }
 
   const active = activeCombatant(combat);
+  /** Who follows, so a player can see their own turn coming. */
+  const upNext = combat.order.length > 1
+    ? combat.order[(combat.turn + 1) % combat.order.length]
+    : null;
   const canEnd = mayEndTurn(seat, combat);
   const mine = seat.kind === "player" ? turnsUntil(combat, seat.characterId) : null;
   const visible = combat.order.filter((c) => visibleTo(seat, c));
@@ -426,12 +511,40 @@ export function Combat({
   return (
     <section className="card">
       <div className="card-hd">
-        <span className="label">Round <span className="num">{combat.round}</span></span>
+        <span className="label">
+          Round <span className="num">{combat.round}</span>
+          <span className="faint">
+            {" · "}turn <span className="num">{combat.turn + 1}</span> of{" "}
+            <span className="num">{combat.order.length}</span>
+          </span>
+        </span>
         {mine !== null && (
           <span
             className={`label turns-away${mine === 0 ? " now" : ""}`}
           >
             {mine === 0 ? "Your turn" : `${mine} turn${mine === 1 ? "" : "s"} away`}
+          </span>
+        )}
+      </div>
+
+      {/*
+        * Whose turn it is, in words.
+        *
+        * It was carried by a highlight on one row and nothing else — which
+        * is legible when you are looking at the list and useless when you
+        * have just looked up from the table. The next name is here too,
+        * because "you are after the ghoul" is the question a player asks
+        * more often than any other.
+        */}
+      <div className="up">
+        <span className="up-now">
+          <span className="k">Up now</span>
+          <span className="n">{active?.name ?? "nobody"}</span>
+        </span>
+        {upNext && (
+          <span className="up-next">
+            <span className="k">Then</span>
+            <span className="n">{upNext.name}</span>
           </span>
         )}
       </div>
@@ -711,17 +824,65 @@ export function Combat({
                     : "—"}
               </span>
               {seat.kind === "dm" && c.source.kind === "creature" && (
-                <button
-                  className="hitbtn"
-                  onClick={() => append({ type: "creatureDamaged", combatantId: c.id, amount: hit })}
-                >
-                  −{hit}
-                </button>
+                <>
+                  <button
+                    className="hitbtn"
+                    aria-label={`Hurt ${c.name} by ${hit}`}
+                    onClick={() => append({ type: "creatureDamaged", combatantId: c.id, amount: hit })}
+                  >
+                    −{hit}
+                  </button>
+                  {/*
+                    * And a number that is not the last one used. It was a
+                    * single box at the foot of the card feeding every row,
+                    * so "which row does this apply to" was answered by
+                    * remembering rather than by looking.
+                    */}
+                  <button
+                    className="hitbtn more"
+                    aria-label={`Hurt or heal ${c.name}`}
+                    aria-expanded={hurting === c.id}
+                    onClick={() => setHurting(hurting === c.id ? null : c.id)}
+                  >
+                    {hurting === c.id ? "−" : "…"}
+                  </button>
+                </>
+              )}
+              {hurting === c.id && seat.kind === "dm" && c.source.kind === "creature" && (
+                <div className="hurt-row">
+                  <input
+                    type="number" min={0} value={amount}
+                    aria-label={`Amount for ${c.name}`}
+                    style={{ width: 74 }}
+                    onChange={(e) => setAmount(Math.max(0, +e.target.value || 0))}
+                  />
+                  <button
+                    aria-label={`Damage ${c.name}`}
+                    onClick={() => {
+                      append({ type: "creatureDamaged", combatantId: c.id, amount });
+                      setHit(amount);
+                      setHurting(null);
+                    }}
+                  >
+                    Hurt
+                  </button>
+                  <button
+                    aria-label={`Heal ${c.name}`}
+                    onClick={() => {
+                      append({ type: "creatureDamaged", combatantId: c.id, amount: -amount });
+                      setHurting(null);
+                    }}
+                  >
+                    Heal
+                  </button>
+                  <span className="faint">of {hp.max}</span>
+                </div>
               )}
               {/* What is wrong with them, where both sides can read it. This
                   is what turns "roll a d20" into "roll two and take the
                   higher" one screen over. */}
               <ConditionStrip
+                who={c.name}
                 on={
                   c.source.kind === "creature"
                     ? (combat.creatureConditions[c.id] ?? [])
@@ -739,6 +900,20 @@ export function Combat({
           );
         })}
       </div>
+
+      {seat.kind === "dm" && (
+        <div className="card-body" style={{ paddingBottom: 0 }}>
+          <button
+            className="next-turn"
+            disabled={!canEnd}
+            aria-label="Next turn"
+            onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
+          >
+            Next turn
+            <small>{upNext ? `${upNext.name} is up` : "round ends"}</small>
+          </button>
+        </div>
+      )}
 
       <div className="card-body">
         <div className="controls" style={{ marginTop: 0 }}>
@@ -782,26 +957,42 @@ export function Combat({
               >
                 {offering ? "Cancel" : "Offer a reaction"}
               </button>
-              <button
-                disabled={!canEnd}
-                onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
-              >
-                Advance turn
-              </button>
             </>
           )}
           {seat.kind === "dm" && (
             <>
-              <input
-                type="number" min={0} value={hit} aria-label="Creature damage"
-                style={{ width: 76 }}
-                onChange={(e) => setHit(Math.max(0, +e.target.value || 0))}
-              />
+              <span className="quick">
+                <span className="k">Quick hit</span>
+                <input
+                  type="number" min={0} value={hit} aria-label="Creature damage"
+                  onChange={(e) => setHit(Math.max(0, +e.target.value || 0))}
+                />
+              </span>
               <button onClick={() => setArea((v) => !v)}>Area damage</button>
-              <button onClick={() => append({ type: "combatEnded" })}>End combat</button>
+              <button onClick={() => setSomething((v) => !v)}>
+                {something ? "Cancel" : "Something arrives"}
+              </button>
+              {/*
+                * Ending a fight is one press and cannot be misread as the one
+                * beside it, so it keeps its distance from the control the DM
+                * presses forty times an evening.
+                */}
+              <button className="end-it" onClick={() => append({ type: "combatEnded" })}>
+                End combat
+              </button>
             </>
           )}
         </div>
+
+        {something && seat.kind === "dm" && (
+          <Arrival
+            onCancel={() => setSomething(false)}
+            onAdd={(combatant) => {
+              append({ type: "combatantJoined", combatant });
+              setSomething(false);
+            }}
+          />
+        )}
         {dmPicking === "reactor" && seat.kind === "dm" && (() => {
           const able = combat.order.filter(
             (c) =>

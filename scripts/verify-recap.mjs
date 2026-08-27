@@ -64,7 +64,7 @@ await player.waitForSelector(".hp-big", { timeout: 20000 });
 
 await dm.getByRole("button", { name: "Open The cellar under the mill" }).click();
 await dm.waitForTimeout(800);
-await go(dm, "fight");
+await go(dm, "combat");
 await dm.getByRole("button", { name: "Add creature" }).click();
 await dm.locator('input[aria-label="Creature 1 name"]').fill("Ghoul");
 await dm.locator('input[aria-label="Creature 1 hp"]').fill("22");

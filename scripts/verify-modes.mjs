@@ -56,7 +56,7 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
 // A goblin goes first, so the player starts the fight waiting.
 // Initiative is rolled after staging now.
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 
@@ -89,8 +89,8 @@ ok("the table sees it",
   (await dm.page.locator(".feed").innerText()).includes("used their reaction"), true);
 
 // ---- acting --------------------------------------------------------------
-await go(dm.page, "fight");
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await go(dm.page, "combat");
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await player.page.waitForTimeout(900);
 ok("now acting", await player.page.locator(".pt.acting").count(), 1);
 ok("the turn is announced", await player.page.locator(".pt-turn").innerText(), "YOUR TURN");
@@ -113,7 +113,7 @@ ok("the spent bonus is still spent between turns",
   await player.page.locator(".econ .ec").count(), 1);
 
 // coming round again refills everything
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await player.page.waitForTimeout(900);
 ok("acting again", await player.page.locator(".pt.acting").count(), 1);
 ok("everything came back",

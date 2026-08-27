@@ -291,7 +291,7 @@ ok("and the concentration with it, in one go",
 // player's, and a solo device may be either.
 await page.selectOption('select[aria-label="Seat"]', "dm");
 await page.waitForTimeout(600);
-await go(page, "fight");
+await go(page, "combat");
 await page.getByRole("button", { name: "Add creature" }).click();
 await page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 await page.locator('input[aria-label="Creature 1 hp"]').fill("20");
@@ -309,7 +309,7 @@ await page.waitForTimeout(700);
 
 // Casting lives on its own tab, so the turn menu has to say it exists —
 // otherwise a new caster's turn offers them only a weapon they may not have.
-await go(page, "fight");
+await go(page, "combat");
 await page.getByRole("button", { name: "What else can I do?" }).click();
 await page.waitForSelector(".hotbar");
 // The menu is a grid of marks now; every one still carries its name.
@@ -327,7 +327,7 @@ await page.waitForTimeout(600);
    Your turn has a clock on it and a tab is somewhere you can walk away from,
    which is how a slot got spent on a spell that was never cast. */
 ok("taking it does not leave the fight",
-  await page.locator('[data-tab="fight"].on').count(), 1);
+  await page.locator('[data-tab="combat"].on').count(), 1);
 ok("and asks what you are casting, right there",
   /what are you casting/i.test(await page.locator(".swing-step").innerText()), true);
 const castables = await page.locator(".swing-step .tgt-row").allInnerTexts();
@@ -346,7 +346,7 @@ await page.waitForTimeout(700);
 ok("a spell cast from the turn spends the action", await page.locator(".ec.spent").count(), 1);
 await page.selectOption('select[aria-label="Seat"]', "dm");
 await page.waitForTimeout(700);
-await go(page, "fight");
+await go(page, "combat");
 ok("and reaches the DM exactly as a weapon attack does",
   /fire bolt/i.test(await page.locator(".claim").first().innerText()), true);
 
@@ -364,7 +364,7 @@ ok("by the amount that was rolled",
 // tab still casts — it is where you go when you are NOT in the middle of a
 // turn, and it must not have been broken by moving the turn's copy.
 for (let i = 0; i < 2; i++) {
-  await page.getByRole("button", { name: "Advance turn" }).click();
+  await page.getByRole("button", { name: "Next turn" }).click();
   await page.waitForTimeout(700);
 }
 await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
@@ -380,7 +380,7 @@ await go(page, "spells");
    action gone, and nothing cast. */
 const slotsNow = () => page.locator(".slot .num").allInnerTexts();
 const actionUp = async () => {
-  await go(page, "fight");
+  await go(page, "combat");
   const n = await page.locator('.econ .ec[aria-label="Action available"]').count();
   await go(page, "spells");
   return n === 1;
@@ -429,7 +429,7 @@ await page.waitForTimeout(700);
 
 await page.selectOption('select[aria-label="Seat"]', "dm");
 await page.waitForTimeout(600);
-await go(page, "fight");
+await go(page, "combat");
 /* Relative, because a spell was already cast at this goblin from the turn
    earlier in this suite — an absolute number here would encode the order the
    assertions happen to run in. */
@@ -477,7 +477,7 @@ await page.waitForTimeout(600);
    clamps at zero proves nothing about halving. */
 await page.selectOption('select[aria-label="Seat"]', "dm");
 await page.waitForTimeout(600);
-await go(page, "fight");
+await go(page, "combat");
 await page.getByRole("button", { name: "End combat" }).click();
 await page.waitForTimeout(600);
 await page.getByRole("button", { name: "Add creature" }).click();
@@ -515,7 +515,7 @@ await page.waitForTimeout(700);
 
 await page.selectOption('select[aria-label="Seat"]', "dm");
 await page.waitForTimeout(700);
-await go(page, "fight");
+await go(page, "combat");
 const saveClaim = (await page.locator(".claim").first().innerText()).replace(/\s+/g, " ");
 /* "they save or they do not" was true and useless: it told the DM neither
    what to roll against nor what a success was worth. */

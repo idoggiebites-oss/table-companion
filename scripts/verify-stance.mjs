@@ -50,7 +50,7 @@ else await player.page.selectOption('select[aria-label="Seat"]', { label: "Kira 
 await player.page.waitForSelector(".hp-big", { timeout: 20000 });
 
 // A fight, with Kira first.
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin");
 await dm.page.locator('input[aria-label="Creature 1 hp"]').fill("20");
@@ -62,7 +62,7 @@ for (const [n, v] of [["Kira Vance", 20], ["Goblin", 5]]) {
 }
 await dm.page.getByRole("button", { name: "Begin", exact: true }).click();
 await player.page.waitForSelector(".pt.acting", { timeout: 20000 });
-await go(player.page, "fight");
+await go(player.page, "combat");
 
 // --- a straight roll, first, so the change has something to be measured against
 const step = () => player.page.locator(".swing-step");
@@ -124,7 +124,7 @@ await go(player.page, "sheet");
 const poison = player.page.getByRole("button", { name: /poisoned/i }).first();
 await poison.click();
 await player.page.waitForTimeout(700);
-await go(player.page, "fight");
+await go(player.page, "combat");
 const third = await swing();
 ok("one of each cancels to a single d20", /Roll a d20 and add/.test(third.ask), true);
 ok("and it says so rather than dropping the losing half",
@@ -133,7 +133,7 @@ await backOut();
 await go(player.page, "sheet");
 await player.page.getByRole("button", { name: /poisoned/i }).first().click();
 await player.page.waitForTimeout(700);
-await go(player.page, "fight");
+await go(player.page, "combat");
 
 // --- Dodge stops being a sentence -----------------------------------------
 await player.page.getByRole("button", { name: "What else can I do?" }).click();
@@ -145,18 +145,18 @@ await player.page.waitForTimeout(900);
 await go(dm.page, "log");
 ok("dodging is recorded, not just narrated",
   /Dodging/i.test(await dm.page.locator(".feed").innerText()), true);
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 
 // --- a readied action lives where the DM can see it -----------------------
 await player.page.waitForTimeout(400);
-await go(player.page, "fight");
+await go(player.page, "combat");
 ok("but the action is gone, so nothing else is offered",
   await player.page.locator(".pt-atk").isDisabled(), true);
 
 // A fresh round, so there is an action to spend on Ready.
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await dm.page.waitForTimeout(700);
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await player.page.waitForSelector(".pt.acting", { timeout: 20000 });
 
 await player.page.getByRole("button", { name: "What else can I do?" }).click();
@@ -176,7 +176,7 @@ await dm.page.waitForTimeout(700);
 ok("and clears when it does", await dm.page.locator(".ready-row").count(), 0);
 
 // --- the reaction arrives instead of being remembered ---------------------
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await dm.page.waitForTimeout(900);
 ok("a player waiting is offered nothing unprompted",
   await player.page.locator(".react-ask").count(), 0);
@@ -199,13 +199,13 @@ ok("the moment arrives on whatever screen they are on",
 ok("without moving them off it",
   await player.page.locator('[data-tab="gear"].on').count(), 1);
 ok("and the fight is marked, so the way back is obvious",
-  await player.page.locator('[data-tab="fight"] .tab-dot').count(), 1);
+  await player.page.locator('[data-tab="combat"] .tab-dot').count(), 1);
 await player.page.screenshot({ path: `${OUT}/43-reaction.png`, fullPage: true });
 // Saying yes takes you to the swing rather than asking the question twice.
 await player.page.getByRole("button", { name: "Take a swing" }).click();
 await player.page.waitForTimeout(1000);
 ok("saying yes goes straight to the swing",
-  await player.page.locator('[data-tab="fight"].on').count(), 1);
+  await player.page.locator('[data-tab="combat"].on').count(), 1);
 ok("with the walkthrough already open",
   await player.page.locator(".swing-step").count(), 1);
 await backOut();
@@ -223,7 +223,7 @@ await dm.page.waitForTimeout(800);
 ok("a condition comes off again",
   await dm.page.locator(".cbt", { hasText: "Goblin" }).locator(".cnd.on").count(), 0);
 
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await player.page.waitForSelector(".pt.acting", { timeout: 20000 });
 await player.page.getByRole("button", { name: "What else can I do?" }).click();
 await player.page.waitForTimeout(300);
@@ -261,9 +261,9 @@ ok("the DM's ruling lands on the creature",
 
 // Shoving cost the action, so the swing that reads the consequence is next
 // turn's — which is also how it goes at a table.
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await dm.page.waitForTimeout(700);
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await player.page.waitForSelector(".pt-atk:not([disabled])", { timeout: 20000 });
 const after = await swing();
 ok("and the next swing knows it, with no one looking anything up",

@@ -21,6 +21,14 @@ recently.
 Live sync, works offline and catches up. Every action is an event; anything
 can be undone. Device-local content and seats never enter the log.
 
+**Combat.** Whose turn it is said in words with the next name beside it, the
+round and turn counted, and one primary control that names who it hands to.
+Damage and healing on the creature's own row. Reinforcements: something walks
+in on round three at its own initiative without restaging the fight.
+Duplicates numbered so two ghouls are two creatures. Conditions in a sheet
+that does not shove the initiative order down the screen. And for a player
+between fights — most of a session — what they would bring to one.
+
 **The DM.** Places prepared ahead of the session — a room, whatever is
 waiting in it, and the line to read when the door opens — opened live in one
 press. Terrain and light on the fight, which every roll then accounts for.
@@ -61,7 +69,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 732 unit tests, 49 browser suites, ~925 assertions, run against a
+**Proof.** 742 unit tests, 50 browser suites, ~950 assertions, run against a
 real build on two devices.
 
 ---

@@ -38,11 +38,11 @@ import { loadSpells } from "../store/srd.js";
 
 /** Device-local, like the seat — never in the log. */
 type TabId =
-  | "fight" | "party" | "prep" | "book" | "log" | "sheet" | "gear" | "spells" | "notes";
+  | "combat" | "party" | "prep" | "book" | "log" | "sheet" | "gear" | "spells" | "notes";
 
 /** What a crash on this tab calls itself. */
 const TAB_NAME: Record<TabId, string> = {
-  fight: "The fight", party: "The party", prep: "Prep", book: "The book",
+  combat: "Combat", party: "The party", prep: "Prep", book: "The book",
   log: "The log", sheet: "Your sheet", gear: "Your gear", spells: "Your spells",
   notes: "Your notes",
 };
@@ -146,7 +146,7 @@ export function App() {
   const askingReaction = offeredToMe !== null && reactionSpare;
 
   const dmTabs: TabDef<TabId>[] = [
-    { id: "fight", label: "Fight", dot: state.combat?.phase === "rolling" },
+    { id: "combat", label: "Combat", dot: state.combat?.phase === "rolling" },
     { id: "party", label: "Party" },
     { id: "prep", label: "Prep" },
     { id: "book", label: "Book" },
@@ -157,7 +157,7 @@ export function App() {
     mine !== undefined &&
     (mine.spellSlots.some((n) => n > 0) || (mineState?.spells.length ?? 0) > 0);
   const playerTabs: TabDef<TabId>[] = [
-    { id: "fight", label: "Fight", dot: myTurn || askingReaction },
+    { id: "combat", label: "Combat", dot: myTurn || askingReaction },
     { id: "sheet", label: "Sheet", dot: owed > 0 || saveOwed },
     ...(casts ? [{ id: "spells" as const, label: "Spells" }] : []),
     { id: "gear", label: "Gear", dot: shopOpen },
@@ -172,9 +172,9 @@ export function App() {
    * a tab that shows you what you are looking at is a dead control.
    */
   const twoUp = wide && state.combat !== null && !needsCharacter && !needsClaim;
-  const tabs = (dmView ? dmTabs : playerTabs).filter((t) => !(twoUp && t.id === "fight"));
+  const tabs = (dmView ? dmTabs : playerTabs).filter((t) => !(twoUp && t.id === "combat"));
   /**
-   * Where you land before choosing. Never "Fight" when there is no fight —
+   * Where you land before choosing. Never "Combat" when there is no fight —
    * that is a dead screen with "No fight yet" on it. A player's home is their
    * sheet; a DM's is the party they are looking after.
    */
@@ -211,7 +211,7 @@ export function App() {
   };
 
   const home: TabId =
-    state.combat !== null && !twoUp ? "fight" : dmView ? "party" : "sheet";
+    state.combat !== null && !twoUp ? "combat" : dmView ? "party" : "sheet";
   const myTags = (mySeatId && state.combat?.tags[mySeatId]) || [];
   // A seat change can also leave you on a tab the other side does not have.
   const current = tab !== null && tabs.some((t) => t.id === tab) ? tab : home;
@@ -258,7 +258,7 @@ export function App() {
   const wasFighting = useRef(inFight);
   useEffect(() => {
     // Nothing to move to when the fight is already pinned beside you.
-    if (inFight && !wasFighting.current && !twoUp) setTab("fight");
+    if (inFight && !wasFighting.current && !twoUp) setTab("combat");
     wasFighting.current = inFight;
   }, [inFight, twoUp]);
 
@@ -404,7 +404,7 @@ export function App() {
         <ReactionAsk
           offer={offeredToMe}
           onTake={() => {
-            setTab("fight");
+            setTab("combat");
             setTakingReaction(true);
           }}
           onDecline={() =>
@@ -500,7 +500,7 @@ export function App() {
             </p>
           )}
           {/* The fight is always the first tab, on both sides. */}
-          {current === "fight" && (
+          {current === "combat" && (
             <Combat
               state={state}
               seat={seat}

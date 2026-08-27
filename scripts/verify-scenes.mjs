@@ -85,7 +85,7 @@ if (await join.count()) await join.first().click();
 await player.waitForSelector(".hp-big", { timeout: 20000 });
 await player.waitForTimeout(1200);
 
-await go(player, "fight");
+await go(player, "combat");
 ok("nothing has been said about any room yet", await player.locator(".room-is").count(), 0);
 ok("and no fight is waiting", await player.locator(".cbt").count(), 0);
 
@@ -96,7 +96,7 @@ const log = await player.locator(".feed").innerText();
 ok("the player's log does not carry the prep", /prepared/i.test(log), false);
 ok("nor the name of a place they have not walked into",
   /cellar/i.test(log), false);
-await go(player, "fight");
+await go(player, "combat");
 
 // --- one press -----------------------------------------------------------
 await dm.getByRole("button", { name: "Open The cellar under the mill" }).click();
@@ -110,7 +110,7 @@ ok("and the player is not", await player.locator(".sc-said").count(), 0);
 await dm.screenshot({ path: `${OUT}/S1-scene-live.png`, fullPage: true });
 await player.screenshot({ path: `${OUT}/S2-scene-player.png`, fullPage: true });
 
-await go(dm, "fight");
+await go(dm, "combat");
 await dm.waitForSelector('input[aria-label$="initiative"]', { timeout: 20000 });
 
 /* Rolling initiative is when there is TIME to talk about the room, and it is

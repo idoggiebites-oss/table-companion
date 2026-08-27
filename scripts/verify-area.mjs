@@ -57,7 +57,7 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
 // a fight with three goblins and the character
 for (const [n, , hp] of [[1, 15, 12], [2, 14, 12], [3, 13, 12]]) {
-  await go(dm.page, "fight");
+  await go(dm.page, "combat");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
   await dm.page.locator(`input[aria-label="Creature ${n} name"]`).fill(`Goblin ${n}`);
   await dm.page.locator(`input[aria-label="Creature ${n} hp"]`).fill(String(hp));
@@ -94,9 +94,9 @@ await dm.page.screenshot({ path: `${OUT}/24-area.png` });
 
 await dm.page.getByRole("button", { name: /^Apply to 3$/ }).click();
 await player.page.waitForTimeout(900);
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 ok("goblins in the blast dropped", await dm.page.locator(".cbt", { hasText: "Goblin 1" }).locator(".hp").innerText(), "0/12");
 ok("the goblin left out is untouched", await dm.page.locator(".cbt", { hasText: "Goblin 3" }).locator(".hp").innerText(), "12/12");
 ok("the character took half", (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "38 / 52");
@@ -110,7 +110,7 @@ ok("the feed shows one line for the whole blast", feed.includes("Fireball · 28 
 // one undo puts all of it back
 await dm.page.locator(".fr", { hasText: "Fireball" }).first().getByRole("button", { name: "Undo" }).click();
 await player.page.waitForTimeout(900);
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 ok("one undo restored both goblins", await dm.page.locator(".cbt", { hasText: "Goblin 1" }).locator(".hp").innerText(), "12/12");
 ok("and the character", (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "52 / 52");
 ok("and cleared the save it owed", await player.page.locator(".alarm").count(), 0);

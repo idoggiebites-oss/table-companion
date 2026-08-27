@@ -55,9 +55,9 @@ await player.page.waitForSelector(".hp-big", { timeout: 20000 });
 ok("no fight, nothing pinned", await dm.page.locator(".pane-pin").count(), 0);
 ok("and the Fight tab is still offered",
   (await dm.page.locator(".tab").allInnerTexts()).map((t) => t.toLowerCase()),
-  ["fight", "party", "prep", "book", "log"]);
+  ["combat", "party", "prep", "book", "log"]);
 
-await go(dm.page, "fight");
+await go(dm.page, "combat");
 await dm.page.getByRole("button", { name: "Add creature" }).click();
 await dm.page.locator('input[aria-label="Creature 1 name"]').fill("Goblin Boss");
 await dm.page.locator('input[aria-label="Creature 1 hp"]').fill("21");
@@ -99,7 +99,7 @@ ok("and the part of the fight that is theirs stays visible",
 await player.page.screenshot({ path: `${OUT}/51-player-ipad.png` });
 
 // Their turn, in a column half the width it was designed for.
-await dm.page.getByRole("button", { name: "Advance turn" }).click();
+await dm.page.getByRole("button", { name: "Next turn" }).click();
 await player.page.waitForSelector(".pane-pin .pt.acting", { timeout: 20000 });
 await player.page.locator(".pt-atk").click();
 await player.page.waitForTimeout(400);
@@ -123,7 +123,7 @@ await player.page.waitForTimeout(600);
 ok("turning the tablet upright puts it back to one column",
   await player.page.locator(".pane-pin").count(), 0);
 ok("and the Fight tab comes back with it",
-  await player.page.locator('[data-tab="fight"]').count(), 1);
+  await player.page.locator('[data-tab="combat"]').count(), 1);
 await player.page.setViewportSize({ width: 1024, height: 768 });
 await player.page.waitForTimeout(600);
 ok("and back again on its side", await player.page.locator(".pane-pin").count(), 1);
@@ -157,7 +157,7 @@ const phoneJoin = phone.page.locator(".join-row", { hasText: "Kira Vance" });
 if (await phoneJoin.count()) await phoneJoin.first().click();
 await phone.page.waitForTimeout(1000);
 ok("a phone pins nothing", await phone.page.locator(".pane-pin").count(), 0);
-ok("and still has every tab it had", await phone.page.locator('[data-tab="fight"]').count(), 1);
+ok("and still has every tab it had", await phone.page.locator('[data-tab="combat"]').count(), 1);
 const width = await phone.page.locator(".app").boundingBox();
 ok("and does not scroll sideways", width.width <= 390, true);
 
