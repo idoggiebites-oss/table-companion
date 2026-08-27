@@ -2050,3 +2050,5 @@ html, body { overscroll-behavior-y: none; }
 .lv-book > .label { display: block; margin-bottom: 5px; }
 .feat-book + .feat-book { margin-top: 8px; }
 .feat-book > .label { display: block; padding: 6px 0 4px; }
+.mc-brings { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.mc-brought + .mc-brought { margin-top: 12px; }

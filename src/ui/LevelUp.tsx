@@ -162,7 +162,7 @@ export function LevelUp({
       // Same switch as the builder: this list is drawn from the same file.
       (homebrew || isCore(sp.name)) &&
       !isClassFeature(sp) &&
-      classIds.some((c) => castableBy(sp, c)) &&
+      classIds.some((c) => castableBy(sp, c, { homebrew })) &&
       (learned.filter((x) => x.level === 0).length < newCantrips
         ? sp.level === 0
         : sp.level > 0 && sp.level <= Math.ceil(to / 2)),

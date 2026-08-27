@@ -139,3 +139,39 @@ describe("what a compendium files under spells but is not one", () => {
     )).toBe(false);
   });
 });
+
+describe("whose list a spell is on", () => {
+  const spell = (name: string, classes: string[]) =>
+    ({ id: name, name, level: 0, school: "evocation", classes }) as never;
+
+  it("the classes it names", () => {
+    expect(castableBy(spell("Fire Bolt", ["wizard", "sorcerer"]), "wizard")).toBe(true);
+    expect(castableBy(spell("Fire Bolt", ["wizard", "sorcerer"]), "cleric")).toBe(false);
+  });
+
+  it("and the subclasses the game itself grants it through", () => {
+    // "fighter (eldritch knight)" is a fighter spell by any reading.
+    expect(castableBy(spell("Chill Touch", ["fighter (eldritch knight)"]), "fighter")).toBe(true);
+  });
+
+  it("but not through somebody's homebrew subclass", () => {
+    /*
+     * The compendium files a subclass's spells under the parent class, so
+     * "cleric (pyre domain (hb))" put Green-Flame Blade on every cleric's
+     * cantrip list, and "wizard (school of invention (ua))" put Sacred Flame
+     * on every wizard's.
+     */
+    expect(castableBy(spell("Green-Flame Blade", ["cleric (pyre domain (hb))"]), "cleric"))
+      .toBe(false);
+    expect(castableBy(spell("Sacred Flame", ["wizard (school of invention (ua))"]), "wizard"))
+      .toBe(false);
+  });
+
+  it("unless the compendium switch is on, like every other list", () => {
+    expect(
+      castableBy(spell("Green-Flame Blade", ["cleric (pyre domain (hb))"]), "cleric", {
+        homebrew: true,
+      }),
+    ).toBe(true);
+  });
+});

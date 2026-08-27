@@ -354,6 +354,55 @@ ok("and the allowance is the wizard's, at the wizard's level",
   /0 of 3 cantrips/.test(owed.replace(/\s+/g, " ")), true);
 await p3.screenshot({ path: `${OUT}/I2-multiclass-spells.png`, fullPage: true });
 
+
+/* --- two casters, two allowances -----------------------------------------
+
+   Pooled, a Wizard 2 / Cleric 1 could fill their cleric's cantrips with
+   wizard cantrips and the count would still read as satisfied. And a second
+   class brings a short, specific list rather than its full training — a
+   fighter taken later has no skills and brings shields instead. */
+const p4 = await (await browser.newContext({ viewport: { width: 430, height: 1500 } })).newPage();
+await p4.goto(URL, { waitUntil: "domcontentloaded" });
+await p4.getByRole("button", { name: "Build a character" }).click();
+await atStep(p4, "Class");
+await p4.waitForSelector(".klass-cards", { timeout: 20000 });
+await p4.getByRole("button", { name: "Wizard", exact: true }).click();
+await p4.waitForTimeout(400);
+await atStep(p4, "Class");
+await p4.locator('input[aria-label="Starting level"]').fill("2");
+await p4.waitForTimeout(300);
+await p4.selectOption('select[aria-label="Add a class"]', { label: "Cleric" });
+await p4.waitForTimeout(600);
+
+await atStep(p4, "Skills");
+const brings = (await p4.locator(".mc-brings").innerText()).replace(/\s+/g, " ");
+ok("a second class says what it actually brings",
+  /Cleric brings light armour, medium armour and shields/.test(brings), true);
+ok("and grants no skills, because a cleric taken later does not",
+  /skill/i.test(brings), false);
+
+await atStep(p4, "Race");
+await p4.selectOption('select[aria-label="Race"]', "human");
+await p4.waitForTimeout(600);
+await atStep(p4, "Spells");
+await p4.waitForTimeout(700);
+const pickers = await p4.locator(".chooser-hd .nm").allInnerTexts();
+ok("each casting class gets its own pickers",
+  pickers.map((t) => t.replace(/\s+/g, " ").toLowerCase()),
+  ["wizard · cantrips", "wizard · spells", "cleric · cantrips", "cleric · spells"]);
+const counts = (await p4.locator(".chooser-hd .num").allInnerTexts()).map((t) => t.trim());
+/* Three each, from two different lines of two different tables — not six
+   from one pool. */
+ok("with its own allowance", [counts[0], counts[2]], ["0 OF 3", "0 OF 3"]);
+
+/* And the lists are different books: a wizard is not offered Cure Wounds. */
+await p4.getByRole("button", { name: /^Wizard Cantrips/ }).click();
+await p4.waitForTimeout(500);
+const wizardList = (await p4.locator(".chooser-list").first().innerText()).toLowerCase();
+ok("a wizard's list is a wizard's", /fire bolt|mage hand|prestidigitation/.test(wizardList), true);
+ok("and not a cleric's", /sacred flame/.test(wizardList), false);
+await p4.screenshot({ path: `${OUT}/I3-two-casters.png`, fullPage: true });
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

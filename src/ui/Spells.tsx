@@ -90,7 +90,7 @@ export function Spells({
         if (!homebrew && !isCore(s.name)) return false;
         if (!showFeatures && isClassFeature(s)) return false;
         if (q && !s.name.toLowerCase().includes(q)) return false;
-        if (onlyMine && !classIds.some((c) => castableBy(s, c))) return false;
+        if (onlyMine && !classIds.some((c) => castableBy(s, c, { homebrew }))) return false;
         return true;
       })
       .sort(byBookOrder)

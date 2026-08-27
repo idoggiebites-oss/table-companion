@@ -17,7 +17,7 @@
  * placing scores would quietly homogenise every character at the table.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ABILITIES, abilityModifier, formatModifier, proficiencyBonus, SKILLS, SKILL_IDS,
   type Ability, type SkillId,
@@ -77,6 +77,7 @@ import { Num } from "./Num.js";
 import { PickList } from "./PickList.js";
 import { SpellPick } from "./SpellPick.js";
 import { choicesBy, findChoices } from "../domain/subclass.js";
+import { describeGrant, multiclassGrant } from "../domain/multiclassing.js";
 import { bookOf, byBook } from "../domain/books.js";
 import type { CompendiumFeat } from "../import/compendium.js";
 import {
@@ -129,8 +130,16 @@ export function CreateCharacter({
   const [gear, setGear] = useState<Item[] | null>(null);
   const [book, setBook] = useState<CompendiumSpell[]>([]);
   const [spellFilter, setSpellFilter] = useState("");
-  const [openPicker, setOpenPicker] = useState<null | "cantrip" | "spell">(null);
-  const [chosenSpells, setChosenSpells] = useState<KnownSpell[]>([]);
+  /** Which picker is open, keyed by class and kind: "wizard:cantrip". */
+  const [openPicker, setOpenPicker] = useState<string | null>(null);
+  /**
+   * Spells, kept per class rather than in one pile.
+   *
+   * A Wizard 2 / Cleric 1 has two allowances and two books. Pooled, a wizard
+   * could fill their cleric's cantrips with wizard cantrips and the count
+   * would still read as satisfied.
+   */
+  const [chosenByClass, setChosenByClass] = useState<Record<string, KnownSpell[]>>({});
   const [gearMode, setGearMode] = useState<"kit" | "gold">("kit");
   /** Which lettered option is taken, per choice. */
   const [picks, setPicks] = useState<Record<number, string>>({});
@@ -176,6 +185,8 @@ export function CreateCharacter({
   const [raceFeat, setRaceFeat] = useState<{ id: string; name: string } | null>(null);
   /** Classes beyond the first — added at the end, the way a rebuild goes. */
   const [extras, setExtras] = useState<ExtraClass[]>([]);
+  /** The one skill a second bard, ranger or rogue brings with it. */
+  const [mcSkills, setMcSkills] = useState<Record<string, SkillId[]>>({});
   /** Which question is in front of you. */
   const [step, setStep] = useState(0);
   /** Whether other people's material is in the lists. Device-local. */
@@ -351,6 +362,12 @@ export function CreateCharacter({
    * right now — so raising Strength to 13 makes Grappler available in front
    * of you rather than after you commit to it.
    */
+  /** Everything chosen, whichever class it came from. */
+  const chosenSpells = useMemo(
+    () => Object.values(chosenByClass).flat(),
+    [chosenByClass],
+  );
+
   const aspirant = {
     abilities: scores,
     spellSlots: atLevel?.slots ?? [],
@@ -494,8 +511,8 @@ export function CreateCharacter({
   const pickedCantrips = chosenSpells.filter((s) => s.level === 0).length;
   const pickedSpells = chosenSpells.filter((s) => s.level > 0).length;
 
-  const spellChoices = useMemo(() => {
-    if (!klass || !castsAtAll) return [];
+  const spellsFor = useMemo(() => {
+    if (!castsAtAll) return () => [] as typeof book;
     const q = spellFilter.trim().toLowerCase();
     const have = new Set(chosenSpells.map((s) => s.id));
     // The highest slot level that exists, as an index. findLastIndex is not
@@ -508,22 +525,39 @@ export function CreateCharacter({
         break;
       }
     }
-    return book
-      .filter((s) => {
-        if (have.has(s.id) || isClassFeature(s)) return false;
-        // The switch governs every list drawn from a compendium, and this is
-        // the one a new player meets first.
-        if (!homebrew && !isCore(s.name)) return false;
-        // Any of this character's casting classes, not just the first.
-        if (!casters.some((c) => castableBy(s, c.id))) return false;
-        // Nothing you could not cast: a spell above your best slot is not a
-        // choice, it is a tease.
-        if (s.level > topSlot + 1) return false;
-        if (q && !s.name.toLowerCase().includes(q)) return false;
-        return true;
-      })
-      .sort(byBookOrder);
-  }, [book, klass, castsAtAll, spellFilter, chosenSpells, atLevel, homebrew]);
+    /*
+     * One list per casting class, not one pooled list.
+     *
+     * A Wizard 2 / Cleric 1 has two allowances and two books, and offering
+     * the two added together let a wizard fill their cleric's cantrips with
+     * wizard cantrips. The tables say how many of each; this says which.
+     */
+    return (classId: string, top: number) =>
+      book
+        .filter((s) => {
+          if (have.has(s.id) || isClassFeature(s)) return false;
+          // The switch governs every list drawn from a compendium, and this
+          // is the one a new player meets first.
+          if (!homebrew && !isCore(s.name)) return false;
+          if (!castableBy(s, classId, { homebrew })) return false;
+          // Nothing you could not cast: a spell above your best slot is not
+          // a choice, it is a tease.
+          if (s.level > top + 1) return false;
+          if (q && !s.name.toLowerCase().includes(q)) return false;
+          return true;
+        })
+        .sort(byBookOrder);
+  }, [book, castsAtAll, spellFilter, chosenSpells, homebrew]);
+
+  /** The highest slot a class has at its own level. */
+  const topSlotOf = useCallback(
+    (id: string, lvl: number) => {
+      const slots = levels?.[id]?.[lvl - 1]?.slots ?? [];
+      for (let i = slots.length - 1; i >= 0; i--) if ((slots[i] ?? 0) > 0) return i;
+      return -1;
+    },
+    [levels],
+  );
 
   /**
    * What the class asks about itself. A cleric without a domain is not a
@@ -587,7 +621,9 @@ export function CreateCharacter({
           baseScores,
           ...(extras.length > 0 ? { extraClasses: extras } : {}),
           // The race's own skill counts as a proficiency like any other.
-          classSkills: [...new Set([...classSkills, ...raceSkills])],
+          classSkills: [
+            ...new Set([...classSkills, ...raceSkills, ...Object.values(mcSkills).flat()]),
+          ],
           level,
           /*
            * A variant human's feat is taken at level ONE, before any
@@ -642,6 +678,10 @@ export function CreateCharacter({
     ...(picksDone ? [] : classChoices.filter((c) => !classPicks[c.of]).map((c) => c.of.toLowerCase())),
     ...(allAssigned ? [] : ["every score assigned"]),
     ...(classSkills.length === skillsNeeded ? [] : [`${skillsNeeded} class skills`]),
+    ...extras.flatMap((c) => {
+      const owed = multiclassGrant(c.id)?.skills?.choose ?? 0;
+      return owed > (mcSkills[c.id]?.length ?? 0) ? [`${c.name}'s skill`] : [];
+    }),
   ];
 
   /**
@@ -1059,6 +1099,55 @@ export function CreateCharacter({
                     </div>
                   </>
                 )}
+
+            {/*
+              * And what the OTHER classes bring, which is not what they would
+              * have brought as a first class. A fighter taken at creation has
+              * two skills off its list; taken later it has none, and brings
+              * shields instead. Three classes grant a skill and the rest do
+              * not — see multiclassing.ts.
+              */}
+            {extras.length > 0 && (
+              <div className="mc-brings">
+                {extras.map((c) => {
+                  const grant = multiclassGrant(c.id);
+                  if (!grant) return null;
+                  const owed = grant.skills?.choose ?? 0;
+                  const taken = mcSkills[c.id] ?? [];
+                  const from =
+                    grant.skills && grant.skills.from.length > 0
+                      ? grant.skills.from
+                      : SKILL_IDS;
+                  return (
+                    <div className="mc-brought" key={c.id}>
+                      <p className="cr-note" style={{ marginTop: 0 }}>
+                        {describeGrant(c.name, grant)}
+                      </p>
+                      {owed > 0 && (
+                        <PickList
+                          label={`${c.name} skill`}
+                          verb="Train"
+                          options={from
+                            .filter((id) => !classSkills.includes(id) && !bgSkills.includes(id))
+                            .map(spaced)}
+                          chosen={taken.map(spaced)}
+                          max={owed}
+                          onChange={(picked) =>
+                            setMcSkills({
+                              ...mcSkills,
+                              [c.id]: picked.map(
+                                (nice) =>
+                                  SKILL_IDS.find((id) => spaced(id) === nice) ?? (nice as SkillId),
+                              ),
+                            })
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -1462,7 +1551,7 @@ export function CreateCharacter({
                 </p>
               )}
               <span className="label cr-sub">Skills you are proficient in</span>
-              {[...new Set([...classSkills, ...bgSkills])].map((s) => (
+              {[...new Set([...classSkills, ...bgSkills, ...Object.values(mcSkills).flat()])].map((s) => (
                 <div className="cr-srow" key={s}>
                   <span>{spaced(s)}<span className="faint"> {SKILLS[s]}</span></span>
                   <span className="num">{formatModifier(mods[SKILLS[s]] + prof)}</span>
@@ -2097,16 +2186,23 @@ export function CreateCharacter({
                 )}
                 {chosenSpells.length > 0 && (
                   <div className="chips" style={{ marginBottom: 10 }}>
-                    {chosenSpells.map((sp) => (
-                      <button
-                        key={sp.id}
-                        className="chip on"
-                        aria-label={`Remove ${sp.name}`}
-                        onClick={() => setChosenSpells(chosenSpells.filter((x) => x.id !== sp.id))}
-                      >
-                        {sp.name}
-                      </button>
-                    ))}
+                    {casters.flatMap((c) =>
+                      (chosenByClass[c.id] ?? []).map((sp) => (
+                        <button
+                          key={`${c.id}:${sp.id}`}
+                          className="chip on"
+                          aria-label={`Remove ${sp.name}`}
+                          onClick={() =>
+                            setChosenByClass({
+                              ...chosenByClass,
+                              [c.id]: (chosenByClass[c.id] ?? []).filter((x) => x.id !== sp.id),
+                            })
+                          }
+                        >
+                          {sp.name}
+                        </button>
+                      )),
+                    )}
                   </div>
                 )}
 
@@ -2118,14 +2214,20 @@ export function CreateCharacter({
                   * carries its own search, and scrolls inside a fixed height
                   * so the step stays the same size whatever the class.
                   */}
-                {([["cantrip", "Cantrips"], ["spell", "Spells"]] as const).map(([kind, label]) => {
+                {casters.flatMap((caster) =>
+                  ([["cantrip", "Cantrips"], ["spell", "Spells"]] as const).map(([kind, label]) => {
                   const isCantrip = kind === "cantrip";
-                  if (isCantrip && cantripsKnown === 0) return null;
-                  if (!isCantrip && !hasSlots && spellsKnown === 0) return null;
+                  if (isCantrip && caster.cantrips === 0) return null;
+                  if (!isCantrip && !caster.slots && caster.known === 0) return null;
 
-                  const open = openPicker === kind;
-                  const taken = isCantrip ? pickedCantrips : pickedSpells;
-                  const limit = isCantrip ? cantripsKnown : spellsKnown;
+                  // Keyed by class as well as kind: two casters, four pickers.
+                  const key = `${caster.id}:${kind}`;
+                  const mine = chosenByClass[caster.id] ?? [];
+                  const open = openPicker === key;
+                  const taken = mine.filter((sp) =>
+                    isCantrip ? sp.level === 0 : sp.level > 0,
+                  ).length;
+                  const limit = isCantrip ? caster.cantrips : caster.known;
                   const full = limit > 0 && taken >= limit;
                   /*
                    * Capped per picker, not across both. Capping the shared
@@ -2134,22 +2236,26 @@ export function CreateCharacter({
                    * cantrips, so a wizard choosing their first spells was
                    * offered an empty list and no reason for it.
                    */
-                  const rows = spellChoices
+                  const rows = spellsFor(caster.id, topSlotOf(caster.id, caster.level))
                     .filter((sp) => (isCantrip ? sp.level === 0 : sp.level > 0))
                     .slice(0, 80);
 
                   return (
-                    <div className="chooser" key={kind}>
+                    <div className="chooser" key={key}>
                       <button
                         className={`chooser-hd${open ? " open" : ""}`}
                         aria-expanded={open}
-                        aria-label={`${label}, ${taken}${limit > 0 ? ` of ${limit}` : ""} chosen`}
+                        aria-label={`${
+                          casters.length > 1 ? `${caster.name} ` : ""
+                        }${label}, ${taken}${limit > 0 ? ` of ${limit}` : ""} chosen`}
                         onClick={() => {
-                          setOpenPicker(open ? null : kind);
+                          setOpenPicker(open ? null : key);
                           setSpellFilter("");
                         }}
                       >
-                        <span className="nm">{label}</span>
+                        <span className="nm">
+                          {casters.length > 1 ? `${caster.name} · ${label}` : label}
+                        </span>
                         <span className="faint num">
                           {limit > 0 ? `${taken} of ${limit}` : `${taken} chosen`}
                         </span>
@@ -2173,7 +2279,12 @@ export function CreateCharacter({
                               spells={rows}
                               actionLabel="Take it"
                               {...(full ? { disabled: () => `That is all ${limit}.` } : {})}
-                              onPick={(sp) => setChosenSpells([...chosenSpells, toKnown(sp)])}
+                              onPick={(sp) =>
+                                setChosenByClass({
+                                  ...chosenByClass,
+                                  [caster.id]: [...mine, toKnown(sp)],
+                                })
+                              }
                             />
                           </div>
                           {full && (
@@ -2185,7 +2296,8 @@ export function CreateCharacter({
                       )}
                     </div>
                   );
-                })}
+                  }),
+                )}
 
                 <p className="faint" style={{ fontSize: ".8rem", margin: "12px 0 0" }}>
                   {spellsKnown === 0 && hasSlots
@@ -2257,7 +2369,11 @@ export function CreateCharacter({
             <div className="rv-cols">
               <div>
                 <span className="label">Trained in</span>
-                <p>{[...new Set([...classSkills, ...bgSkills])].map(spaced).join(", ") || "—"}</p>
+                <p>
+                  {[...new Set([...classSkills, ...bgSkills, ...Object.values(mcSkills).flat()])]
+                    .map(spaced)
+                    .join(", ") || "—"}
+                </p>
               </div>
               <div>
                 <span className="label">Hit points</span>

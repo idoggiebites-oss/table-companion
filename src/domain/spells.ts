@@ -83,11 +83,28 @@ export function toKnown(s: SpellSource, prepared = true): KnownSpell {
  * hide Fireball from a Light cleric. Matching the leading word finds the base
  * class without pretending to understand subclasses.
  */
-export function castableBy(spell: SpellSource, classId: string): boolean {
+export function castableBy(
+  spell: SpellSource,
+  classId: string,
+  { homebrew = false }: { homebrew?: boolean } = {},
+): boolean {
   const want = classId.toLowerCase();
   // Tolerates an absent list: device-local content is never migrated, and a
   // record saved by an older import must not be able to blank the screen.
-  return (spell.classes ?? []).some((c) => c === want || c.startsWith(`${want} `));
+  return (spell.classes ?? []).some((c) => {
+    if (c === want) return true;
+    if (!c.startsWith(`${want} `)) return false;
+    /*
+     * A qualified entry names the SUBCLASS that grants it: "fighter (eldritch
+     * knight)", "cleric (pyre domain (hb))". The first is the game's own and
+     * belongs on a fighter's list; the second is somebody's homebrew domain,
+     * and matching it put Green-Flame Blade on every cleric's cantrips —
+     * along with Sacred Flame on every wizard's, from a UA wizard school.
+     *
+     * So a marked qualifier follows the same switch every other list does.
+     */
+    return homebrew || !/\((?:hb|tp|ua)\)/i.test(c);
+  });
 }
 
 /**
