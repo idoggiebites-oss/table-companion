@@ -2316,3 +2316,26 @@ textarea,
 }
 .hb-line { margin: 4px 0 0; font-size: 0.84rem; line-height: 1.45; }
 .hb-line:first-of-type { margin-top: 6px; }
+
+/* ---- can I re-roll ---- */
+/*
+ * Under the sheet rather than on it. Re-rolling is a rare, whole conversation
+ * with the DM — a control for it beside the hit points is one somebody
+ * presses by accident on the evening they meant to press Heal.
+ */
+.ask-edit {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 14px; padding: 12px 14px;
+  border: 1px dashed var(--line); border-radius: var(--r-card);
+  font-size: 0.86rem;
+}
+.ask-edit .faint { margin: 0; line-height: 1.45; }
+/* Granted reads as a door that is open, so it is not mistaken for the ask. */
+.ask-edit.granted { border-style: solid; border-color: var(--gold); }
+.ask-row {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--line);
+}
+.ask-row:last-of-type { border-bottom: 0; }
+.ask-row .nm { font-weight: 600; }
+.ask-row .why { flex: 1 1 160px; font-size: 0.82rem; }

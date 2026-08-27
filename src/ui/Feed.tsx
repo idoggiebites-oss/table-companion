@@ -76,6 +76,16 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return `${e.combatant.name} arrives`;
     case "combatantRenamed":
       return `Now called ${e.name}`;
+    /* The asking is in the log too — a character that changed without the
+       table noticing is what this exists to prevent. */
+    case "characterEditAsked":
+      return e.why?.trim()
+        ? `${e.whoName} asks to change their character — ${e.why.trim()}`
+        : `${e.whoName} asks to change their character`;
+    case "characterEditAnswered":
+      return e.granted ? "The DM said yes" : "The DM said no";
+    case "characterRebuilt":
+      return `${e.character.base.name} was rebuilt`;
     case "homebrewItemSaved":
       return `${e.item.name} written up`;
     case "homebrewItemDeleted":

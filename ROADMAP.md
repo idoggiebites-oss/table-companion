@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 829 unit tests, 58 browser suites, ~1,090 assertions, run against a
+**Proof.** 836 unit tests, 59 browser suites, ~1,090 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -101,6 +101,15 @@ spread across the other modules.
    the other side of the screen.
 
 ## Done since this list was written
+
+**"Can I re-roll?"** A character was built once and then only ever added to;
+a player who put their 15 in the wrong place on their first evening was stuck
+with it. It is law two's shape — the player asks, the DM answers — and a grant
+is spent by using it. The rebuild replaces the build at the level they had
+reached and keeps everything that is not the build: hit points, what they are
+carrying, their notes. The wound comes with them rather than being healed by
+paperwork.
+
 
 **The homebrew tool makes things, not only creatures.** A magic sword used to
 live in somebody's notes: it could not be carried, equipped, swung, priced or

@@ -30,6 +30,7 @@ import { addItem, removeItem, type Stack , type Item } from "./items.js";
 import { sellOne, type Npc } from "./npc.js";
 import { levelForXp, type Progression } from "./progression.js";
 import type { Statblock } from "./statblock.js";
+import type { EditAsk } from "./editask.js";
 import { rulesFor, type ConditionId } from "./edition.js";
 import { resolveRoll } from "./roll.js";
 import type { DomainEvent, EventId } from "./events.js";
@@ -97,6 +98,8 @@ export interface CampaignState {
   readonly stash: { readonly items: readonly Stack[]; readonly coins: number };
   /** Attacks a player has rolled, waiting for the DM to say they land. */
   readonly claims: readonly AttackClaim[];
+  /** "Can I re-roll?" — asked by a player, answered by the DM. */
+  readonly editAsks: readonly EditAsk[];
   /** Rolls the DM has asked the table for. */
   readonly checks: readonly CheckRequest[];
   readonly progression: Progression;
@@ -338,6 +341,80 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       };
     case "checkClosed":
       return { ...state, checks: state.checks.filter((c) => c.id !== e.checkId) };
+    /*
+     * "Can I re-roll?" — the ask, the answer, and the rebuild.
+     *
+     * All three are campaign-level rather than per-character: the ASK is not
+     * a change to a sheet, and the rebuild replaces a build rather than
+     * editing one, so neither belongs in the per-character replay below.
+     */
+    case "characterEditAsked":
+      return {
+        ...state,
+        editAsks: [
+          ...state.editAsks,
+          { id: e.id, who: e.who, whoName: e.whoName, at: e.at, ...(e.why ? { why: e.why } : {}) },
+        ],
+      };
+    case "characterEditAnswered":
+      return {
+        ...state,
+        editAsks: state.editAsks.map((a) =>
+          a.id === e.askId ? { ...a, granted: e.granted } : a,
+        ),
+      };
+    case "characterRebuilt": {
+      const had = state.builds[e.who];
+      if (!had) return state;
+      /*
+       * Everything that is not the build survives, because it lives
+       * elsewhere: hit points, inventory, conditions and notes are campaign
+       * state under the same id. A re-roll changes who they are on paper,
+       * not that they are standing there.
+       */
+      const rebuilt = effectiveBuild(e.character);
+      const standing = state.characters[e.who];
+      return {
+        ...state,
+        sources: { ...state.sources, [e.who]: e.character },
+        /*
+         * The derived build has to be recomputed here. Replacing the source
+         * alone left the sheet showing the old class — sources is what the
+         * build derives FROM, and nothing re-derives it on its own.
+         */
+        builds: { ...state.builds, [e.who]: rebuilt },
+        characters: standing
+          ? {
+              ...state.characters,
+              [e.who]: {
+                ...standing,
+                /*
+                 * A new maximum, and the damage they had taken carried over
+                 * rather than the sheet quietly healing them. Re-rolling as
+                 * a wizard does not close a wound — and a smaller maximum
+                 * must not leave them above it.
+                 */
+                /*
+                 * Never below 1: a character does not fall unconscious
+                 * because of paperwork. If the new maximum is smaller than
+                 * the wound they were carrying, they are at 1 and the table
+                 * can decide what that means.
+                 */
+                currentHp: Math.max(
+                  1,
+                  Math.min(
+                    rebuilt.maxHp,
+                    rebuilt.maxHp - (had.maxHp - standing.currentHp),
+                  ),
+                ),
+              },
+            }
+          : state.characters,
+        editAsks: state.editAsks.map((a) =>
+          a.id === e.askId ? { ...a, used: true } : a,
+        ),
+      };
+    }
     case "attackClaimed":
       return state.claims.some((c) => c.id === e.claim.id)
         ? state
@@ -973,7 +1050,8 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
 
 export const EMPTY_STATE: CampaignState = {
   sources: {}, builds: {}, characters: {}, combat: null,
-  encounters: {}, scenes: {}, homebrew: {}, homebrewItems: {}, notes: {}, progression: "xp",
+  encounters: {}, scenes: {}, homebrew: {}, homebrewItems: {}, notes: {},
+  editAsks: [], progression: "xp",
   npcs: {}, openTrader: null, stash: { items: [], coins: 0 }, claims: [], checks: [],
 };
 

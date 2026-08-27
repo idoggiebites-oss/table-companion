@@ -132,8 +132,19 @@ function labelFor(kinds: readonly ToolKind[]): string {
 }
 
 export function CreateCharacter({
-  onCreate, onCancel,
+  onCreate, onCancel, startLevel = 1, rebuilding = false,
 }: {
+  /*
+   * The level to open at.
+   *
+   * A re-roll is a fresh character at the level they had REACHED, and this
+   * form defaults to 1 — so the first rebuild produced a level 1 wizard with
+   * eight hit points and knocked them unconscious on the spot. The level is
+   * not the player's to change here; it is what they already were.
+   */
+  startLevel?: number;
+  /** Says so on the screen, since "Create character" is the wrong verb. */
+  rebuilding?: boolean;
   onCreate: (
     c: Character,
     starting?: {
@@ -166,7 +177,7 @@ export function CreateCharacter({
   const [picks, setPicks] = useState<Record<number, string>>({});
   /** What was chosen to satisfy "a martial weapon", keyed choice:phrase. */
   const [catPicks, setCatPicks] = useState<Record<string, string>>({});
-  const [level, setLevel] = useState(1);
+  const [level, setLevel] = useState(startLevel);
 
   const [name, setName] = useState("");
   const [classId, setClassId] = useState<string>("");
@@ -2578,7 +2589,7 @@ export function CreateCharacter({
               disabled={gaps.length > 0 || !choices}
               onClick={() => finish()}
             >
-              Create character
+              {rebuilding ? "Replace my character" : "Create character"}
             </button>
           ) : (
             <button className="cr-on" onClick={() => go(stepIndex + 1)}>

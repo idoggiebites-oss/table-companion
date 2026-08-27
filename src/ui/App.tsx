@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Character } from "../domain/build.js";
+import type { Character, CharacterId } from "../domain/build.js";
 import type { Stack } from "../domain/items.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { actorKey } from "../domain/permissions.js";
@@ -26,6 +26,8 @@ import { RoomBar } from "./RoomBar.js";
 import { Sheet } from "./Sheet.js";
 import { AnswerCheck } from "./AnswerCheck.js";
 import { AskCheck } from "./AskCheck.js";
+import { AskToRebuild, EditAsks } from "./EditAsk.js";
+import { grantToSpend } from "../domain/editask.js";
 import { Sources } from "./Sources.js";
 import { SpellLookup } from "./SpellLookup.js";
 import { Spells } from "./Spells.js";
@@ -60,6 +62,12 @@ export function App() {
   const wide = useWide();
   const [adding, setAdding] = useState(false);
   const [building, setBuilding] = useState(false);
+  /*
+   * Rebuilding an existing character rather than making a new one. Held as
+   * the character's id, because the rebuild has to replace THAT one — and
+   * because it is what tells `create` which of the two things it is doing.
+   */
+  const [rebuilding, setRebuilding] = useState<CharacterId | null>(null);
 
   // Events are signed by the seat, which is what makes one person editing
   // another's sheet acceptable rather than merely convenient.
@@ -308,6 +316,31 @@ export function App() {
      */
     sit = true,
   ) {
+    /*
+     * A re-roll rather than a new character. The base AND the deltas are
+     * replaced: the builder builds at any level, so this is a fresh
+     * character at the level they had reached, and a delta naming a class
+     * they no longer have would replay into nonsense.
+     *
+     * Everything that is not the build survives — hit points, inventory,
+     * conditions, notes — because it lives under the same id in campaign
+     * state. It changes who they are on paper, not that they are standing
+     * there.
+     */
+    if (rebuilding) {
+      const grant = grantToSpend(state.editAsks, rebuilding);
+      if (grant) {
+        append({
+          type: "characterRebuilt",
+          who: rebuilding,
+          character: { ...c, base: { ...c.base, id: rebuilding } },
+          askId: grant.id,
+        });
+      }
+      setRebuilding(null);
+      setBuilding(false);
+      return;
+    }
     append({ type: "characterAdded", character: c });
     // Worn and wielded straight away: a kit in a pack gives no attacks and no
     // armour class, and "go and equip something" is the hidden step this is
@@ -510,7 +543,15 @@ export function App() {
       <Boundary key={current} what={TAB_NAME[current]}>
       {needsCharacter ? (
         building ? (
-          <CreateCharacter onCreate={create} onCancel={() => setBuilding(false)} />
+          <CreateCharacter
+            onCreate={create}
+            /* A re-roll is a fresh character at the level they REACHED. The
+               form defaults to 1, which made the first rebuild a level 1
+               wizard with eight hit points. */
+            startLevel={rebuilding ? (state.builds[rebuilding]?.totalLevel ?? 1) : 1}
+            rebuilding={rebuilding !== null}
+            onCancel={() => { setBuilding(false); setRebuilding(null); }}
+          />
         ) : (
           <>
             <section className="card">
@@ -584,6 +625,9 @@ export function App() {
                       <NewCharacter onCreate={create} />
                     </>
                   )}
+                  {/* What is waiting on the DM to answer. Above the party,
+                      because it is a question somebody asked. */}
+                  <EditAsks asks={state.editAsks} append={append} />
                   <Party state={state} seat={seat} append={append} />
                   <AskCheck state={state} append={append} />
                   <Progression state={state} append={append} />
@@ -620,6 +664,19 @@ export function App() {
                     append={append}
                   />
                   <Sheet build={mine} state={mineState} campaign={state} append={append} />
+                  {/*
+                    * Under the sheet, not on it. Re-rolling is a rare, whole
+                    * conversation with the DM, and a button for it beside the
+                    * hit points is a button somebody presses by accident on
+                    * the evening they meant to press Heal.
+                    */}
+                  <AskToRebuild
+                    who={mine.id}
+                    name={mine.name}
+                    asks={state.editAsks}
+                    append={append}
+                    onRebuild={() => { setRebuilding(mine.id); setBuilding(true); }}
+                  />
                 </>
               )}
 

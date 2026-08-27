@@ -42,6 +42,40 @@ interface Meta {
 export type DomainEvent = Meta &
   (
     | { readonly type: "characterAdded"; readonly character: Character }
+    /*
+     * "Can I re-roll?" — law two's shape, the same as an attack: the player
+     * claims, the DM confirms. A character that changed without the table
+     * noticing is the sort of thing discovered three weeks later in an
+     * argument, so the asking is an event too.
+     */
+    | {
+        readonly type: "characterEditAsked";
+        readonly who: CharacterId;
+        readonly whoName: string;
+        readonly why?: string;
+      }
+    | {
+        readonly type: "characterEditAnswered";
+        readonly askId: string;
+        readonly granted: boolean;
+      }
+    /*
+     * The rebuild itself, carrying the whole character. Base AND deltas are
+     * replaced: the builder can build at any level, so a re-roll is a fresh
+     * character at the level they had reached — and a delta naming a class
+     * they no longer have would replay into nonsense.
+     *
+     * Everything that is not the build survives, because it lives elsewhere:
+     * hit points, inventory, conditions and notes are campaign state keyed by
+     * the same character id.
+     */
+    | {
+        readonly type: "characterRebuilt";
+        readonly who: CharacterId;
+        readonly character: Character;
+        /** The grant this spends, so a door opened once closes once. */
+        readonly askId: string;
+      }
     | { readonly type: "damageApplied"; readonly who: CharacterId; readonly amount: number }
     | { readonly type: "healingApplied"; readonly who: CharacterId; readonly amount: number }
     | { readonly type: "tempHpGranted"; readonly who: CharacterId; readonly amount: number }
