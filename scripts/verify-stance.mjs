@@ -101,7 +101,7 @@ await backOut();
 const goblinRow = dm.page.locator(".cbt", { hasText: "Goblin" });
 await goblinRow.getByRole("button", { name: "Add a condition" }).click();
 await dm.page.waitForTimeout(300);
-await dm.page.locator(".cnd-pick .cnd", { hasText: "prone" }).click();
+await dm.page.locator(".pop-pane .cnd", { hasText: "prone" }).click();
 await dm.page.waitForTimeout(900);
 ok("the DM can say what is wrong with a creature",
   (await goblinRow.locator(".cnd.on").innerText()).toLowerCase(), "prone");

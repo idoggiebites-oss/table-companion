@@ -200,6 +200,22 @@ switch, the monster piles, and the DM's spell lookup.
   are per-scene and per-player. Same judgement, same test.
 
 
+## Asked for, and not yet designed
+
+- **A map screen.** Raised deliberately against law 4, which refuses one. The
+  shape asked for is not a battle map: a DM makes *map items* — a custom
+  image a player can open, zoom and pan, and pass to another player — as a
+  thing the party shares rather than a surface the fight is resolved on. That
+  distinction is the whole question, and it is a real one: a hand-drawn map of
+  the town, passed round, is a prop. Tokens on a grid is the app becoming what
+  everyone looks at.
+
+  What has to be settled before any of it is built: whether creatures ever
+  appear on it (law 4 says no), whether the DM can hide parts of it, where the
+  image lives given a Worker and a Durable Object with no blob store, and what
+  happens on a phone in a cellar with no signal. Not started — see VISION.md,
+  which will need amending or explicitly excepting either way.
+
 ## Known and unfixed
 
 - **44px is a rule the code keeps forgetting.** Four separate controls have

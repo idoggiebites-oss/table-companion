@@ -16,6 +16,8 @@ import type { EventBody } from "../domain/events.js";
 import {
   equippedItems, indexItems, type Item, type Stack,
 } from "../domain/items.js";
+import { displacedBy, usesBothHands } from "../domain/equipment.js";
+import { Popover } from "./Popover.js";
 import {
   HELD, rarityOf, rarityStep, slotFor, SLOTS, WORN, worn as fill,
   type SlotId,
@@ -40,6 +42,14 @@ export function Doll({
   );
   const { slots, elsewhere } = useMemo(() => fill(on), [on]);
 
+  /*
+   * The weapon that has taken both hands, if there is one. A greatsword in
+   * the main hand does not leave an empty off hand to fill — it leaves no
+   * off hand at all, and drawing an inviting empty box there was the app
+   * offering something the rules do not.
+   */
+  const bothHands = on.find(usesBothHands);
+
   /** What could go in this slot, out of what is actually carried. */
   const candidates = (id: SlotId): Item[] => {
     const taken = new Set<SlotId>(
@@ -58,19 +68,32 @@ export function Doll({
         const slot = SLOTS.find((s) => s.id === id)!;
         const item = slots[id];
         const rarity = item ? rarityOf(item) : null;
+        /* No off hand at all, rather than an empty one — a greatsword is
+           already in it. An inviting empty box here offered something the
+           rules do not. */
+        const spoken = id === "off" && !item && bothHands;
         return (
           <button
             key={id}
-            className={`dl-slot${item ? "" : " empty"}${open === id ? " on" : ""}`}
+            className={`dl-slot${item ? "" : " empty"}${spoken ? " taken" : ""}${open === id ? " on" : ""}`}
             data-rarity={rarity ? rarityStep(item!) : 0}
-            aria-label={item ? `${slot.name}: ${item.name}` : `${slot.name}, empty`}
+            aria-label={
+              item
+                ? `${slot.name}: ${item.name}`
+                : spoken
+                  ? `${slot.name}, holding ${bothHands.name}`
+                  : `${slot.name}, empty`
+            }
             aria-expanded={open === id}
+            disabled={Boolean(spoken)}
             onClick={() => setOpen(open === id ? null : id)}
           >
             <span className="g">{slot.glyph}</span>
             <span className="t">
               <span className="n">{item ? item.name : slot.name}</span>
-              <span className="s">{item ? said(item) : "empty"}</span>
+              <span className="s">
+                {item ? said(item) : spoken ? `both hands on the ${bothHands.name.toLowerCase()}` : "empty"}
+              </span>
             </span>
           </button>
         );
@@ -101,9 +124,21 @@ export function Doll({
         {column(HELD)}
       </div>
 
-      {slot && (
-        <div className="dl-pick">
-          <span className="label">{slot.name}</span>
+      {/*
+        * Over the figure, not under it.
+        *
+        * Choosing what to wear opened a list INSIDE the panel, which pushed
+        * the figure — the thing you are choosing FOR — off the top of a
+        * phone. You picked a helm while looking at your own boots.
+        */}
+      <Popover
+        open={slot !== null}
+        title={slot ? slot.name : ""}
+        onClose={() => setOpen(null)}
+        done="Close"
+      >
+        {slot && (
+          <>
           {held ? (
             <>
               <p className="dl-what">
@@ -128,6 +163,11 @@ export function Doll({
                   className="dl-row"
                   aria-label={`Wear ${i.name}`}
                   onClick={() => {
+                    /* Both hands means both hands. Whatever was in the other
+                       one comes off first, as its own event. */
+                    for (const off of displacedBy(i, on)) {
+                      append({ type: "itemUnequipped", who, itemId: off.id, name: off.name });
+                    }
                     append({ type: "itemEquipped", who, itemId: i.id, name: i.name });
                     setOpen(null);
                   }}
@@ -142,8 +182,9 @@ export function Doll({
               Nothing in the bag goes here. {slot.what}.
             </p>
           )}
-        </div>
-      )}
+          </>
+        )}
+      </Popover>
 
       {elsewhere.length > 0 && (
         <div className="dl-else">

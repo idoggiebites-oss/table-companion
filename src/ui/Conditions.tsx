@@ -17,6 +17,7 @@
  */
 
 import { useState } from "react";
+import { Popover } from "./Popover.js";
 import type { ConditionId } from "../domain/edition.js";
 import { rulesFor } from "../domain/edition.js";
 
@@ -64,35 +65,36 @@ export function ConditionStrip({
         * the initiative track. Opening it used to push every row below it
         * down half a screen, mid-fight, while somebody was reading them.
         */}
-      {open && (
-        <>
-          <button
-            className="cnd-back"
-            aria-label="Close the conditions"
-            onClick={() => setOpen(false)}
-          />
-          <div className="cnd-pick" role="dialog" aria-label={`Conditions for ${who ?? "it"}`}>
-            <span className="label">What is wrong with {who ?? "it"}</span>
-            <div className="cnd-list">
-              {all
-                .filter((c) => !on.includes(c))
-                .map((c) => (
-                  <button
-                    key={c}
-                    className="cnd"
-                    onClick={() => {
-                      onAdd(c);
-                      setOpen(false);
-                    }}
-                  >
-                    {c}
-                  </button>
-                ))}
-            </div>
-            <button onClick={() => setOpen(false)}>Done</button>
-          </div>
-        </>
-      )}
+      {/*
+        * A sheet at the foot of the screen, not fourteen chips shoved into
+        * the initiative track. Opening it used to push every row below it
+        * down half a screen, mid-fight, while somebody was reading them.
+        *
+        * The pattern is Popover now, because this was not the only screen
+        * doing it inline.
+        */}
+      <Popover
+        open={open}
+        title={`What is wrong with ${who ?? "it"}`}
+        onClose={() => setOpen(false)}
+      >
+        <div className="cnd-list">
+          {all
+            .filter((c) => !on.includes(c))
+            .map((c) => (
+              <button
+                key={c}
+                className="cnd"
+                onClick={() => {
+                  onAdd(c);
+                  setOpen(false);
+                }}
+              >
+                {c}
+              </button>
+            ))}
+        </div>
+      </Popover>
     </div>
   );
 }

@@ -194,8 +194,31 @@ describe("attacks derived from weapons", () => {
     expect(attackFromWeapon(longbow).ability).toBe("dex");
   });
 
-  it("carries the versatile die as a note rather than a second attack", () => {
-    expect(attackFromWeapon(longsword).notes).toContain("1d10 in two hands");
+  /* This used to assert the opposite — the versatile die was carried as a
+     NOTE and then never rolled, so the sheet said "1d10 in two hands" and
+     handed you 1d8. Both grips are attacks now. */
+  it("rolls the versatile die when the weapon is held in two hands", () => {
+    expect(resolveAttack(attackFromWeapon(longsword), mods, 3).damageFormula)
+      .toContain("1d8");
+    expect(
+      resolveAttack(attackFromWeapon(longsword, undefined, { twoHands: true }), mods, 3)
+        .damageFormula,
+    ).toContain("1d10");
+  });
+
+  it("and names the grip, so two rows are not the same row twice", () => {
+    expect(attackFromWeapon(longsword, undefined, { twoHands: true }).name)
+      .toBe("Longsword, two-handed");
+  });
+
+  /* A shield is a hand. Offering the second grip beside one would be the app
+     handing out a swing nobody can take — and it already handed out the
+     armour class to go with it. */
+  it("offers both grips, but not while a shield is held", () => {
+    const free = attacksFromEquipment([longsword]).map((a) => a.name);
+    expect(free).toEqual(["Longsword", "Longsword, two-handed"]);
+    const shielded = attacksFromEquipment([longsword, shield]).map((a) => a.name);
+    expect(shielded).toEqual(["Longsword"]);
   });
 
   it("says when a weapon needs ammunition, and its range", () => {

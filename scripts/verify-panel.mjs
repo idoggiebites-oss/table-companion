@@ -104,20 +104,35 @@ ok("the hand offers only what a hand takes",
 await page.getByRole("button", { name: /^Wear Longbow/i }).click();
 await page.waitForTimeout(600);
 
-await page.getByRole("button", { name: "Off hand, empty" }).click();
+/* A longbow is held in both hands, so there is no off hand to fill — the
+   slot says which weapon has it rather than drawing an inviting empty box,
+   and it cannot be pressed. Equipping a shortsword there anyway would be a
+   picture of something that cannot happen. */
+ok("a two-handed weapon leaves no off hand",
+  await page.getByRole("button", { name: /^Off hand, holding Longbow/ }).count(), 1);
+ok("and it cannot be filled",
+  await page.getByRole("button", { name: /^Off hand, holding Longbow/ }).isDisabled(), true);
+
+/* Putting a one-handed weapon up takes the bow down, as its own event — a
+   swap is one tap and the log says both halves of it. */
+await page.getByRole("button", { name: /^Main hand: Longbow/ }).click();
+await page.waitForTimeout(300);
+await page.getByRole("button", { name: /^Take off Longbow/ }).click();
+await page.waitForTimeout(500);
+/* A lone weapon goes to the main hand — the off hand is for the SECOND one,
+   which is what slotFor means by "taken". */
+await page.getByRole("button", { name: "Main hand, empty" }).click();
 await page.waitForTimeout(300);
 await page.getByRole("button", { name: /^Wear Shortsword/i }).click();
 await page.waitForTimeout(600);
-ok("a second weapon lands in the other hand, not on top of the first",
-  await page.locator('.dl-slot[aria-label^="Main hand: Longbow"]').count(), 1);
-ok("both hands full", await page.locator(".dl-slot.empty").count(), 3);
+ok("a one-handed weapon goes up, and the other hand is free again",
+  await page.locator('.dl-slot[aria-label^="Main hand: Shortsword"]').count(), 1);
+ok("with a real empty off hand this time",
+  await page.getByRole("button", { name: "Off hand, empty" }).count(), 1);
 
 /* The case that forces the number to move. A shield is +2 on top of whatever
-   you were standing at, and it goes in the hand rather than on the body. */
-await page.getByRole("button", { name: /^Off hand: Shortsword/ }).click();
-await page.waitForTimeout(300);
-await page.getByRole("button", { name: /^Take off Shortsword/ }).click();
-await page.waitForTimeout(500);
+   you were standing at, and it goes in the hand rather than on the body —
+   the free one, beside the sword. */
 await page.getByRole("button", { name: "Off hand, empty" }).click();
 await page.waitForTimeout(300);
 await page.getByRole("button", { name: /^Wear Shield/i }).click();

@@ -156,3 +156,37 @@ export function searchItems(
     return true;
   });
 }
+
+/**
+ * Everything the app knows about a thing, in lines.
+ *
+ * For a press-and-hold, which is the phone gesture for "what is this". There
+ * is no prose to show: not one of the 10,760 items in the compendium carries
+ * a description, so this is assembled from the fields rather than quoted —
+ * and it says so, because an empty panel reads as a bug and "the data does
+ * not have this" reads as a fact.
+ */
+export function itemFacts(i: Item): readonly string[] {
+  const out: string[] = [];
+  const cat = i.detail && i.detail !== "common" ? `${i.category} · ${i.detail}` : i.category;
+  out.push(cat);
+  if (i.damage) {
+    out.push(
+      `${i.damage} ${i.damageType?.toLowerCase() ?? "damage"}` +
+        (i.twoHanded ? `, or ${i.twoHanded} in two hands` : ""),
+    );
+    if (i.weaponCategory) out.push(`${i.weaponCategory} ${i.weaponRange?.toLowerCase() ?? ""} weapon`.trim());
+  }
+  if (i.properties?.length) out.push(i.properties.join(", "));
+  if (i.range) out.push(`range ${i.range.normal}${i.range.long ? `/${i.range.long}` : ""} ft`);
+  if (i.baseAc !== undefined) {
+    out.push(
+      i.armorCategory === "Shield"
+        ? `+${i.baseAc} to armour class`
+        : `armour class ${i.baseAc}${i.dexBonus ? " + dexterity" : ""}`,
+    );
+    if (i.stealthDisadvantage) out.push("disadvantage on Stealth");
+  }
+  if (i.weight) out.push(`${i.weight} lb`);
+  return out;
+}

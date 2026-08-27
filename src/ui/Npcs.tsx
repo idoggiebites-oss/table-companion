@@ -37,6 +37,13 @@ export function Npcs({
   const [draft, setDraft] = useState<Npc>(blank);
   const [find, setFind] = useState("");
   const [price, setPrice] = useState("");
+  /*
+   * How many there are. Blank means an endless supply, which is the right
+   * default for a rope merchant and the wrong one for the only breastplate
+   * in the village — and the wrong one was the only one on offer, because
+   * this form hardcoded UNLIMITED and never asked.
+   */
+  const [qty, setQty] = useState("");
   const [picked, setPicked] = useState<Item | null>(null);
 
   const items = useCatalogue(loadEquipment, open && draft.trader);
@@ -57,16 +64,20 @@ export function Npcs({
 
   function addStock(item: Item) {
     const asked = parseCoins(price);
+    const wanted = Number(qty);
     const entry: StockEntry = {
       itemId: item.id,
       name: item.name,
       price: asked ?? item.cost,
-      qty: UNLIMITED,
+      // Blank, nonsense or zero all read as endless: a shop with none of a
+      // thing is a thing not on the shelf, which is what Remove is for.
+      qty: qty.trim() !== "" && Number.isFinite(wanted) && wanted > 0 ? Math.floor(wanted) : UNLIMITED,
     };
     setDraft({ ...draft, stock: [...draft.stock.filter((s) => s.itemId !== item.id), entry] });
     setFind("");
     setPicked(null);
     setPrice("");
+    setQty("");
   }
 
   return (
@@ -174,6 +185,29 @@ export function Npcs({
                 <div className="inv-row" key={s.itemId}>
                   <span className="nm">{s.name}</span>
                   <span className="faint num">{describeStock(s)}</span>
+                  {/* A shelf changes between sessions. Re-adding the item to
+                      change the count would also lose the asking price. */}
+                  <input
+                    type="number"
+                    min={0}
+                    value={s.qty < 0 ? "" : s.qty}
+                    aria-label={`How many ${s.name}`}
+                    placeholder="any"
+                    style={{ flex: "0 0 70px", width: "auto" }}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      const next =
+                        e.target.value.trim() !== "" && Number.isFinite(n) && n >= 0
+                          ? Math.floor(n)
+                          : UNLIMITED;
+                      setDraft({
+                        ...draft,
+                        stock: draft.stock.map((x) =>
+                          x.itemId === s.itemId ? { ...x, qty: next } : x,
+                        ),
+                      });
+                    }}
+                  />
                   <button
                     aria-label={`Remove ${s.name} from stock`}
                     onClick={() =>
@@ -202,6 +236,17 @@ export function Npcs({
                   placeholder={picked ? formatPrice(picked.cost) : "price"}
                   style={{ flex: "0 0 88px", width: "auto" }}
                   onChange={(e) => setPrice(e.target.value)}
+                />
+                {/* Blank is endless, which is right for rope and wrong for
+                    the only breastplate in the village. */}
+                <input
+                  type="number"
+                  min={1}
+                  value={qty}
+                  aria-label="How many"
+                  placeholder="any"
+                  style={{ flex: "0 0 74px", width: "auto" }}
+                  onChange={(e) => setQty(e.target.value)}
                 />
               </div>
               {/* The point of a trader is that THIS one charges more. */}

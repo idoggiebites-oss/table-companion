@@ -1273,20 +1273,8 @@ html, body { overscroll-behavior-y: none; }
   font-size: 0.7rem; letter-spacing: 0.02em;
 }
 .cnd.on { color: var(--ink-dim); border-color: var(--bloodied); }
-/* The picker is a sheet under the thumb, like the roll pad — not fourteen
-   chips wedged into the initiative track, shoving every row below it down. */
-.cnd-back {
-  position: fixed; inset: 0; z-index: 29;
-  background: #0009; border: 0; border-radius: 0; padding: 0;
-}
-.cnd-pick {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
-  background: var(--panel); border-top: 1px solid var(--gold);
-  border-radius: var(--r-card) var(--r-card) 0 0;
-  max-height: 62vh; overflow-y: auto;
-}
+/* Moved to the Popover section — the conditions picker was not the only
+   screen opening a chooser inline and shoving everything below it down. */
 .cnd-list { display: flex; flex-wrap: wrap; gap: 7px; }
 .cnd-list .cnd { min-height: 44px; padding: 6px 12px; font-size: 0.78rem; }
 .cnd.add { color: var(--muted); min-width: 26px; }
@@ -2216,4 +2204,58 @@ html, body { overscroll-behavior-y: none; }
 .stance-why {
   margin: 6px 0 0; font-size: 0.84rem; line-height: 1.45;
   color: var(--accent);
+}
+
+/* ---- a hand that is not free ---- */
+/*
+ * A greatsword does not leave an empty off hand to fill; it leaves no off
+ * hand. Drawn as spoken-for rather than as an inviting empty box, because
+ * the empty box was the app offering something the rules do not.
+ */
+.dl-slot.taken { opacity: 0.62; border-style: dashed; }
+
+/* ---- a sheet under the thumb ---- */
+/*
+ * Opening a chooser INSIDE the page pushes everything below it down half a
+ * screen, mid-session, while somebody is reading it — and then you scroll
+ * back to find where you were. Over the page instead: what you were looking
+ * at stays put, and closing leaves nothing moved.
+ *
+ * At the bottom because that is where thumbs are. On a wide screen it stops
+ * short of full width, so it reads as a sheet over the page rather than as
+ * the page having changed.
+ */
+.pop-back {
+  position: fixed; inset: 0; z-index: 29;
+  background: #0009; border: 0; border-radius: 0; padding: 0;
+}
+.pop-pane {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--panel); border-top: 1px solid var(--gold);
+  border-radius: var(--r-card) var(--r-card) 0 0;
+  max-height: 62vh; overflow-y: auto;
+  animation: pop-rise 160ms ease-out;
+}
+/* The body scrolls, not the pane, so the title and the way out stay put. */
+.pop-body { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+@keyframes pop-rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pop-pane { animation: none; } }
+@media (min-width: 760px) {
+  .pop-pane {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: min(560px, 94vw); bottom: 18px;
+    border: 1px solid var(--gold); border-radius: var(--r-card);
+  }
+  @keyframes pop-rise {
+    from { transform: translate(-50%, 14px); opacity: 0; }
+    to { transform: translateX(-50%); opacity: 1; }
+  }
+}
+
+/* Rules text inside a sheet: prose, not a control. */
+.pop-text {
+  margin: 0; font-size: 0.86rem; line-height: 1.5; color: var(--ink-dim);
+  white-space: pre-wrap;
 }

@@ -169,33 +169,58 @@ await page.waitForTimeout(500);
 const list = await attacks();
 ok("drawing a second weapon adds a second attack", list.length, 2);
 const sword = list.find((t) => t.startsWith("Longsword")) ?? "";
-ok("with its damage and the versatile die",
+/* A shield is up, so only the one-handed grip is offered — the versatile die
+   used to be printed as a note here and then never rolled. */
+ok("with its damage and the grip it is actually held in",
   sword.replace(/\s+/g, " "),
-  "Longsword 1d8+3 slashing · 1d10 in two hands +5");
+  "Longsword 1d8+3 slashing · one hand +5");
 ok("and the derived bonus — str +3, proficiency +2",
   await page.locator(".gear-atk", { hasText: "Longsword" }).locator(".m").innerText(), "+5");
+ok("and no two-handed row, because a shield is a hand",
+  list.some((t) => /two-handed/i.test(t)), false);
 
+/* Take the shield off and the second grip appears — 1d10, rolled rather than
+   mentioned. This is the whole of the versatile rule and the app used to
+   print it and ignore it. */
+await page.getByRole("button", { name: "Put away Shield" }).click();
+await page.waitForTimeout(500);
+const freeHand = await attacks();
+const twoH = freeHand.find((t) => /two-handed/i.test(t)) ?? "";
+ok("a free hand offers the two-handed grip", twoH !== "", true);
+ok("and it rolls the bigger die", /1d10/.test(twoH), true);
+await page.getByRole("button", { name: "Equip Shield" }).click();
+await page.waitForTimeout(500);
+
+/* A longbow needs both hands, so putting it up takes down whatever was in
+   them — as its own event, so the log says so. */
 await addItem("Longbow");
 await page.getByRole("button", { name: "Equip Longbow" }).click();
-await page.waitForTimeout(500);
+await page.waitForTimeout(600);
 const both = await attacks();
-ok("and a third is a third", both.length, 3);
+ok("a two-handed weapon takes the hands it needs",
+  both.length, 1);
 ok("a bow uses dexterity, and says what it needs",
   (both.find((t) => t.startsWith("Longbow")) ?? "").replace(/\s+/g, " "),
   "Longbow 1d8+2 piercing · 150/600 ft · needs ammunition +4");
+/* And the shield went with them — which is the point: the app was handing
+   out +2 armour class for a hand that was holding a bow. */
+ok("including the shield, and its two points of armour",
+  Number(await strip().innerText()), 15 + 2);
 await page.screenshot({ path: `${OUT}/45-inventory.png`, fullPage: true });
 
 // --- putting it away is the same in reverse -------------------------------
 await page.getByRole("button", { name: "Put away Longbow" }).click();
 await page.waitForTimeout(500);
-ok("sheathing a weapon takes its attack away", (await attacks()).length, 2);
+ok("sheathing a weapon takes its attack away", (await attacks()).length, 0);
+await page.getByRole("button", { name: "Equip Longsword" }).click();
+await page.waitForTimeout(500);
 
 // Selling armour has to take the armour class with it, even while equipped.
 await page.getByRole("button", { name: "Drop Half Plate Armor" }).click();
 await page.waitForTimeout(500);
-// Unarmoured 12 plus the kit's shield, which is still worn.
+// Unarmoured 12, and the shield came off with the bow.
 ok("dropping worn armour drops its armour class too",
-  Number(await strip().innerText()), 14);
+  Number(await strip().innerText()), 12);
 
 // --- it survives a reload, because it is in the log ----------------------
 await page.reload({ waitUntil: "networkidle" });
@@ -204,13 +229,13 @@ await page.waitForTimeout(1200);
 await go(page, "gear");
 ok("the purse survived", await page.locator(".inv-purse").innerText(), "9 gp 5 sp");
 ok("so did what is drawn", (await attacks()).length, 2);
-ok("and the armour class it implies", Number(await strip().innerText()), 14);
+ok("and the armour class it implies", Number(await strip().innerText()), 12);
 
 // Gear and the sheet are two tabs onto the same character: equipping on one
 // has to be true on the other, or the split has quietly forked the numbers.
 await go(page, "sheet");
 ok("the sheet agrees with the gear screen",
-  await page.locator(".strip div", { hasText: "Armour" }).locator("b").innerText(), "14");
+  await page.locator(".strip div", { hasText: "Armour" }).locator("b").innerText(), "12");
 ok("and carries the same attacks",
   (await page.locator(".atk .n").allInnerTexts()).length, 2);
 

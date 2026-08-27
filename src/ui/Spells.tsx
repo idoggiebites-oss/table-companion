@@ -16,25 +16,58 @@
  * pretend, an empty state says where spells come from.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useHold } from "./useHold.js";
+import { Popover } from "./Popover.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
 import type { CharacterState } from "../domain/project.js";
 import {
   byBookOrder, canCast, castableBy, groupByLevel, isClassFeature, isReady, levelLabel,
   slotsFor, toKnown,
-  type KnownSpell, type SlotState,
+  type KnownSpell,
 } from "../domain/spells.js";
-import type { CompendiumSpell } from "../import/compendium.js";
 import type { Combat, Combatant } from "../domain/combat.js";
 import type { Stance, StanceReason } from "../domain/stance.js";
-import { costOf } from "../domain/spellcast.js";
 import { AimSpell } from "./AimSpell.js";
 import { useCasting } from "./useCasting.js";
 import { useHomebrew } from "./useHomebrew.js";
 import { HomebrewToggle } from "./HomebrewToggle.js";
 import { isCore } from "../domain/marks.js";
 import { SpellPick } from "./SpellPick.js";
+
+
+/**
+ * One spell, tappable to consider and holdable to read.
+ *
+ * The text is four hundred words and the row is forty pixels; printing it on
+ * every tile turns a list into a book, and putting it behind the tap collides
+ * with casting. A hold is the phone gesture for "what is this", costs nothing
+ * when unused, and cannot be hit by accident mid-turn.
+ */
+function SpellTile({
+  spell, able, open, onOpen, onRead, children,
+}: {
+  spell: KnownSpell;
+  able: boolean;
+  open: boolean;
+  onOpen: () => void;
+  onRead: () => void;
+  children: React.ReactNode;
+}) {
+  const hold = useHold(onRead);
+  return (
+    <button
+      className={`sp-tile${able ? " ready" : " no"}${open ? " on" : ""}`}
+      aria-label={`${spell.name}, ${able ? "ready" : "not ready"}`}
+      aria-expanded={open}
+      onClick={onOpen}
+      {...hold}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function Spells({
   build, state, append, combat, stanceAt, onCast,
@@ -66,6 +99,12 @@ export function Spells({
     { spell: KnownSpell; atLevel: number; ritual: boolean } | null
   >(null);
   const [open, setOpen] = useState<string | null>(null);
+  /*
+   * The spell somebody is holding down to read. Separate from `open`, which
+   * is "I am thinking about casting this" — a tap on this grid means cast,
+   * and a row that both casts and explains is a row nobody trusts.
+   */
+  const [reading, setReading] = useState<KnownSpell | null>(null);
 
   const { book, slots, costFor, canAfford, commit } = useCasting({
     build, state, combat, append,
@@ -241,12 +280,13 @@ export function Spells({
               {g.spells.map((s) => {
                 const able = isReady(s) && canCast(s, slots) && canAfford(s);
                 return (
-                  <button
-                    className={`sp-tile${able ? " ready" : " no"}${open === s.id ? " on" : ""}`}
+                  <SpellTile
                     key={s.id}
-                    aria-label={`${s.name}, ${able ? "ready" : "not ready"}`}
-                    aria-expanded={open === s.id}
-                    onClick={() => setOpen(open === s.id ? null : s.id)}
+                    spell={s}
+                    able={able}
+                    open={open === s.id}
+                    onOpen={() => setOpen(open === s.id ? null : s.id)}
+                    onRead={() => setReading(s)}
                   >
                     {s.concentration && <i className="conc" aria-hidden="true" />}
                     <span className="nm">{s.name}</span>
@@ -254,7 +294,7 @@ export function Spells({
                       <span className="cost">{s.level === 0 ? "cantrip" : levelLabel(s.level)}</span>
                       <span className="sc">{(s.school ?? "").slice(0, 3)}</span>
                     </span>
-                  </button>
+                  </SpellTile>
                 );
               })}
             </div>
@@ -327,6 +367,39 @@ export function Spells({
           </div>
         </section>
       )}
+
+      {/*
+        * What a hold found. The compendium's own words, unedited — this is a
+        * reference, and paraphrasing a spell is how a table ends up arguing
+        * with the app instead of with the book.
+        */}
+      <Popover
+        open={reading !== null}
+        title={reading?.name ?? ""}
+        onClose={() => setReading(null)}
+        done="Close"
+      >
+        {reading && (() => {
+          const full = (book ?? []).find((x) => x.id === reading.id);
+          return (
+            <>
+              <span className="faint">
+                {full
+                  ? `${full.level === 0 ? "Cantrip" : levelLabel(full.level)} · ${full.school} · ${full.time} · ${full.range}`
+                  : reading.level === 0 ? "Cantrip" : levelLabel(reading.level)}
+              </span>
+              {full?.text
+                ? full.text.split(/\n{2,}/).map((para, i) => (
+                    <p className="pop-text" key={i}>{para}</p>
+                  ))
+                : <p className="pop-text faint">
+                    No description shipped with this one — it came from a list
+                    that carried the name and the numbers only.
+                  </p>}
+            </>
+          );
+        })()}
+      </Popover>
 
       {aiming && combat && (
         <AimSpell

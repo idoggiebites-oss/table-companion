@@ -13,11 +13,14 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useHold } from "./useHold.js";
+import { Popover } from "./Popover.js";
 import type { EventBody } from "../domain/events.js";
 import {
-  countOf, isArmour, isShield, isWeapon, searchItems, type Catalogue, type Item, type Stack,
+  countOf, isArmour, isShield, isWeapon, itemFacts, searchItems, type Catalogue, type Item, type Stack,
 } from "../domain/items.js";
 import { formatCoins, formatPrice, parseCoins } from "../domain/money.js";
+import { displacedBy } from "../domain/equipment.js";
 
 const CATEGORIES = [
   { id: "", label: "All" },
@@ -30,6 +33,32 @@ const CATEGORIES = [
 /** Only things that DO something can be equipped. Rope cannot be worn. */
 function equippable(item: Item | undefined): boolean {
   return item !== undefined && (isWeapon(item) || isArmour(item) || isShield(item));
+}
+
+
+/**
+ * A thing's name, holdable.
+ *
+ * A tap on a row must keep meaning what it meant — nothing here — so "what is
+ * this" lives under a hold, which is the phone gesture for the question and
+ * cannot be hit by accident.
+ */
+function ItemName({
+  label, note, count, onRead,
+}: {
+  label: string;
+  note?: string | undefined;
+  count: number;
+  onRead?: (() => void) | undefined;
+}) {
+  const hold = useHold(onRead);
+  return (
+    <span className="nm" {...hold}>
+      {label}
+      {note && <> <span className="hb">{note}</span></>}
+      {count > 1 && <> <span className="faint num">×{count}</span></>}
+    </span>
+  );
 }
 
 export function Inventory({
@@ -59,6 +88,10 @@ export function Inventory({
   );
 
   const worn = inventory.filter((s) => equipped.includes(s.itemId));
+  /** The same list as things rather than as stacks, for the hands rule. */
+  const wornItems = worn.map((s) => catalogue[s.itemId]).filter((i) => i !== undefined);
+  /** What a hold is asking about. */
+  const [reading, setReading] = useState<Item | null>(null);
   const packed = inventory.filter((s) => !equipped.includes(s.itemId));
 
   const row = (s: Stack) => {
@@ -66,23 +99,34 @@ export function Inventory({
     const isOn = equipped.includes(s.itemId);
     return (
       <div className="inv-row" key={`${s.itemId}:${s.note ?? ""}`}>
-        <span className="nm">
-          {s.name}
-          {s.note && <> <span className="hb">{s.note}</span></>}
-          {s.qty > 1 && <> <span className="faint num">×{s.qty}</span></>}
-        </span>
+        {/* Hold the name to find out what it is. There is no prose to show —
+            not one of the 10,760 items carries a description — so it is the
+            fields, and the panel says so rather than looking empty. */}
+        <ItemName
+          label={s.name}
+          note={s.note}
+          count={s.qty}
+          {...(item ? { onRead: () => setReading(item) } : {})}
+        />
         {editable && equippable(item) && (
           <button
             className={isOn ? "on" : ""}
             aria-label={`${isOn ? "Put away" : "Equip"} ${s.name}`}
-            onClick={() =>
+            onClick={() => {
+              /* Both hands means both hands. Whatever was in the other one
+                 comes off first, as its own event, so the log says so. */
+              if (!isOn && item) {
+                for (const off of displacedBy(item, wornItems)) {
+                  append({ type: "itemUnequipped", who, itemId: off.id, name: off.name });
+                }
+              }
               append({
                 type: isOn ? "itemUnequipped" : "itemEquipped",
                 who,
                 itemId: s.itemId,
                 name: s.name,
-              })
-            }
+              });
+            }}
           >
             {isOn ? "Worn" : "Equip"}
           </button>
@@ -204,6 +248,32 @@ export function Inventory({
           </div>
         </div>
       )}
+      {/*
+        * What a hold found. There is no prose to quote — not one of the
+        * 10,760 items in the compendium carries a description — so this is
+        * assembled from the fields, and it says so. An empty panel reads as
+        * a bug; "the data does not have this" reads as a fact.
+        */}
+      <Popover
+        open={reading !== null}
+        title={reading?.name ?? ""}
+        onClose={() => setReading(null)}
+        done="Close"
+      >
+        {reading && (
+          <>
+            {itemFacts(reading).map((line) => (
+              <p className="pop-text" key={line}>{line}</p>
+            ))}
+            <p className="pop-text faint">
+              {formatPrice(reading.cost)} · the compendium ships no description
+              for items, so this is what the app knows rather than what a book
+              would say.
+            </p>
+          </>
+        )}
+      </Popover>
+
     </section>
   );
 }

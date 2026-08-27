@@ -131,8 +131,14 @@ const rowTop = async () =>
   Math.round((await dm.locator(".cbt").last().boundingBox()).y);
 const before = await rowTop();
 await dm.locator(".cbt", { hasText: "Ghoul 1" }).getByRole("button", { name: "Add a condition" }).click();
-await dm.waitForSelector(".cnd-pick", { timeout: 5000 });
-ok("the picker opens as a sheet", await dm.locator(".cnd-pick").count(), 1);
+await dm.waitForSelector(".pop-pane", { timeout: 5000 });
+ok("the picker opens as a sheet", await dm.locator(".pop-pane").count(), 1);
+/* Over the page, not inside it — the rows behind it must not have moved. */
+ok("and over the fight rather than inside it",
+  await dm.evaluate(() => {
+    const p = document.querySelector(".pop-pane");
+    return p ? getComputedStyle(p).position : "none";
+  }), "fixed");
 ok("and the initiative order stays where it was", await rowTop(), before);
 await dm.getByRole("button", { name: "prone", exact: true }).click();
 await dm.waitForTimeout(500);
