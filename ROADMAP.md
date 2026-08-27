@@ -71,7 +71,7 @@ official ones are grouped by the book that printed them — subclasses, races,
 backgrounds, feats and fighting styles alike — in publication order, with
 anything from outside those nineteen books kept last under "elsewhere". The
 compendium does not carry which book anything came from; that table is
-`books.ts`, 2014 rules only, 381 entries.
+`books.ts`, 2014 rules only, 433 entries.
 
 **The player.** Character building from level 1 or mid-campaign at any level,
 with class, race, background, abilities, skills, subclass, spells, feats and
