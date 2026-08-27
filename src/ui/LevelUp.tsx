@@ -28,6 +28,7 @@ import { isCore } from "../domain/marks.js";
 import { useSpellbook } from "./useCasting.js";
 import type { CharacterState } from "../domain/project.js";
 import { choicesBy, findChoices, ownerOf } from "../domain/subclass.js";
+import { byBook } from "../domain/books.js";
 import { castableBy, isClassFeature, toKnown, type KnownSpell } from "../domain/spells.js";
 import { effectsOf } from "../domain/featvariants.js";
 import type { EffectiveBuild } from "../domain/build.js";
@@ -433,7 +434,9 @@ export function LevelUp({
             * game's own are cards; everything else is behind a tap.
             */}
           {opening.map((c) => {
-            const core = c.options.filter((o) => isCore(o.name));
+            // On the FULL name: the display name has its marker stripped, so
+            // this filter matched everything and hid nothing.
+            const core = c.options.filter((o) => isCore(o.full));
             const shown = (homebrew || core.length === 0 ? c.options : core)
               .slice(0, openAll[c.of] ? 200 : 6);
             const hidden = (homebrew ? c.options.length : core.length) - shown.length;
@@ -441,22 +444,28 @@ export function LevelUp({
             return (
               <div className="lv-choice" key={c.of}>
                 <span className="label">{c.of}</span>
-                <div className="picks">
-                  {shown.map((o) => (
-                    <button
-                      key={o.name}
-                      className={`pick${pick[c.of] === o.name ? " on" : ""}`}
-                      aria-pressed={pick[c.of] === o.name}
-                      aria-label={`${c.of}: ${o.name}`}
-                      onClick={() => setPick({ ...pick, [c.of]: o.name })}
-                    >
-                      <span className="nm">{o.name}</span>
-                      {o.text && (
-                        <span className="faint">{o.text.slice(0, 90)}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                {/* Under the book that printed it — see books.ts. */}
+                {byBook(shown).map(([book, options]) => (
+                  <div className="lv-book" key={book}>
+                    <span className="label q">{book}</span>
+                    <div className="picks">
+                      {options.map((o) => (
+                        <button
+                          key={o.name}
+                          className={`pick${pick[c.of] === o.name ? " on" : ""}`}
+                          aria-pressed={pick[c.of] === o.name}
+                          aria-label={`${c.of}: ${o.name}`}
+                          onClick={() => setPick({ ...pick, [c.of]: o.name })}
+                        >
+                          <span className="nm">{o.name}</span>
+                          {o.text && (
+                            <span className="faint">{o.text.slice(0, 90)}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
                 <div className="row" style={{ marginTop: 8 }}>
                   {hidden > 0 && (
                     <button

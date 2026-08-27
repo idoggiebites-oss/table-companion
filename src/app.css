@@ -2003,3 +2003,7 @@ html, body { overscroll-behavior-y: none; }
 /* Every reason it might not work is a sentence, not a disabled control. */
 .buzz-say, .buzz-no { font-size: 0.78rem; color: var(--muted); margin: 0; }
 .buzz-no { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
+
+/* ---- which book it came from ---- */
+.lv-book + .lv-book { margin-top: 10px; }
+.lv-book > .label { display: block; margin-bottom: 5px; }

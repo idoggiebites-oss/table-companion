@@ -55,6 +55,7 @@ and a class table that carries every archetype ever written for it is read
 down to the one the character took.
 
 `compendium.ts` `content.ts` `bundled.ts` `srd.ts` `marks.ts` `subclass.ts`
+`books.ts`
 `non-srd.ts` · suites: `compendium` `import` `shipped` `builder-content`
 `guidance`
 

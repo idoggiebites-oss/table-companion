@@ -187,6 +187,70 @@ await go(page, "sheet");
 ok("the character is made from imported content and reads normally",
   (await page.locator(".hp-big").innerText()).includes("/"), true);
 
+
+/* --- subclasses, and where they came from --------------------------------
+
+   A complete compendium offers a ranger sixty-three archetypes and eight of
+   them are the game's own. The switch to hide the rest was there all along
+   and matched nothing: findChoices strips a name's trailing marker for the
+   menu, so "Bog Phantom (HB)" was tested as "Bog Phantom" and read as
+   official. And nothing anywhere said which BOOK an official one came from —
+   the compendium does not carry it. */
+// A fresh builder: the one above has already produced a character.
+await page.getByRole("button", { name: "Add character" }).click();
+await page.waitForTimeout(400);
+await page.getByRole("button", { name: "Build a character" }).click();
+await page.waitForSelector(".klass-cards", { timeout: 20000 });
+await atStep(page, "Class");
+await page.getByRole("button", { name: "Ranger", exact: true }).click();
+await page.waitForTimeout(500);
+await atStep(page, "Class");
+await page.locator('input[aria-label="Starting level"]').fill("5");
+await page.waitForTimeout(400);
+/* The class's own questions live on the Scores step, which needs a race
+   before it will render them. */
+await atStep(page, "Race");
+await page.selectOption('select[aria-label="Race"]', "human");
+await page.waitForTimeout(600);
+await atStep(page, "Scores");
+await page.waitForTimeout(500);
+
+/* This suite turned the compendium switch on earlier, which is the state it
+   was testing. Off again here: the claim is about what a player sees by
+   default. */
+const chooser = page.locator(".chooser", { hasText: "Ranger Archetype" }).first();
+const toggle = chooser.getByRole("button", { name: "Show homebrew and third-party content" });
+if ((await toggle.getAttribute("aria-pressed")) === "true") {
+  await toggle.click();
+  await page.waitForTimeout(400);
+}
+
+const archetypes = page.locator('select[aria-label="Ranger Archetype"]');
+await archetypes.first().scrollIntoViewIfNeeded();
+const shape = await archetypes.first().evaluate((el) => ({
+  groups: [...el.querySelectorAll("optgroup")].map((g) => g.label),
+  options: [...el.querySelectorAll("optgroup option")].map((o) => o.textContent),
+  loose: [...el.children].filter((c) => c.tagName === "OPTION").length,
+}));
+ok("a ranger is offered the eight the game printed", shape.options.length, 8);
+ok("and nothing from anybody else",
+  shape.options.some((n) => /bog phantom|trophy hunter|spellbreaker/i.test(n)), false);
+ok("grouped by the book that printed them",
+  shape.groups, ["Player's Handbook", "Xanathar's", "Tasha's", "Fizban's"]);
+ok("in publication order, not alphabetical",
+  shape.groups.indexOf("Xanathar's") < shape.groups.indexOf("Tasha's"), true);
+ok("with only 'choose…' loose outside a group", shape.loose, 1);
+console.log(`      ${shape.options.join(" · ")}`);
+
+/* The rest are not gone, they are behind the switch that always meant this. */
+ok("the rest are one press away", await toggle.count(), 1);
+await toggle.click();
+await page.waitForTimeout(500);
+const opened = await archetypes.first().evaluate(
+  (el) => [...el.querySelectorAll("optgroup option")].length,
+);
+ok("and turning it on brings them back", opened > 50, true);
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

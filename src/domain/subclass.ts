@@ -24,7 +24,17 @@ export interface ClassFeature {
 }
 
 export interface ChoiceOption {
+  /** As it should be READ: "Gloom Stalker", "Bog Phantom". */
   readonly name: string;
+  /**
+   * As the file WROTE it, marker and all: "Bog Phantom (HB)".
+   *
+   * The display name has the trailing parenthetical stripped, which is right
+   * for a menu and was quietly fatal for provenance: every homebrew archetype
+   * came out looking like the game's own, so a ranger was offered sixty-four
+   * subclasses of which fifty-six were somebody else's.
+   */
+  readonly full: string;
   readonly level: number;
   readonly text?: string;
 }
@@ -62,7 +72,12 @@ export function findChoices(features: readonly ClassFeature[]): ChoicePoint[] {
     if (!option) continue;
     const at = grouped.get(head) ?? [];
     if (!at.some((o) => o.name === option)) {
-      at.push({ name: option, level: f.level, ...(f.text ? { text: f.text } : {}) });
+      at.push({
+        name: option,
+        full: m[2]!.trim(),
+        level: f.level,
+        ...(f.text ? { text: f.text } : {}),
+      });
     }
     grouped.set(head, at);
   }

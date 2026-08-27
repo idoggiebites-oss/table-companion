@@ -77,6 +77,7 @@ import { Num } from "./Num.js";
 import { PickList } from "./PickList.js";
 import { SpellPick } from "./SpellPick.js";
 import { choicesBy, findChoices } from "../domain/subclass.js";
+import { byBook } from "../domain/books.js";
 import type { CompendiumFeat } from "../import/compendium.js";
 import {
   indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
@@ -1670,7 +1671,20 @@ export function CreateCharacter({
                * where you choose your subclass is not hiding them.
                */
               const q = (pickFilter[c.of] ?? "").trim().toLowerCase();
-              const allowed = c.options.filter((o) => homebrew || isCore(o.name));
+              /*
+               * On the FULL name, marker and all. The display name has its
+               * trailing parenthetical stripped for the menu, so filtering on
+               * it meant every homebrew archetype read as the game's own —
+               * this switch was here all along and matched nothing. A ranger
+               * was offered sixty-three subclasses; eight are official.
+               */
+              const allowed = c.options.filter((o) => homebrew || isCore(o.full));
+              /*
+               * How many the switch is ABOUT, not how many it is hiding right
+               * now — otherwise turning it on makes it vanish, and there is
+               * no way back to the game's own list.
+               */
+              const marked = c.options.filter((o) => !isCore(o.full)).length;
               const shown = (allowed.length > 0 ? allowed : c.options)
                 .filter((o) => !q || o.name.toLowerCase().includes(q));
               return (
@@ -1690,13 +1704,9 @@ export function CreateCharacter({
                         }
                       />
                     )}
-                    {c.options.length - allowed.length > 0 && (
+                    {marked > 0 && (
                       <div className="row" style={{ marginTop: 8 }}>
-                        <HomebrewToggle
-                          on={homebrew}
-                          hidden={c.options.length - allowed.length}
-                          onChange={setHomebrew}
-                        />
+                        <HomebrewToggle on={homebrew} hidden={marked} onChange={setHomebrew} />
                       </div>
                     )}
                     <select
@@ -1706,8 +1716,18 @@ export function CreateCharacter({
                       onChange={(e) => setClassPicks((p) => ({ ...p, [c.of]: e.target.value }))}
                     >
                       <option value="">choose…</option>
-                      {shown.slice(0, 200).map((o) => (
-                        <option key={o.name} value={o.name}>{o.name}</option>
+                      {/*
+                        * Grouped by the book it came from, in publication
+                        * order. The compendium does not carry that — see
+                        * books.ts — and without it a list of thirty officials
+                        * is thirty names with no shape.
+                        */}
+                      {byBook(shown).map(([book, options]) => (
+                        <optgroup key={book} label={book}>
+                          {options.slice(0, 120).map((o) => (
+                            <option key={o.name} value={o.name}>{o.name}</option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
