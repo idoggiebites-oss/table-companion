@@ -868,8 +868,22 @@ export function CreateCharacter({
    * and a linear flow that forbids it is worse than the scroll was.
    */
   const steps: { readonly id: string; readonly label: string; readonly done: boolean }[] = [
+    /*
+     * Who they are, then what they can do.
+     *
+     * Skills used to come second, before a race, a background or a single
+     * ability score existed — so the table it draws showed every total as
+     * the bare proficiency bonus, and the choice that is MEANT to be read
+     * off consequences ("+7 stealth") was read off nothing. It also asked
+     * about skills twice over: a background grants two and a race sometimes
+     * grants one, and picking class skills before either is how a player
+     * spends a choice on something they were about to be given.
+     *
+     * Class first because it is what makes everything after it advisable.
+     * Then race, then the background, then the numbers — and only then the
+     * skills, where every one of those has already had its say.
+     */
     { id: "class", label: "Class", done: klass !== undefined },
-    { id: "skills", label: "Skills", done: classSkills.length === skillsNeeded },
     {
       id: "race",
       label: "Race",
@@ -879,12 +893,13 @@ export function CreateCharacter({
         raceSkills.length >= freeSkills &&
         (!offersFeat || raceFeat !== null),
     },
+    { id: "background", label: "Story", done: bgSkills.length >= 2 && bgName.trim() !== "" },
     {
       id: "abilities",
       label: "Scores",
       done: allAssigned && improvementsDone && picksDone,
     },
-    { id: "background", label: "Story", done: bgSkills.length >= 2 && bgName.trim() !== "" },
+    { id: "skills", label: "Skills", done: classSkills.length === skillsNeeded },
     ...(castsAtAll ? [{ id: "spells", label: "Spells", done: true }] : []),
     { id: "gear", label: "Gear", done: gearMode !== "kit" || unpicked.length === 0 },
     { id: "review", label: "Review", done: gaps.length === 0 },

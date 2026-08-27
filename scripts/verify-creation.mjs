@@ -274,8 +274,20 @@ await flow.page.waitForTimeout(900);
 const landed = await flow.page.evaluate(() => ({
   rail: Math.round(document.querySelector(".cr-rail").getBoundingClientRect().top),
   anim: getComputedStyle(document.querySelector(".cr-steps")).animationName,
+  scrollY: Math.round(window.scrollY),
+  viewH: window.innerHeight,
 }));
-ok("and the next one opens with the steps in view", landed.rail < 200, true);
+/* Two claims, because one of them used to stand in for both and stopped
+   being true the moment a SHORT step followed a long one: the rail sat at
+   its natural 333 with nothing scrolled past, which is right, and an
+   assertion about its distance from the top called that a failure.
+
+   What is actually meant is that you are no longer where you were, and that
+   the steps are on screen — both of which hold whether the next step fills
+   the page or not. */
+ok("you are no longer at the bottom of the last step", landed.scrollY < before, true);
+ok("and the steps are on screen",
+  landed.rail >= 0 && landed.rail < landed.viewH, true);
 ok("arriving from the side it came from", landed.anim, "cr-arrive");
 
 await flow.page.getByRole("button", { name: "Back" }).click();

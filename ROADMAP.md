@@ -102,6 +102,13 @@ spread across the other modules.
 
 ## Done since this list was written
 
+**Who they are, then what they can do.** The builder asked for skills second —
+before a race, a background or a single ability score existed — so the table it
+draws showed every total as the bare proficiency bonus, and it asked about
+skills twice over, since a background grants two and some races grant one. The
+order is now class, race, story, scores, skills.
+
+
 **"Can I re-roll?"** A character was built once and then only ever added to;
 a player who put their 15 in the wrong place on their first evening was stuck
 with it. It is law two's shape — the player asks, the DM answers — and a grant

@@ -2329,6 +2329,17 @@ textarea,
   border: 1px dashed var(--line); border-radius: var(--r-card);
   font-size: 0.86rem;
 }
+/*
+ * Idle, it is one quiet button and no furniture. A bordered block with two
+ * lines of prose pushed the sheet back over the height the panel work fought
+ * to get under — 68px of permanent scenery for something a table does twice
+ * a campaign.
+ */
+.ask-edit.idle { padding: 0; border: 0; margin-top: 10px; }
+.ask-quiet {
+  width: 100%; font-size: 0.78rem; color: var(--muted);
+  background: none; border: 1px solid var(--line);
+}
 .ask-edit .faint { margin: 0; line-height: 1.45; }
 /* Granted reads as a door that is open, so it is not mistaken for the ask. */
 .ask-edit.granted { border-style: solid; border-color: var(--gold); }

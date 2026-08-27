@@ -62,10 +62,19 @@ export function AskToRebuild({
     );
   }
 
+  /*
+   * Idle, this is one quiet button and nothing else.
+   *
+   * It was a bordered block with two lines of prose, which pushed the sheet
+   * past the height the panel work fought to get under — 68px of permanent
+   * furniture for something a table does twice a campaign. The explanation
+   * belongs in the moment somebody asks for it, not on the screen forever.
+   */
   return (
-    <div className="ask-edit">
+    <div className={`ask-edit${open ? " asking" : " idle"}`}>
       {!open ? (
         <button
+          className="ask-quiet"
           aria-label="Ask to change my character"
           onClick={() => setOpen(true)}
         >

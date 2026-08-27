@@ -90,8 +90,12 @@ ok("tapping it again gives them all back", (await names()).length, all.length);
 await atStep(page, "Skills");
 ok("skills are a step of their own now",
   await page.locator(".skl").count(), 1);
+/* Named, not numbered. This pinned Skills to position 2 and broke the day
+   the order changed — the claim was only ever that skills are a step of
+   their own with a name on the rail, and where they sit in the flow is a
+   product decision this suite has no opinion about. */
 ok("named on the rail",
-  await page.getByRole("button", { name: /^Step 2, Skills$/ }).count(), 1);
+  await page.getByRole("button", { name: /^Step \d+, Skills$/ }).count(), 1);
 ok("and no longer buried under the class",
   await page.locator(".klass-cards").count(), 0);
 
