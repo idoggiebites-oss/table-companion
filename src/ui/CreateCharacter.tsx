@@ -437,10 +437,59 @@ export function CreateCharacter({
    * A wizard at 1 knows three cantrips and six spells; at 5 it is four and
    * more — asking the builder to know that is the point of having the table.
    */
-  const cantripsKnown = atLevel?.cantrips ?? 0;
-  const spellsKnown = atLevel?.known ?? 0;
-  const hasSlots = (atLevel?.slots ?? []).some((n) => n > 0);
-  const castsAtAll = cantripsKnown > 0 || spellsKnown > 0 || hasSlots;
+  /**
+   * Every class this character has, the first one included.
+   *
+   * The builder used to know about exactly one class and treat the rest as an
+   * afterthought bolted on at the review step: no subclass, no fighting
+   * style, no spells. A Fighter 3 / Wizard 2 was offered no spell step at
+   * all, because the question "does this character cast" was asked of the
+   * fighter.
+   */
+  const roster = useMemo(
+    () =>
+      klass
+        ? [
+            {
+              id: klass.id as ClassId,
+              name: klass.name,
+              hitDie: klass.hitDie as DieSize,
+              level,
+            },
+            ...extras,
+          ]
+        : [],
+    [klass, level, extras],
+  );
+
+  /**
+   * Which of this character's classes cast, and what each is owed.
+   *
+   * Asked of every class rather than the first, because "does this character
+   * cast" is not a question about the fighter half of a Fighter 3 / Wizard 2
+   * — and asking it that way is why that character was offered no spells at
+   * all.
+   */
+  const casters = useMemo(
+    () =>
+      roster
+        .map((c) => {
+          const row = levels?.[c.id]?.[c.level - 1];
+          return {
+            ...c,
+            cantrips: row?.cantrips ?? 0,
+            known: row?.known ?? 0,
+            slots: (row?.slots ?? []).some((n) => n > 0),
+          };
+        })
+        .filter((c) => c.cantrips > 0 || c.known > 0 || c.slots),
+    [roster, levels],
+  );
+
+  const cantripsKnown = casters.reduce((n, c) => n + c.cantrips, 0);
+  const spellsKnown = casters.reduce((n, c) => n + c.known, 0);
+  const hasSlots = casters.some((c) => c.slots);
+  const castsAtAll = casters.length > 0;
 
   const pickedCantrips = chosenSpells.filter((s) => s.level === 0).length;
   const pickedSpells = chosenSpells.filter((s) => s.level > 0).length;
@@ -465,7 +514,8 @@ export function CreateCharacter({
         // The switch governs every list drawn from a compendium, and this is
         // the one a new player meets first.
         if (!homebrew && !isCore(s.name)) return false;
-        if (!castableBy(s, klass.id)) return false;
+        // Any of this character's casting classes, not just the first.
+        if (!casters.some((c) => castableBy(s, c.id))) return false;
         // Nothing you could not cast: a spell above your best slot is not a
         // choice, it is a tease.
         if (s.level > topSlot + 1) return false;
@@ -480,16 +530,23 @@ export function CreateCharacter({
    * cleric, and the builder was making them.
    */
   const classChoices = useMemo(() => {
-    const table = klass && levels ? (levels[klass.id] ?? []) : [];
-    const feats = table.flatMap((row) =>
-      row.features.map((n) => ({
-        level: row.level,
-        name: n,
-        ...(row.texts?.[n] ? { text: row.texts[n]! } : {}),
-      })),
-    );
-    return choicesBy(findChoices(feats), level);
-  }, [klass, levels, level]);
+    if (!levels) return [];
+    return roster.flatMap((c) => {
+      const table = levels[c.id] ?? [];
+      const feats = table.flatMap((row) =>
+        row.features.map((n) => ({
+          level: row.level,
+          name: n,
+          ...(row.texts?.[n] ? { text: row.texts[n]! } : {}),
+        })),
+      );
+      return choicesBy(findChoices(feats), c.level).map((p) =>
+        // Two classes can both ask for a Fighting Style, so the key carries
+        // whose question it is — and so does the heading, once there are two.
+        roster.length > 1 ? { ...p, of: `${c.name} · ${p.of}` } : p,
+      );
+    });
+  }, [roster, levels]);
   const picksDone = classChoices.every((c) => classPicks[c.of]);
 
   /** Improvement levels this character has already passed. */
@@ -838,6 +895,86 @@ export function CreateCharacter({
           * like one question when they are two, and put a sixteen-row table
           * beneath a card you were still reading.
           */}
+        {/*
+          * Multiclassing, asked HERE rather than at the end.
+          *
+          * It used to be the last question on the review card, which made
+          * every class after the first a footnote: no subclass, no fighting
+          * style, no spells, and a Fighter 3 / Wizard 2 who was never
+          * offered a spell. Asked before the rest of the flow, the second
+          * class gets the same questions the first one does.
+          */}
+        {races && classes && at("class") && klass && (
+          <div className="card-body">
+            {classes && (
+              <div className="mc">
+                <div className="cnt" style={{ marginBottom: 8 }}>
+                  <span>Is this character more than one class?</span>
+                  <b>{level + extras.reduce((n, c) => n + c.level, 0)}</b>
+                </div>
+
+                {extras.map((c, i) => (
+                  <div className="mc-row" key={c.id}>
+                    <span className="nm">{c.name}</span>
+                    <Num
+                      min={1} max={19}
+                      aria-label={`${c.name} levels`}
+                      value={c.level}
+                      style={{ width: 70 }}
+                      onChange={(n) =>
+                        setExtras(extras.map((x, j) => (j === i ? { ...x, level: n } : x)))
+                      }
+                    />
+                    <button
+                      aria-label={`Remove ${c.name}`}
+                      onClick={() => setExtras(extras.filter((_, j) => j !== i))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+
+                {/* The rule cuts both ways, and people forget the first half. */}
+                {mcBlock && (
+                  <p className="lv-block" style={{ marginTop: 8 }}>{mcBlock}</p>
+                )}
+
+                <select
+                  aria-label="Add a class"
+                  value=""
+                  style={{ marginTop: 8 }}
+                  onChange={(e) => {
+                    const k = classes.find((x) => x.id === e.target.value);
+                    if (!k) return;
+                    setExtras([
+                      ...extras,
+                      {
+                        id: k.id as ClassId,
+                        name: k.name,
+                        hitDie: k.hitDie as DieSize,
+                        level: 1,
+                      },
+                    ]);
+                  }}
+                >
+                  <option value="">add another class…</option>
+                  {classes
+                    .filter(
+                      (k) =>
+                        k.id !== klass.id &&
+                        !extras.some((x) => x.id === k.id) &&
+                        (homebrew || !k.extra),
+                    )
+                    .map((k) => (
+                      <option key={k.id} value={k.id}>{k.name}</option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+          </div>
+        )}
+
         {races && classes && at("skills") && klass && (
           <div className="card-body">
             <span className="label cr-step">2 · Skills</span>
@@ -1927,6 +2064,20 @@ export function CreateCharacter({
             </span>
           </div>
           <div className="card-body">
+            {casters.length > 1 && (
+              /*
+               * Two casting classes, two lists, one allowance shown. Which
+               * spell came from which class is a line on a sheet rather than
+               * a rule the app can check — a wizard/cleric picks from both
+               * books, and the counts are what the tables say.
+               */
+              <p className="cr-note" style={{ marginTop: 0 }}>
+                Both lists are offered:{" "}
+                <b>{casters.map((c) => `${c.name} ${c.level}`).join(" and ")}</b>. The
+                allowance is the two added together; which class each spell
+                came from is yours to note.
+              </p>
+            )}
             {book.length === 0 ? (
               <p className="cr-note" style={{ marginTop: 0 }}>
                 No spell list on this device. The SRD data shipped here has
@@ -2103,72 +2254,6 @@ export function CreateCharacter({
               * happens in this order anyway: you know you are a Fighter 5 /
               * Warlock 3, so you build the fighter and add the warlock.
               */}
-            {classes && (
-              <div className="mc">
-                <div className="cnt" style={{ marginBottom: 8 }}>
-                  <span>Is this character more than one class?</span>
-                  <b>{level + extras.reduce((n, c) => n + c.level, 0)}</b>
-                </div>
-
-                {extras.map((c, i) => (
-                  <div className="mc-row" key={c.id}>
-                    <span className="nm">{c.name}</span>
-                    <Num
-                      min={1} max={19}
-                      aria-label={`${c.name} levels`}
-                      value={c.level}
-                      style={{ width: 70 }}
-                      onChange={(n) =>
-                        setExtras(extras.map((x, j) => (j === i ? { ...x, level: n } : x)))
-                      }
-                    />
-                    <button
-                      aria-label={`Remove ${c.name}`}
-                      onClick={() => setExtras(extras.filter((_, j) => j !== i))}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-
-                {/* The rule cuts both ways, and people forget the first half. */}
-                {mcBlock && (
-                  <p className="lv-block" style={{ marginTop: 8 }}>{mcBlock}</p>
-                )}
-
-                <select
-                  aria-label="Add a class"
-                  value=""
-                  style={{ marginTop: 8 }}
-                  onChange={(e) => {
-                    const k = classes.find((x) => x.id === e.target.value);
-                    if (!k) return;
-                    setExtras([
-                      ...extras,
-                      {
-                        id: k.id as ClassId,
-                        name: k.name,
-                        hitDie: k.hitDie as DieSize,
-                        level: 1,
-                      },
-                    ]);
-                  }}
-                >
-                  <option value="">add another class…</option>
-                  {classes
-                    .filter(
-                      (k) =>
-                        k.id !== klass.id &&
-                        !extras.some((x) => x.id === k.id) &&
-                        (homebrew || !k.extra),
-                    )
-                    .map((k) => (
-                      <option key={k.id} value={k.id}>{k.name}</option>
-                    ))}
-                </select>
-              </div>
-            )}
-
             <div className="rv-cols">
               <div>
                 <span className="label">Trained in</span>

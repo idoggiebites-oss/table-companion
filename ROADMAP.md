@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 791 unit tests, 52 browser suites, ~1,025 assertions, run against a
+**Proof.** 791 unit tests, 52 browser suites, ~1,035 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -143,6 +143,13 @@ switch, the monster piles, and the DM's spell lookup.
   takes the whole blast and asks who saved. Two paths to the same fight.
 
 ## Known and unfixed
+
+- **A multiclass character's spells are counted together, not per class.**
+  The builder now offers both lists and adds the two allowances up; which
+  class a given spell was learned as is a line on the sheet rather than a
+  rule the app checks. Nor does it apply the reduced proficiencies a second
+  class grants — a multiclassed rogue gets the full skill list, not the one
+  skill the book allows.
 
 - **44px is a rule the code keeps forgetting.** Three separate controls have
   shipped too small to press — background chips at 30, feat rows at 39, and

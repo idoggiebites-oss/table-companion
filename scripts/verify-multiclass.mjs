@@ -230,12 +230,19 @@ const sel2 = p2.locator('select[aria-label^="Choose"]');
 for (let i = 0; i < (await sel2.count()); i++) await sel2.nth(i).selectOption({ index: 1 });
 const kit2 = p2.locator(".kit select");
 for (let i = 0; i < (await kit2.count()); i++) await kit2.nth(i).selectOption({ index: 1 });
+/* Asked at the START now, not on the review card.
+
+   It used to be the last question in the builder, which made every class
+   after the first a footnote: no subclass, no fighting style, no spells at
+   all. Asked before the rest of the flow, the second class gets the same
+   questions the first one does. */
+await atStep(p2, "Class");
+const adder = p2.locator('select[aria-label="Add a class"]');
+ok("the class step is where a second class is asked for", await adder.count(), 1);
 await atStep(p2, "Review");
 await p2.locator('input[aria-label="Character name"]').fill("Bel Twiceborn");
 await p2.waitForTimeout(500);
-
-const adder = p2.locator('select[aria-label="Add a class"]');
-ok("the review asks whether this is more than one class", await adder.count(), 1);
+await atStep(p2, "Class");
 const totalLine = () => p2.locator(".mc .cnt b").first().innerText();
 ok("counting the levels so far", await totalLine(), "5");
 
@@ -246,7 +253,10 @@ await p2.waitForTimeout(700);
 ok("a class they do not qualify for is refused here too",
   /charisma 13/i.test(await p2.locator(".lv-block").innerText()), true);
 const create2 = p2.getByRole("button", { name: "Create character" });
+// The finish button lives on the review step; the block is raised here.
+await atStep(p2, "Review");
 ok("and the character cannot be finished", await create2.isDisabled(), true);
+await atStep(p2, "Class");
 await p2.getByRole("button", { name: "Remove Warlock" }).click();
 await p2.waitForTimeout(500);
 
@@ -257,7 +267,32 @@ await p2.waitForTimeout(600);
 await p2.locator('input[aria-label="Barbarian levels"]').fill("3");
 await p2.waitForTimeout(600);
 ok("adding a class adds its levels to the total", await totalLine(), "8");
-ok("and it can be finished", await create2.isDisabled(), false);
+
+/* And the rest of the builder now knows about it. */
+await atStep(p2, "Scores");
+const asked = await p2.locator(".chooser-hd .nm").allInnerTexts();
+ok("both classes ask their own questions",
+  asked.some((t) => /^Fighter · /.test(t)) && asked.some((t) => /^Barbarian · /.test(t)), true);
+ok("and each is named, because two classes can ask the same one",
+  asked.filter((t) => /Fighting Style/.test(t)).length >= 1, true);
+
+/* Which means it is NOT finished yet: a barbarian at 3 owes a Primal Path,
+   and until this change nothing ever asked for it. */
+await atStep(p2, "Review");
+ok("a second class brings questions, so the build is not done",
+  await create2.isDisabled(), true);
+
+await atStep(p2, "Scores");
+const unanswered = p2.locator(".chooser select");
+for (let i = 0; i < (await unanswered.count()); i++) {
+  const sel = unanswered.nth(i);
+  if ((await sel.inputValue()) === "") {
+    await sel.selectOption({ index: 1 });
+    await p2.waitForTimeout(250);
+  }
+}
+await atStep(p2, "Review");
+ok("and answering them finishes it", await create2.isDisabled(), false);
 await p2.screenshot({ path: `${OUT}/I0-multiclass-build.png`, fullPage: true });
 await create2.click();
 await p2.waitForSelector(".hp-big", { timeout: 20000 });
@@ -278,6 +313,46 @@ ok("of the sizes it actually has",
 ok("and no spells, because neither class casts",
   await p2.locator('[data-tab="spells"]').count(), 0);
 await p2.screenshot({ path: `${OUT}/I1-multiclass-sheet.png`, fullPage: true });
+
+
+/* --- the hole this was really hiding -------------------------------------
+
+   "Does this character cast" used to be asked of the FIRST class only. A
+   Fighter 3 / Wizard 2 was offered no spell step at all — the wizard half
+   simply did not exist until the character reached the table. */
+const p3 = await (await browser.newContext({ viewport: { width: 430, height: 1500 } })).newPage();
+await p3.goto(URL, { waitUntil: "domcontentloaded" });
+await p3.getByRole("button", { name: "Build a character" }).click();
+await atStep(p3, "Class");
+await p3.waitForSelector(".klass-cards", { timeout: 20000 });
+await p3.getByRole("button", { name: "Fighter", exact: true }).click();
+await p3.waitForTimeout(400);
+await atStep(p3, "Class");
+await p3.locator('input[aria-label="Starting level"]').fill("3");
+await p3.waitForTimeout(300);
+ok("a fighter alone is offered no spells",
+  await p3.locator('[data-step="spells"], .cr-node').filter({ hasText: /spells/i }).count(),
+  0);
+
+await p3.selectOption('select[aria-label="Add a class"]', { label: "Wizard" });
+await p3.waitForTimeout(500);
+await p3.locator('input[aria-label="Wizard levels"]').fill("2");
+await p3.waitForTimeout(700);
+ok("adding the wizard adds the step",
+  await p3.locator(".cr-node").filter({ hasText: /spells/i }).count(), 1);
+
+await atStep(p3, "Race");
+await p3.selectOption('select[aria-label="Race"]', "human");
+await p3.waitForTimeout(600);
+await atStep(p3, "Spells");
+await p3.waitForTimeout(600);
+const owed = await p3.locator(".card", { hasText: "Spells" })
+  .locator(".card-hd .faint").first().innerText();
+/* Three cantrips is the wizard's own line of the table at level 2 — the
+   fighter contributes none, and the count comes from the class that casts. */
+ok("and the allowance is the wizard's, at the wizard's level",
+  /0 of 3 cantrips/.test(owed.replace(/\s+/g, " ")), true);
+await p3.screenshot({ path: `${OUT}/I2-multiclass-spells.png`, fullPage: true });
 
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
