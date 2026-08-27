@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 816 unit tests, 56 browser suites, ~1,090 assertions, run against a
+**Proof.** 818 unit tests, 57 browser suites, ~1,090 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -101,6 +101,25 @@ spread across the other modules.
    the other side of the screen.
 
 ## Done since this list was written
+
+**A shopkeeper can run out.** The stock entry has carried a quantity since it
+was written and the buy path already decremented the shelf; the setup form
+asked a price and hardcoded an endless supply.
+
+**Both hands means both hands.** The versatile die was printed as a note and
+never rolled. Both grips are attack rows now, a shield rules the second one
+out, and a two-handed weapon takes the hand it needs — the app was handing out
++2 armour class for a hand that was holding a bow.
+
+**Popover.** The sheet-under-the-thumb the conditions picker had, now a
+component: Escape, a reachable scrim, and a centred width on desktop.
+Everything else opened its chooser inside the page and pushed what you were
+reading down half a screen.
+
+**Press and hold to find out what something is.** Spells show the compendium's
+own words; items show what the app knows and say why, since not one of the
+10,760 items carries a description.
+
 
 **Help had never once worked.** Being helped and then having your turn deleted
 the advantage one instant before it could apply: `advance` cleared every stance
