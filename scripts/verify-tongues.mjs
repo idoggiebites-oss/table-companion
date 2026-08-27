@@ -81,8 +81,46 @@ ok("neither is offered as a choice — you already have them",
     await openPick(page, "Languages");
     return card.getByRole("button", { name: "Speak Dwarvish" }).count();
   })(), 0);
-ok("what is left to choose is a background's two",
+/* --- what the BACKGROUND gives ------------------------------------------
+
+   Not two picks to spend either way, which is a rule no edition has. In 2014
+   the background decides: an acolyte gets two languages and no tools, a
+   criminal two tools and no languages, a guild artisan one of each. The
+   builder offered the choice, so a criminal could walk away speaking
+   Draconic and knowing no trade. */
+const pickBackground = async (label) => {
+  await atStep(page, "Story");
+  await page.locator('input[aria-label="Filter backgrounds"]').fill(label);
+  await page.waitForTimeout(500);
+  await page.selectOption('select[aria-label="Background"]', { label });
+  await page.waitForTimeout(600);
+  await card.scrollIntoViewIfNeeded();
+  return (await card.innerText()).replace(/\s+/g, " ");
+};
+
+const acolyte = await pickBackground("Acolyte");
+ok("an acolyte is told what the book gives them",
+  /Acolyte gives you two languages\./.test(acolyte), true);
+ok("and is asked for exactly that", /2 languages to choose\./.test(acolyte), true);
+ok("with no tool asked for at all", /tool to choose|tools to choose/.test(acolyte), false);
+ok("the count agrees",
   (await card.locator(".card-hd .faint").innerText()).trim(), "0 of 2");
+
+const criminal = await pickBackground("Criminal");
+ok("a criminal gets tools instead, one named and one chosen",
+  /Criminal gives you thieves' tools and a gaming set of your choice\./.test(criminal), true);
+ok("so the ask is a tool, not a language",
+  /1 tool to choose\./.test(criminal), true);
+ok("and no language is offered", /language to choose/.test(criminal), false);
+
+const artisan = await pickBackground("Guild Artisan");
+ok("a guild artisan gets one of each",
+  /Guild Artisan gives you a language and an artisan's tools of your choice\./.test(artisan), true);
+ok("and is asked for one of each",
+  /1 language and 1 tool to choose\./.test(artisan), true);
+
+// Back to the acolyte for the rest of this suite's arithmetic.
+await pickBackground("Acolyte");
 await page.screenshot({ path: `${OUT}/80-tongues.png`, fullPage: true });
 
 // The tool list is the compendium's, not one somebody typed out.
@@ -92,10 +130,17 @@ ok("tools come from the item catalogue", tools.length > 30, true);
 ok("and are the mundane ones, not treasure",
   tools.some((t) => /Herbalism Kit/i.test(t)) && !tools.some((t) => /legendary/i.test(t)), true);
 
+/* An acolyte's two are both languages — the tool list is offered as reading,
+   not as a choice, and taking one is refused. */
 await openPick(page, "Languages");
 await card.getByRole("button", { name: "Speak Elvish" }).click();
+await page.waitForTimeout(200);
 await openPick(page, "Tools");
-await card.getByRole("button", { name: "Use Herbalism Kit" }).click();
+ok("a background that grants no tool does not let you take one",
+  await card.getByRole("button", { name: "Use Herbalism Kit" }).isDisabled(), true);
+await openPick(page, "Languages");
+await card.getByRole("button", { name: "Speak Orc" }).click();
+await page.waitForTimeout(200);
 await page.waitForTimeout(300);
 /* --- and it fits on a screen ---------------------------------------------
    Sixteen languages and fifty-three tools laid out at once, with a real 44px
@@ -127,18 +172,12 @@ ok("two picks fills the background's allowance",
 ok("and a third is refused rather than silently ignored",
   await (async () => {
     await openPick(page, "Languages");
-    return card.getByRole("button", { name: "Speak Orc" }).isDisabled();
+    return card.getByRole("button", { name: "Speak Giant" }).isDisabled();
   })(), true);
 
-// Finish, and see it on the sheet.
+/* Finish, and see it on the sheet. The background's own two skills came with
+   it when it was chosen — the step is full, and asking for more is refused. */
 await atStep(page, "Story");
-await openPick(page, "Skills");
-await page.getByRole("button", { name: "Train nature" }).click();
-await atStep(page, "Story");
-await openPick(page, "Skills");
-await page.getByRole("button", { name: "Train animal handling" }).click();
-await atStep(page, "Story");
-await page.locator('input[aria-label="Background name"]').fill("Guild thief");
 await atStep(page, "Review");
 await page.locator('input[aria-label="Character name"]').fill("Bel Ashcroft");
 await atStep(page, "Gear");
@@ -160,8 +199,9 @@ await atStep(page, "Story");
 const sheet = page.locator(".card", { hasText: "Languages & tools" }).first();
 await sheet.scrollIntoViewIfNeeded();
 const shown = (await sheet.innerText()).replace(/\s+/g, " ");
-ok("the sheet says what they speak", /common, dwarvish, elvish/i.test(shown), true);
-ok("and what they can use", /thieves' tools, herbalism kit/i.test(shown), true);
+ok("the sheet says what they speak", /common, dwarvish, elvish, orc/i.test(shown), true);
+// The rogue's own, since an acolyte grants none.
+ok("and what they can use", /thieves' tools/i.test(shown), true);
 ok("with Common listed once, though two sources gave it",
   (shown.match(/common/gi) ?? []).length, 1);
 await page.screenshot({ path: `${OUT}/81-tongues-sheet.png`, fullPage: true });

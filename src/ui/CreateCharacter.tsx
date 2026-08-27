@@ -72,6 +72,7 @@ import {
   featureOf, mechanicalTraits, shapeOf,
 } from "../domain/guidance.js";
 import { FeatPick } from "./FeatPick.js";
+import { describeGrants, grantsOf } from "../domain/background.js";
 import { Num } from "./Num.js";
 import { PickList } from "./PickList.js";
 import { SpellPick } from "./SpellPick.js";
@@ -319,9 +320,20 @@ export function CreateCharacter({
     : { known: race?.languages ?? [], choose: 0 };
   const classTools = toolsFromClass(klass?.tools ?? "");
   /** Race extra + class choice + a background's two, in one pool. */
-  const langPicks = raceLangs.choose;
-  const toolPicks = classTools.choose;
-  const BACKGROUND_PICKS = 2;
+  /*
+   * What the chosen background actually gives — not two picks to spend
+   * however you like, which is a rule no edition has. An acolyte gets two
+   * languages and no tools; a criminal two tools and no languages. See
+   * background.ts for the reading.
+   */
+  const chosenBg = backgrounds.find((x) => x.id === bgId);
+  const bgGives = useMemo(
+    () => grantsOf(chosenBg?.traits ?? []),
+    [chosenBg],
+  );
+  const langPicks = raceLangs.choose + bgGives.languages;
+  const toolPicks =
+    classTools.choose + bgGives.toolChoices.reduce((n, c) => n + c.count, 0);
   const toolOptions = useMemo(
     () =>
       [...new Set((gear ?? []).filter((i) => isMundaneTool(i.detail)).map((i) => i.name))]
@@ -1417,7 +1429,7 @@ export function CreateCharacter({
           <div className="card-hd">
             <span className="label">5 · Languages &amp; tools</span>
             <span className="faint" style={{ fontSize: ".78rem" }}>
-              {pickedLangs.length + pickedTools.length} of {langPicks + toolPicks + BACKGROUND_PICKS}
+              {pickedLangs.length + pickedTools.length} of {langPicks + toolPicks}
             </span>
           </div>
           <div className="card-body">
@@ -1434,12 +1446,25 @@ export function CreateCharacter({
             )}
             {raceLangs.stated && <p className="cr-note">{raceLangs.stated}</p>}
 
+            {/*
+              * What the background gives, in its own words. It is not a pool
+              * of two to spend either way: the book decides, and a criminal
+              * who came away speaking Draconic and knowing no trade was this
+              * screen inventing a rule.
+              */}
+            {bgName.trim() !== "" && (
+              <p className="cr-note">{describeGrants(bgGives, bgName)}</p>
+            )}
+
             <p className="cr-blurb" style={{ marginTop: 10 }}>
               {langPicks + toolPicks > 0
-                ? `Your race and class leave ${langPicks + toolPicks} to choose. `
-                : ""}
-              A background is two more of either — pick whichever suits the
-              story you gave it.
+                ? `${[
+                    langPicks > 0 ? `${langPicks} language${langPicks === 1 ? "" : "s"}` : "",
+                    toolPicks > 0 ? `${toolPicks} tool${toolPicks === 1 ? "" : "s"}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" and ")} to choose.`
+                : "Nothing to choose here — your race, class and background have said it all."}
             </p>
 
             {/*
@@ -1454,7 +1479,7 @@ export function CreateCharacter({
               verb="Speak"
               options={ALL_LANGUAGES.filter((l) => !raceLangs.known.includes(l))}
               chosen={pickedLangs}
-              max={langPicks + toolPicks + BACKGROUND_PICKS - pickedTools.length}
+              max={langPicks}
               onChange={setPickedLangs}
             />
             <PickList
@@ -1462,7 +1487,7 @@ export function CreateCharacter({
               verb="Use"
               options={toolOptions}
               chosen={pickedTools}
-              max={langPicks + toolPicks + BACKGROUND_PICKS - pickedLangs.length}
+              max={toolPicks}
               onChange={setPickedTools}
               {...(classTools.stated ? { note: classTools.stated } : {})}
             />
