@@ -136,6 +136,12 @@ switch, the monster piles, and the DM's spell lookup.
 
 ## Known and unfixed
 
+- **`verify-turns`'s "one move, not two" is racy.** It presses Next turn and
+  End turn on two devices "at the same instant" and asserts the fight moves
+  once. When the sync lands between the two clicks the second device reads an
+  already-advanced turn, sends a valid `from`, and the fight moves twice —
+  the app behaving correctly on the input it got. Passes on re-run.
+
 - **Push on iOS needs the app installed to the home screen.** Apple only
   delivers to an installed PWA, and the app does not yet say so at the moment
   a player turns notifications on from Safari — where the button works, the

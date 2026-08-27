@@ -238,6 +238,15 @@ input, select {
   width: 100%;
 }
 input:focus-visible, select:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
+/*
+ * An example, not a value.
+ *
+ * There was no rule at all, so this fell to the browser's default — which on
+ * iOS is bright enough that "Kira Vance" in an empty name field reads as a
+ * name already filled in. It sits at the dim end of the ramp now, well below
+ * anything typed.
+ */
+input::placeholder, textarea::placeholder { color: var(--faint); opacity: 1; }
 input[type="number"] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 section.card {
@@ -1301,7 +1310,6 @@ html, body { overscroll-behavior-y: none; }
   background: var(--ground); color: var(--ink);
   font: inherit; font-size: 0.88rem; line-height: 1.45;
 }
-.who-say textarea::placeholder { color: var(--faint); }
 .who-ct { font-family: var(--mono); font-size: 0.6rem; color: var(--faint); }
 
 /* ---- class as a card rather than a line in a dropdown ---- */
@@ -1383,15 +1391,17 @@ html, body { overscroll-behavior-y: none; }
   text-transform: uppercase; color: var(--faint); margin-left: 6px;
 }
 .skl .mark {
-  /* The row is the tap target here — 44px tall — so the mark can stay small. */
+  /* The row is the tap target here — 44px tall — so the mark can stay small.
+     The ring is --muted rather than --rule: at 18px on a panel, a hairline
+     the colour of a divider is a hairline nobody can see. */
   width: 18px; height: 18px; padding: 0; min-width: 0;
-  border: 1px solid var(--rule); border-radius: 50%;
+  border: 1px solid var(--muted); border-radius: 50%;
   background: transparent; color: transparent;
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 0.6rem; letter-spacing: 0;
 }
 .skl tr.on .mark { border-color: var(--unharmed); color: var(--unharmed); }
-.skl tr.shut .mark { border-style: dashed; color: var(--faint); }
+.skl tr.shut .mark { border-style: dashed; border-color: var(--faint); color: var(--faint); }
 
 /* ---- the hotbar: a turn is something you aim at ---- */
 .hotbar-wrap { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
@@ -1727,7 +1737,6 @@ html, body { overscroll-behavior-y: none; }
   padding: 9px 11px; border: 1px solid var(--rule); border-radius: var(--r-control);
   background: var(--sunk); color: var(--ink); font: inherit; font-size: 0.88rem;
 }
-.sc-note textarea::placeholder { color: var(--faint); }
 .sc-ct { font-family: var(--mono); font-size: 0.6rem; color: var(--faint); }
 
 /* ---- the DM's queue: a player rolled, nothing has happened yet ---- */
@@ -1908,7 +1917,6 @@ html, body { overscroll-behavior-y: none; }
   background: var(--sunk); color: var(--ink);
   font-family: var(--sans); font-size: 0.92rem; line-height: 1.55;
 }
-.nt::placeholder { color: var(--faint); }
 .nt:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
 /* Said plainly, beside the button, rather than promised in a heading. */
 .nt-who { font-size: 0.76rem; color: var(--muted); }

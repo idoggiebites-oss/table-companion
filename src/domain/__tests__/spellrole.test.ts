@@ -88,3 +88,32 @@ describe("against the whole shipped spellbook", () => {
     expect(utility / all.length).toBeGreaterThan(0.1);
   });
 });
+
+describe("a curse that names the cure", () => {
+  it("is not healing", () => {
+    /*
+     * Chill Touch: necrotic damage, and the target cannot be healed while it
+     * lasts. It was filed under healing — a green label in a list of cures —
+     * because the rule read the words and not the "can't" in front of them.
+     */
+    const chill = rolesOf({
+      name: "Chill Touch",
+      text:
+        "You create a ghostly, skeletal hand. Make a ranged spell attack. On a hit, "
+        + "the target takes 1d8 necrotic damage, and it can't regain hit points until "
+        + "the start of your next turn.",
+      rolls: [{ description: "necrotic damage", dice: "1d8" }],
+    });
+    expect(chill).toContain("damage");
+    expect(chill).not.toContain("healing");
+  });
+
+  it("while an actual cure still is", () => {
+    // The control: the same reader, on the spell it was written for.
+    expect(rolesOf({
+      name: "Cure Wounds",
+      text: "A creature you touch regains a number of hit points equal to 1d8 + your modifier.",
+      rolls: [{ description: "healing", dice: "1d8" }],
+    })).toContain("healing");
+  });
+});

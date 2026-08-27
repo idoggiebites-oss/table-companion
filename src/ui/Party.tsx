@@ -9,6 +9,7 @@
  * signed by whoever made it, and any of it can be undone from any device.
  */
 
+import { Num } from "./Num.js";
 import { useState } from "react";
 import { COMMON_BOONS, describeBoon, type Boon } from "../domain/boons.js";
 import { formatCoins, parseCoins } from "../domain/money.js";
@@ -101,11 +102,10 @@ export function Party({
             {editable && (
               <>
                 <div className="pm-acts">
-                  <input
-                    type="number" min={0} value={amountOf(b.id)}
+                  <Num min={0} value={amountOf(b.id)}
                     aria-label={`${b.name} amount`}
                     style={{ width: 62 }}
-                    onChange={(e) => setAmount(b.id, +e.target.value || 0)}
+                    onChange={(n) => setAmount(b.id, n)}
                   />
                   <button onClick={() => append({ type: "damageApplied", who: b.id, amount: amountOf(b.id) })}>
                     Damage

@@ -132,10 +132,14 @@ await player.page.waitForTimeout(900);
 ok("round advanced for the dm", await round(dm), "2");
 ok("round advanced for the player", await round(player), "2");
 
-// creature damage crosses to the player as vague health
-await dm.page.locator('input[aria-label="Creature damage"]').fill("12");
-// Two buttons on the row now: the quick "−N" and the row's own number.
-await dm.page.locator(".cbt", { hasText: "Goblin Boss" }).locator(".hitbtn").first().click();
+/* Creature damage crosses to the player as vague health. Typed on the row it
+   belongs to now — the shared box at the foot of the card fed every row and
+   said so nowhere, which is exactly how it read at a table. */
+await dm.page.locator(".cbt", { hasText: "Goblin Boss" })
+  .getByRole("button", { name: /^Hurt or heal/ }).click();
+await dm.page.waitForTimeout(300);
+await dm.page.locator('input[aria-label="Amount for Goblin Boss"]').fill("12");
+await dm.page.getByRole("button", { name: "Damage Goblin Boss", exact: true }).click();
 await player.page.waitForTimeout(800);
 ok("dm sees the exact number",
   await dm.page.locator(".cbt", { hasText: "Goblin Boss" }).locator(".hp").innerText(), "9/21");

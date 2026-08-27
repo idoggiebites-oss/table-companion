@@ -295,7 +295,17 @@ export function PlayerTurn({
                   * yet — the labels come off when somebody says they can.
                   */}
                 <div className="hotbar">
-                  {STANDARD_ACTIONS.map((a) => {
+                  {STANDARD_ACTIONS.filter(
+                    /*
+                     * "Cast a spell" was a tile whose whole content was
+                     * "opens your spells", directly above a strip that shows
+                     * the spells. Two doors into one room, and the strip is
+                     * the one you can see through — so the tile goes, and
+                     * with it the only action on the bar that explained
+                     * itself by naming another part of the screen.
+                     */
+                    (a) => !(a.id === "cast" && castable.length > 0),
+                  ).map((a) => {
                     const why = blockedBecause(
                       a, character.economy, attacks.length > 0, castable.length > 0,
                     );
@@ -398,9 +408,12 @@ export function PlayerTurn({
 
                 {castable.length > 0 && (
                   <div className="pt-strip">
-                    <span className="label q">Can be cast right now</span>
+                    <span className="label q">
+                      Can be cast right now
+                      <span className="faint"> · costs your action</span>
+                    </span>
                     <div className="sp-grid pt-cast">
-                      {castable.slice(0, 6).map((sp) => (
+                      {castable.map((sp) => (
                         <button
                           className="sp-tile ready"
                           key={sp.id}

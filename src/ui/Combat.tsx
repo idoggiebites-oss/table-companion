@@ -14,6 +14,7 @@
 
 import { ConditionStrip } from "./Conditions.js";
 import { SceneSet } from "./SceneSet.js";
+import { Num } from "./Num.js";
 import { describeRoom, isOpenGround, type Room } from "../domain/terrain.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { useEffect, useState } from "react";
@@ -158,12 +159,12 @@ function StartCombat({
               setCreatures(creatures.map((x, n) => (n === i ? { ...x, name: e.target.value } : x)))
             }
           />
-          <input
-            type="number"
+          <Num
+            min={1}
             aria-label={`Creature ${i + 1} hp`}
             value={c.maxHp}
-            onChange={(e) =>
-              setCreatures(creatures.map((x, n) => (n === i ? { ...x, maxHp: Math.max(1, +e.target.value || 1) } : x)))
+            onChange={(n) =>
+              setCreatures(creatures.map((x, at) => (at === i ? { ...x, maxHp: n } : x)))
             }
           />
           <input
@@ -282,11 +283,10 @@ function Arrival({
           style={{ flex: "2 1 130px", width: "auto" }}
           onChange={(e) => setName(e.target.value)}
         />
-        <input
-          type="number" min={1} value={hp}
+        <Num min={1} value={hp}
           aria-label="Arrival hit points"
           style={{ flex: "0 0 74px", width: "auto" }}
-          onChange={(e) => setHp(Math.max(1, +e.target.value || 1))}
+          onChange={setHp}
         />
         <input
           type="number" value={init}
@@ -612,10 +612,9 @@ export function Combat({
                   </span>
                 </button>
               ))}
-          <input
-            type="number" min={0} value={dealt} aria-label="Damage dealt"
+          <Num min={0} value={dealt} aria-label="Damage dealt"
             style={{ width: 76 }}
-            onChange={(e) => setDealt(Math.max(0, +e.target.value || 0))}
+            onChange={setDealt}
           />
           <button
             disabled={dealt <= 0}
@@ -855,11 +854,10 @@ export function Combat({
               )}
               {hurting === c.id && seat.kind === "dm" && c.source.kind === "creature" && (
                 <div className="hurt-row">
-                  <input
-                    type="number" min={0} value={amount}
+                  <Num min={0} value={amount}
                     aria-label={`Amount for ${c.name}`}
                     style={{ width: 74 }}
-                    onChange={(e) => setAmount(Math.max(0, +e.target.value || 0))}
+                    onChange={setAmount}
                   />
                   <button
                     aria-label={`Damage ${c.name}`}
@@ -966,13 +964,7 @@ export function Combat({
           )}
           {seat.kind === "dm" && (
             <>
-              <span className="quick">
-                <span className="k">Quick hit</span>
-                <input
-                  type="number" min={0} value={hit} aria-label="Creature damage"
-                  onChange={(e) => setHit(Math.max(0, +e.target.value || 0))}
-                />
-              </span>
+
               <button onClick={() => setArea((v) => !v)}>Area damage</button>
               <button onClick={() => setSomething((v) => !v)}>
                 {something ? "Cancel" : "Something arrives"}

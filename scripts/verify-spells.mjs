@@ -307,36 +307,29 @@ await page.waitForTimeout(900);
 await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
 await page.waitForTimeout(700);
 
-// Casting lives on its own tab, so the turn menu has to say it exists —
-// otherwise a new caster's turn offers them only a weapon they may not have.
+/* Casting is on the turn itself — and it is the SPELLS that are on it, not a
+   tile saying "opens your spells". The tile and the strip below it were two
+   doors into the same room; the strip is the one you can see through. */
 await go(page, "combat");
 await page.getByRole("button", { name: "What else can I do?" }).click();
 await page.waitForSelector(".hotbar");
-// The menu is a grid of marks now; every one still carries its name.
-ok("the turn offers casting",
-  (await page.locator(".hot .ht").allInnerTexts()).some((t) => /cast a spell/i.test(t)), true);
-await page.getByRole("button", { name: "Cast a spell", exact: true }).click();
-await page.waitForTimeout(300);
-ok("and says the cost varies rather than pretending it does not",
-  /bonus action/i.test(await page.locator(".hot-say .what").innerText()), true);
-await page.getByRole("button", { name: "Do it" }).click();
-await page.waitForTimeout(600);
-/* Casting happens HERE now, not two tabs away.
+ok("the turn does not offer a door to a room it is already in",
+  (await page.locator(".hot .ht").allInnerTexts()).some((t) => /cast a spell/i.test(t)), false);
+const ready = await page.locator(".pt-strip .sp-tile .nm").allInnerTexts();
+ok("it offers the spells themselves",
+  ready.some((t) => /fire bolt/i.test(t)), true);
+ok("and what each one costs",
+  (await page.locator(".pt-strip .sp-tile .cost").allInnerTexts()).some((t) => /cantrip/i.test(t)),
+  true);
 
-   It used to send you to the Spells tab: a moment implemented as a place.
-   Your turn has a clock on it and a tab is somewhere you can walk away from,
-   which is how a slot got spent on a spell that was never cast. */
+// Straight from the tile into the aim, without leaving the fight.
+await page.locator(".pt-strip .sp-tile", { hasText: /fire bolt/i }).first().click();
+await page.waitForTimeout(600);
 ok("taking it does not leave the fight",
   await page.locator('[data-tab="combat"].on').count(), 1);
-ok("and asks what you are casting, right there",
-  /what are you casting/i.test(await page.locator(".swing-step").innerText()), true);
-const castables = await page.locator(".swing-step .tgt-row").allInnerTexts();
-ok("listing only what can be cast this instant, with what it costs",
-  castables.some((t) => /fire bolt/i.test(t) && /cantrip/i.test(t)), true);
 
 // All the way through, from the turn: aim, roll, and into the DM's queue.
-await page.locator(".swing-step .tgt-row", { hasText: /fire bolt/i }).first().click();
-await page.waitForTimeout(500);
+// The tile IS the choice of spell, so the next question is who it is aimed at.
 await page.locator(".tgt-row", { hasText: "Goblin" }).first().click();
 await page.waitForTimeout(400);
 await page.locator('input[aria-label="Spell attack roll"]').fill("18");

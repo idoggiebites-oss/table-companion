@@ -72,6 +72,7 @@ import {
   featureOf, mechanicalTraits, shapeOf,
 } from "../domain/guidance.js";
 import { FeatPick } from "./FeatPick.js";
+import { Num } from "./Num.js";
 import { PickList } from "./PickList.js";
 import { SpellPick } from "./SpellPick.js";
 import { choicesBy, findChoices } from "../domain/subclass.js";
@@ -567,6 +568,32 @@ export function CreateCharacter({
     ...(classSkills.length === skillsNeeded ? [] : [`${skillsNeeded} class skills`]),
   ];
 
+  /**
+   * Finish. Hoisted out of the review card so the footer's primary button —
+   * the biggest thing on the screen, and where a thumb already is — can be
+   * the control that does it.
+   */
+  function finish(): void {
+    if (!choices || gaps.length > 0) return;
+    onCreate(
+      { base: assemble(choices), deltas: [] },
+      {
+        ...starting,
+        /*
+         * What the race gave, alongside what the class chose. Deduped by id —
+         * a high elf whose free cantrip is one their class also offers should
+         * know it once.
+         */
+        spells: [
+          ...chosenSpells,
+          ...innateSpells
+            .filter((sp) => !chosenSpells.some((x) => x.id === sp.id))
+            .map((sp) => toKnown(sp)),
+        ],
+      },
+    );
+  }
+
   function recommend() {
     if (!klass) return;
     const order = PRIORITY[klass.id as ClassId] ?? [...ABILITIES];
@@ -758,11 +785,11 @@ export function CreateCharacter({
               <>
                 <div className="row" style={{ marginTop: 10 }}>
                   <span className="label">Starting at level</span>
-                  <input
-                    type="number" min={1} max={20} value={level}
+                  <Num
+                    min={1} max={20} value={level}
                     aria-label="Starting level"
                     style={{ width: 78 }}
-                    onChange={(e) => setLevel(Math.max(1, Math.min(20, +e.target.value || 1)))}
+                    onChange={setLevel}
                   />
                   {level > 1 && (
                     <span className="faint" style={{ fontSize: ".8rem" }}>
@@ -1713,7 +1740,14 @@ export function CreateCharacter({
                           <button
                             key={a}
                             className={`chip${added > 0 ? " on" : ""}`}
-                            disabled={at.feat !== undefined || (used >= 2 && added === 0) || total >= 20}
+                            /*
+                             * Two points, full stop. The old rule only
+                             * stopped abilities that had not been touched
+                             * yet — so after +1 and +1 the two raised ones
+                             * stayed live, and a level 4 improvement could
+                             * be spent seven times.
+                             */
+                            disabled={at.feat !== undefined || used >= 2 || total >= 20}
                             aria-label={`Level ${lvl} raise ${a}`}
                             onClick={() =>
                               setImprovements((cur) => ({
@@ -1972,19 +2006,13 @@ export function CreateCharacter({
                 {extras.map((c, i) => (
                   <div className="mc-row" key={c.id}>
                     <span className="nm">{c.name}</span>
-                    <input
-                      type="number" min={1} max={19}
+                    <Num
+                      min={1} max={19}
                       aria-label={`${c.name} levels`}
                       value={c.level}
                       style={{ width: 70 }}
-                      onChange={(e) =>
-                        setExtras(
-                          extras.map((x, j) =>
-                            j === i
-                              ? { ...x, level: Math.max(1, Math.min(19, +e.target.value || 1)) }
-                              : x,
-                          ),
-                        )
+                      onChange={(n) =>
+                        setExtras(extras.map((x, j) => (j === i ? { ...x, level: n } : x)))
                       }
                     />
                     <button
@@ -2058,31 +2086,6 @@ export function CreateCharacter({
             </div>
 
             <div className="row" style={{ marginTop: 14 }}>
-              <button
-                disabled={gaps.length > 0 || !choices}
-                onClick={() =>
-                  choices &&
-                  onCreate(
-                    { base: assemble(choices), deltas: [] },
-                    {
-                      ...starting,
-                      /*
-                       * What the race gave, alongside what the class chose.
-                       * Deduped by id — a high elf whose free cantrip is one
-                       * their class also offers should know it once.
-                       */
-                      spells: [
-                        ...chosenSpells,
-                        ...innateSpells
-                          .filter((sp) => !chosenSpells.some((x) => x.id === sp.id))
-                          .map((sp) => toKnown(sp)),
-                      ],
-                    },
-                  )
-                }
-              >
-                Create character
-              </button>
               <span className="faint" style={{ fontSize: ".82rem" }}>
                 {gaps.length > 0 ? `Still needed: ${gaps.join(", ")}.` : "Ready to play."}
               </span>
@@ -2091,17 +2094,30 @@ export function CreateCharacter({
         </section>
       )}
 
-      {/* Back and on. The rail is for jumping; these are for walking. */}
+      {/*
+        * Back and on — and, on the last step, the thing that finishes.
+        *
+        * The primary button used to go dead on the review step while the
+        * control that actually created the character sat in the card above
+        * it. It was still gold, still the biggest thing on the screen, and
+        * pressing it did nothing at all.
+        */}
       {races && classes && (
         <div className="cr-nav">
           <button disabled={stepIndex === 0} onClick={() => go(stepIndex - 1)}>Back</button>
-          <button
-            className="cr-on"
-            disabled={stepIndex === steps.length - 1}
-            onClick={() => go(stepIndex + 1)}
-          >
-            Continue
-          </button>
+          {stepIndex === steps.length - 1 ? (
+            <button
+              className="cr-on"
+              disabled={gaps.length > 0 || !choices}
+              onClick={() => finish()}
+            >
+              Create character
+            </button>
+          ) : (
+            <button className="cr-on" onClick={() => go(stepIndex + 1)}>
+              Continue
+            </button>
+          )}
         </div>
       )}
     </>

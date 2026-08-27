@@ -45,6 +45,17 @@ const CONTROLLING = new RegExp(
 /** "…regains 2d8 hit points", "you restore hit points". */
 const HEALING = /regains?\b[^.]{0,60}\bhit points|restore[sd]?\b[^.]{0,40}\bhit points|healing/i;
 
+/**
+ * The same words, negated — which is a curse rather than a cure.
+ *
+ * Chill Touch says the target "can't regain hit points" and was filed under
+ * healing, where it sat in a list of cures with a green label on it. Necrotic
+ * damage that BLOCKS healing is the opposite of the thing it was matched
+ * against, and the phrasing is near-boilerplate across the book.
+ */
+const NOT_HEALING =
+  /\b(can(?:'|’)?t|cannot|unable to|prevented from|does(?:n(?:'|’)?t| not))\b[^.]{0,40}\b(regain|restore|heal)/i;
+
 export function rolesOf(spell: RoleSource): SpellRole[] {
   const text = spell.text ?? "";
   const rolls = spell.rolls ?? [];
@@ -56,7 +67,7 @@ export function rolesOf(spell: RoleSource): SpellRole[] {
    */
   const says = (re: RegExp) => rolls.some((r) => re.test(r.description ?? ""));
   if (says(/damage/i)) out.push("damage");
-  if (says(/heal/i) || HEALING.test(text)) out.push("healing");
+  if ((says(/heal/i) || HEALING.test(text)) && !NOT_HEALING.test(text)) out.push("healing");
 
   // Only fall back to the text where the file gave no dice to read.
   if (!out.includes("damage") && /\b\d+d\d+\b[^.]{0,40}damage|deals?\b[^.]{0,30}damage/i.test(text)) {

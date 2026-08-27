@@ -6,6 +6,7 @@
  * model honest. Fight Club XML and PDF land next and write the same object.
  */
 
+import { Num } from "./Num.js";
 import { useState } from "react";
 import { ABILITIES, SKILLS, SKILL_IDS, type Ability, type SkillId } from "../domain/abilities.js";
 import type { Attack } from "../domain/attack.js";
@@ -146,8 +147,8 @@ export function NewCharacter({ onCreate }: { onCreate: (c: Character) => void })
             </div>
             <div className="field">
               <label className="label" htmlFor="lv">Level</label>
-              <input id="lv" type="number" min={1} max={20} value={level}
-                onChange={(e) => { setLevel(Math.max(1, Math.min(20, +e.target.value || 1))); setImportedClasses(null); }} />
+              <Num id="lv"  min={1} max={20} value={level}
+                onChange={(n) => { setLevel(n); setImportedClasses(null); }} />
             </div>
             <div className="field">
               <label className="label" htmlFor="rc">Race</label>
@@ -158,18 +159,18 @@ export function NewCharacter({ onCreate }: { onCreate: (c: Character) => void })
           <div className="six">
             <div className="field">
               <label className="label" htmlFor="hp">Max HP</label>
-              <input id="hp" type="number" min={1} value={maxHp}
-                onChange={(e) => setMaxHp(Math.max(1, +e.target.value || 1))} />
+              <Num id="hp"  min={1} value={maxHp}
+                onChange={setMaxHp} />
             </div>
             <div className="field">
               <label className="label" htmlFor="ac">Armour class</label>
-              <input id="ac" type="number" min={1} value={armourClass}
-                onChange={(e) => setArmourClass(Math.max(1, +e.target.value || 1))} />
+              <Num id="ac"  min={1} value={armourClass}
+                onChange={setArmourClass} />
             </div>
             <div className="field">
               <label className="label" htmlFor="sp">Speed</label>
-              <input id="sp" type="number" min={0} step={5} value={speed}
-                onChange={(e) => setSpeed(Math.max(0, +e.target.value || 0))} />
+              <Num id="sp"  min={0} step={5} value={speed}
+                onChange={setSpeed} />
             </div>
           </div>
 
@@ -179,8 +180,8 @@ export function NewCharacter({ onCreate }: { onCreate: (c: Character) => void })
               {ABILITIES.map((a) => (
                 <div key={a}>
                   <label className="label" htmlFor={`ab-${a}`}>{a}</label>
-                  <input id={`ab-${a}`} type="number" min={1} max={30} value={scores[a]}
-                    onChange={(e) => setScores({ ...scores, [a]: Math.max(1, Math.min(30, +e.target.value || 1)) })} />
+                  <Num id={`ab-${a}`} min={1} max={30} value={scores[a]}
+                    onChange={(n) => setScores({ ...scores, [a]: n })} />
                 </div>
               ))}
             </div>
@@ -222,10 +223,10 @@ export function NewCharacter({ onCreate }: { onCreate: (c: Character) => void })
               {slots.map((n, i) => (
                 <div key={i}>
                   <label className="label" htmlFor={`sl-${i}`}>{i + 1}</label>
-                  <input id={`sl-${i}`} type="number" min={0} max={9} value={n}
-                    onChange={(e) => {
+                  <Num id={`sl-${i}`} min={0} max={9} value={n}
+                    onChange={(v) => {
                       const next = [...slots];
-                      next[i] = Math.max(0, Math.min(9, +e.target.value || 0));
+                      next[i] = v;
                       setSlots(next);
                     }} />
                 </div>

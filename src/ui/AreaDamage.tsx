@@ -11,6 +11,7 @@
  * a friendly is a selection, not a separate flow.
  */
 
+import { Num } from "./Num.js";
 import { useState } from "react";
 import { targetOf, type Combat, type TargetRef } from "../domain/combat.js";
 import type { EventBody } from "../domain/events.js";
@@ -62,10 +63,9 @@ export function AreaDamage({
           style={{ flex: "2 1 120px", width: "auto" }}
           onChange={(e) => setLabel(e.target.value)}
         />
-        <input
-          type="number" min={0} value={amount} aria-label="Area damage amount"
+        <Num min={0} value={amount} aria-label="Area damage amount"
           style={{ flex: "0 0 76px", width: "auto" }}
-          onChange={(e) => setAmount(Math.max(0, +e.target.value || 0))}
+          onChange={setAmount}
         />
         <input
           value={damageType} aria-label="Area damage type" placeholder="fire"
