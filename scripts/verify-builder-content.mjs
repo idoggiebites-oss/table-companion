@@ -242,6 +242,28 @@ ok("in publication order, not alphabetical",
 ok("with only 'choose…' loose outside a group", shape.loose, 1);
 console.log(`      ${shape.options.join(" · ")}`);
 
+/* Races, backgrounds and feats get the same treatment — the compendium says
+   which are the game's own, and this table says which book printed them. */
+await atStep(page, "Race");
+const raceGroups = await page.locator('select[aria-label="Race"]').evaluate(
+  (el) => [...el.querySelectorAll("optgroup")].map((g) => g.label),
+);
+ok("races are grouped by book too", raceGroups.slice(0, 3),
+  ["Player's Handbook", "Volo's", "Mordenkainen's"]);
+ok("with what no book of the era printed kept last",
+  raceGroups.at(-1), "elsewhere");
+
+await page.selectOption('select[aria-label="Race"]', "human");
+await page.waitForTimeout(500);
+await atStep(page, "Story");
+const bgGroups = await page.locator('select[aria-label="Background"]').evaluate(
+  (el) => [...el.querySelectorAll("optgroup")].map((g) => g.label),
+);
+ok("and so are backgrounds", bgGroups.slice(0, 3),
+  ["Player's Handbook", "Sword Coast", "Ravnica"]);
+
+await atStep(page, "Scores");
+
 /* The rest are not gone, they are behind the switch that always meant this. */
 ok("the rest are one press away", await toggle.count(), 1);
 await toggle.click();

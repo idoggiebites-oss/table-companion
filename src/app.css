@@ -2007,3 +2007,5 @@ html, body { overscroll-behavior-y: none; }
 /* ---- which book it came from ---- */
 .lv-book + .lv-book { margin-top: 10px; }
 .lv-book > .label { display: block; margin-bottom: 5px; }
+.feat-book + .feat-book { margin-top: 8px; }
+.feat-book > .label { display: block; padding: 6px 0 4px; }

@@ -183,10 +183,13 @@ await atStep(page, "Race");
 ok("and the list is filterable, being long",
   await page.locator('input[aria-label="Filter races"]').count(), 1);
 
+/* The split is by BOOK now, not "core" and "everything else" — which put a
+   Volo's tabaxi, a Ravnica loxodon and a stranger's homebrew in one bucket
+   of two hundred. */
 const raceCore = await page
   .locator('select[aria-label="Race"] optgroup')
   .first().locator("option").allInnerTexts();
-ok("races lead with the familiar nine", raceCore.length, 9);
+ok("races lead with the Player's Handbook", raceCore.length > 8, true);
 ok("starting where the book does", raceCore[0], "Dragonborn");
 
 // Filtering has to keep the split, or narrowing throws you back into one
@@ -198,7 +201,8 @@ const split = await page
   .locator('select[aria-label="Race"] optgroup')
   .evaluateAll((g) => g.map((x) => x.label));
 await atStep(page, "Race");
-ok("and the grouping survives a filter", split, ["Core", "From your compendium"]);
+ok("and the grouping survives a filter",
+  split.length > 0 && split[0] === "Player's Handbook", true);
 await page.locator('input[aria-label="Filter races"]').fill("");
 await page.waitForTimeout(300);
 

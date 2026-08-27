@@ -13,6 +13,7 @@
  */
 
 import { useState } from "react";
+import { byBook } from "../domain/books.js";
 import { useHomebrew } from "./useHomebrew.js";
 import { HomebrewToggle } from "./HomebrewToggle.js";
 import { blocked, meets, type Aspirant, type FeatSource } from "../domain/feats.js";
@@ -104,7 +105,15 @@ export function FeatPick({
         onChange={setHomebrew}
       />
       <div className="menu feat-scroll">
-        {rows.map((g) => {
+        {/*
+          * Under the book that printed it — see books.ts. Alphabetical across
+          * two hundred names tells you nothing about which of them your table
+          * actually owns.
+          */}
+        {byBook(rows, "feat").map(([book, group]) => (
+        <div className="feat-book" key={book}>
+        <span className="label q">{book}</span>
+        {group.map((g) => {
           /* Every variant shares the prerequisite and the text; the first
              stands for the group until one is picked. */
           const head = g.variants[0]!;
@@ -167,6 +176,8 @@ export function FeatPick({
             </div>
           );
         })}
+        </div>
+        ))}
         {rows.length === 0 && (
           <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
             Nothing matches.

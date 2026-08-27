@@ -67,10 +67,11 @@ survives a lost phone, and honest about the DM being able to read it.
 
 **Provenance.** A complete compendium offers a ranger sixty-three archetypes;
 eight are the game's own. The rest sit behind the compendium switch, and the
-official ones are grouped by the book that printed them — Player's Handbook,
-Sword Coast, Xanathar's, Tasha's and the rest, in publication order. The
+official ones are grouped by the book that printed them — subclasses, races,
+backgrounds, feats and fighting styles alike — in publication order, with
+anything from outside those nineteen books kept last under "elsewhere". The
 compendium does not carry which book anything came from; that table is
-`books.ts`, 2014 rules only.
+`books.ts`, 2014 rules only, 381 entries.
 
 **The player.** Character building from level 1 or mid-campaign at any level,
 with class, race, background, abilities, skills, subclass, spells, feats and
@@ -83,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 782 unit tests, 52 browser suites, ~1,010 assertions, run against a
+**Proof.** 789 unit tests, 52 browser suites, ~1,015 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 

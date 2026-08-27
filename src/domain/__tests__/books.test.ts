@@ -62,7 +62,15 @@ describe("grouping a list", () => {
 
 describe("the table itself", () => {
   it("covers every 2014 book that added a subclass", () => {
-    expect(new Set(FILED.map((f) => f.book)).size).toBe(13);
+    const books = new Set(FILED.filter((f) => f.kind === "subclass").map((f) => f.book));
+    expect(books.size).toBe(13);
+  });
+
+  it("and every one that added anything else", () => {
+    // Nineteen books all told: the thirteen with subclasses, plus Volo's,
+    // Mordenkainen's, Acquisitions, Strixhaven, Spelljammer and Planescape,
+    // which added races, backgrounds or feats and no subclass at all.
+    expect(new Set(FILED.map((f) => f.book)).size).toBe(19);
   });
 
   it("and files each name once", () => {
@@ -99,5 +107,55 @@ describe("the marker survives long enough to be read", () => {
     expect(bog?.full).toBe("Bog Phantom (HB)");
     expect(isCore(bog?.name ?? "")).toBe(true);   // what was being asked
     expect(isCore(bog?.full ?? "")).toBe(false);  // what should have been
+  });
+});
+
+describe("the other four kinds", () => {
+  it("places races, and keeps two books' goblins apart", () => {
+    /*
+     * Volo's goblin and Ravnica's goblin are different races with one name.
+     * First printing wins, which is what "where is this from" means.
+     */
+    expect(bookOf("Tabaxi", "race")?.short).toBe("Volo's");
+    expect(bookOf("Goblin", "race")?.short).toBe("Volo's");
+    expect(bookOf("Loxodon", "race")?.short).toBe("Ravnica");
+    expect(bookOf("Owlin", "race")?.short).toBe("Strixhaven");
+  });
+
+  it("reads the comma-inverted spelling a compendium uses for subraces", () => {
+    // "Dwarf, Hill" is how a shelf sorts them; "Hill Dwarf" is how a book
+    // prints them. Half this table's races missed until both were read.
+    expect(bookOf("Dwarf, Hill", "race")?.short).toBe("Player's Handbook");
+    expect(bookOf("Human, Mark of Making", "race")?.short).toBe("Eberron");
+  });
+
+  it("places backgrounds", () => {
+    expect(bookOf("Criminal", "background")?.short).toBe("Player's Handbook");
+    expect(bookOf("Faction Agent", "background")?.short).toBe("Sword Coast");
+    expect(bookOf("Rune Carver", "background")?.short).toBe("Bigby's");
+  });
+
+  it("places feats, including the ones filed with a choice in the name", () => {
+    expect(bookOf("Sentinel", "feat")?.short).toBe("Player's Handbook");
+    expect(bookOf("Elven Accuracy", "feat")?.short).toBe("Xanathar's");
+    expect(bookOf("Fey Touched", "feat")?.short).toBe("Tasha's");
+    // The compendium ships the choice already made, twice nested.
+    expect(bookOf("Squat Nimbleness (Dexterity + Athletics (Proficient))", "feat")?.short)
+      .toBe("Xanathar's");
+  });
+
+  it("places fighting styles, which one book of the era added", () => {
+    expect(bookOf("Archery", "style")?.short).toBe("Player's Handbook");
+    expect(bookOf("Fighting Style: Blind Fighting", "style")?.short).toBe("Tasha's");
+    expect(bookOf("Interception", "style")?.short).toBe("Tasha's");
+  });
+
+  it("and keeps the kinds apart, because a word is two things", () => {
+    // "Fey Touched" is a Tasha's feat; "Fey Wanderer" is a Tasha's subclass;
+    // neither should answer for the other, and a race named Goblin should
+    // never resolve against a subclass table.
+    expect(bookOf("Goblin", "subclass")).toBe(null);
+    expect(bookOf("Sentinel", "subclass")).toBe(null);
+    expect(bookOf("Hunter", "race")).toBe(null);
   });
 });

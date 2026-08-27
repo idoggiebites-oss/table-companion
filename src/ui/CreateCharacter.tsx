@@ -948,24 +948,19 @@ export function CreateCharacter({
               }}
             >
               <option value="">choose a race…</option>
-              {shownRaces.some((r) => r.extra) && shownRaces.some((r) => !r.extra) ? (
-                <>
-                  <optgroup label="Core">
-                    {shownRaces.filter((r) => !r.extra).map((r) => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="From your compendium">
-                    {shownRaces.filter((r) => r.extra).map((r) => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </optgroup>
-                </>
-              ) : (
-                shownRaces.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))
-              )}
+              {/*
+                * Under the book that printed them. "Core" and "from your
+                * compendium" was the only split there was, which put a
+                * Volo's tabaxi, a Ravnica loxodon and somebody's homebrew in
+                * one bucket of two hundred.
+                */}
+              {byBook(shownRaces, "race").map(([book, list]) => (
+                <optgroup key={book} label={book}>
+                  {list.map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
             {races.length > 20 && shownRaces.length === 0 && (
               <p className="cr-note">Nothing matches that.</p>
@@ -1359,8 +1354,12 @@ export function CreateCharacter({
                   }}
                 >
                   <option value="">choose one, or make your own below…</option>
-                  {shownBackgrounds.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
+                  {byBook(shownBackgrounds, "background").map(([book, list]) => (
+                    <optgroup key={book} label={book}>
+                      {list.map((x) => (
+                        <option key={x.id} value={x.id}>{x.name}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </>
