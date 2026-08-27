@@ -90,6 +90,8 @@ const put = (kind: Kind, book: string, names: readonly string[]) => {
   EXACT[kind] ??= {};
   LOOSE[kind] ??= {};
   for (const n of names) {
+    const whole = strict(n);
+    if (!(whole in EXACT[kind]!)) EXACT[kind]![whole] = book;
     const e = exact(n);
     if (!(e in EXACT[kind]!)) EXACT[kind]![e] = book;
     const k = key(n);
@@ -147,6 +149,21 @@ function plain(name: string): string {
 /** The name as written, minus punctuation and any trailing marker. */
 export function exact(name: string): string {
   return plain(name).replace(/[^a-z0-9]+/g, "");
+}
+
+/**
+ * The same, WITHOUT taking the first of two slashed spellings.
+ *
+ * "Elf, Drow / Dark" is one race under two names and the split is right.
+ * "Drow / Dark Elf Ancestry" is a half-elf variant from the Sword Coast, and
+ * splitting it left "Drow" — which matched the Player's Handbook's drow and
+ * filed a Sword Coast variant under the wrong book entirely. So the whole
+ * string is tried first, and the split is the fallback.
+ */
+export function strict(name: string): string {
+  const t = withoutTail(name).toLowerCase().replace(/^fighting style:\s*/, "");
+  const comma = /^([^,]+),\s*(.+)$/.exec(t);
+  return (comma ? `${comma[2]} ${comma[1]}` : t).replace(/[^a-z0-9]+/g, "");
 }
 
 /** Names differ in punctuation and in whether the class word is present. */
@@ -235,10 +252,17 @@ put("race", "phb", [
 put("race", "scag", [
   "Ghostwise Halfling", "Svirfneblin", "Deep Gnome",
   "Feral Tiefling", "Devil's Tongue", "Hellfire", "Winged Tiefling",
-  // As the compendium spells the half-elf and tiefling variants.
+  /*
+   * The half-elf variants are Sword Coast, not the Player's Handbook — the
+   * book that lets a half-elf swap Skill Versatility for an elf parent's
+   * trait. Both spellings: as the compendium files them, and as the subrace
+   * picker shows them once the parent's name is stripped off the front.
+   */
   "Half-Elf, Aquatic Elf Ancestry", "Half-Elf, Drow / Dark Elf Ancestry",
   "Half-Elf, High Elf Ancestry", "Half-Elf, Wood Elf Ancestry",
   "Half-Elf, Moon Elf or Sun Elf Ancestry", "Tiefling, Variants",
+  "Aquatic Elf Ancestry", "Drow / Dark Elf Ancestry", "High Elf Ancestry",
+  "Wood Elf Ancestry", "Moon Elf or Sun Elf Ancestry",
 ]);
 put("race", "vgm", [
   "Aasimar", "Protector Aasimar", "Scourge Aasimar", "Fallen Aasimar",
@@ -399,7 +423,11 @@ put("style", "tce", [
 
 /** Which book, or null for something no official book printed. */
 export function bookOf(name: string, kind: Kind = "subclass"): Book | null {
-  const id = EXACT[kind]?.[exact(name)] ?? LOOSE[kind]?.[key(name)] ?? null;
+  const id =
+    EXACT[kind]?.[strict(name)]
+    ?? EXACT[kind]?.[exact(name)]
+    ?? LOOSE[kind]?.[key(name)]
+    ?? null;
   return id ? (BOOKS.find((b) => b.id === id) ?? null) : null;
 }
 

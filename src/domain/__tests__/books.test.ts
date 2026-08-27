@@ -2,7 +2,7 @@
  * Which book a subclass came from — the one thing no compendium says.
  */
 import { describe, expect, it } from "vitest";
-import { bookOf, byBook, exact, FILED, key } from "../books.js";
+import { bookOf, byBook, exact, FILED, key, strict } from "../books.js";
 import { findChoices } from "../subclass.js";
 import { isCore } from "../marks.js";
 
@@ -74,8 +74,20 @@ describe("the table itself", () => {
   });
 
   it("and files each name once", () => {
-    const keys = FILED.map((f) => exact(f.name));
+    /*
+     * On the STRICT key, which is the one that decides. The loose key can
+     * collide by design — "Drow / Dark Elf Ancestry" reduces to "Drow" the
+     * same as the Player's Handbook drow does — and the strict key is what
+     * keeps those two apart.
+     */
+    const keys = FILED.map((f) => `${f.kind}:${strict(f.name)}`);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("and the loose key is only ever a fallback", () => {
+    // exact() splits at a slash; two different things reduce to "drow".
+    expect(exact("Drow / Dark Elf Ancestry")).toBe(exact("Drow"));
+    expect(strict("Drow / Dark Elf Ancestry")).not.toBe(strict("Drow"));
   });
 
   it("keeps two books apart when they name a subclass the same", () => {
@@ -157,5 +169,28 @@ describe("the other four kinds", () => {
     expect(bookOf("Goblin", "subclass")).toBe(null);
     expect(bookOf("Sentinel", "subclass")).toBe(null);
     expect(bookOf("Hunter", "race")).toBe(null);
+  });
+});
+
+describe("a half-elf's ancestry", () => {
+  it("is Sword Coast, not the Player's Handbook", () => {
+    /*
+     * The book that lets a half-elf swap Skill Versatility for an elf
+     * parent's trait is the Sword Coast Adventurer's Guide. The Player's
+     * Handbook half-elf has no such option.
+     */
+    expect(bookOf("High Elf Ancestry", "race")?.short).toBe("Sword Coast");
+    expect(bookOf("Wood Elf Ancestry", "race")?.short).toBe("Sword Coast");
+  });
+
+  it("including the one that names two elves at once", () => {
+    /*
+     * "Drow / Dark Elf Ancestry" was split at the slash, leaving "Drow" —
+     * which matched the Player's Handbook's own drow and filed a Sword Coast
+     * variant under the wrong book. The whole string is tried first now.
+     */
+    expect(bookOf("Drow / Dark Elf Ancestry", "race")?.short).toBe("Sword Coast");
+    // And the split still answers where it was meant to: one race, two names.
+    expect(bookOf("Elf, Drow / Dark", "race")?.short).toBe("Player's Handbook");
   });
 });

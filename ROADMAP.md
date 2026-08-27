@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 802 unit tests, 52 browser suites, ~1,050 assertions, run against a
+**Proof.** 805 unit tests, 52 browser suites, ~1,060 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 

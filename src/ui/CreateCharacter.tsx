@@ -1729,23 +1729,35 @@ export function CreateCharacter({
               * box. What was chosen reads on the closed row, because that is
               * the answer; the list is only how you got there.
               */}
-            <PickList
-              label="Languages"
-              verb="Speak"
-              options={ALL_LANGUAGES.filter((l) => !raceLangs.known.includes(l))}
-              chosen={pickedLangs}
-              max={langPicks}
-              onChange={setPickedLangs}
-            />
-            <PickList
-              label="Tools"
-              verb="Use"
-              options={toolOptions}
-              chosen={pickedTools}
-              max={toolPicks}
-              onChange={setPickedTools}
-              {...(classTools.stated ? { note: classTools.stated } : {})}
-            />
+            {/*
+              * A picker only where there is something to pick.
+              *
+              * A sage gets two languages and no tools, and the card says so —
+              * but the tools list was still sitting underneath offering
+              * fifty-four of them with an allowance of zero, which reads as
+              * a choice somebody forgot to make.
+              */}
+            {langPicks > 0 && (
+              <PickList
+                label="Languages"
+                verb="Speak"
+                options={ALL_LANGUAGES.filter((l) => !raceLangs.known.includes(l))}
+                chosen={pickedLangs}
+                max={langPicks}
+                onChange={setPickedLangs}
+              />
+            )}
+            {toolPicks > 0 && (
+              <PickList
+                label="Tools"
+                verb="Use"
+                options={toolOptions}
+                chosen={pickedTools}
+                max={toolPicks}
+                onChange={setPickedTools}
+                {...(classTools.stated ? { note: classTools.stated } : {})}
+              />
+            )}
           </div>
         </section>
       )}

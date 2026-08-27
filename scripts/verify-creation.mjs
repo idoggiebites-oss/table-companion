@@ -222,6 +222,35 @@ await dm.page.selectOption('select[aria-label="Seat"]', "dm").catch(() => {});
 await dm.page.waitForTimeout(1200);
 ok("the DM sees the new character", (await dm.page.locator(".pm-name").innerText()), "Kira Vance");
 
+
+/* --- nothing spills out of its own box -----------------------------------
+
+   A flex item's default `min-height: auto` is the only thing stopping it
+   being squeezed below its own content — so giving every button a 44px
+   minimum quietly let the class cards collapse to 44 and print their
+   descriptions over the card beneath. It looked like overlapping text and it
+   was a one-word CSS change three commits earlier.
+
+   Measured the same way the tap targets are: content against its container,
+   on the screen where a card is biggest. */
+await atStep(player.page, "Class");
+await player.page.waitForTimeout(400);
+const spilling = await player.page.evaluate(() => {
+  const out = [];
+  for (const el of document.querySelectorAll("button, .klass, .menu-row, .pick")) {
+    const r = el.getBoundingClientRect();
+    if (r.height === 0) continue;
+    for (const kid of el.children) {
+      const k = kid.getBoundingClientRect();
+      if (k.height > 0 && k.bottom - r.bottom > 2) {
+        out.push(`${(el.className || el.tagName).toString().split(" ")[0]} +${Math.round(k.bottom - r.bottom)}px`);
+      }
+    }
+  }
+  return [...new Set(out)];
+});
+ok("no card prints over the one beneath it", spilling.join(", "), "");
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

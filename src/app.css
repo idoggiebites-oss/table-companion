@@ -1366,6 +1366,14 @@ html, body { overscroll-behavior-y: none; }
   padding-right: 4px;
 }
 .klass {
+  /*
+   * Never shrink. These are flex items in a column with a max-height, and a
+   * flex item's default `min-height: auto` is the only thing that stops it
+   * being squeezed below its own content. Giving buttons a 44px minimum
+   * replaced that auto — so the cards collapsed to 44 and their descriptions
+   * spilled over the card beneath.
+   */
+  flex: 0 0 auto;
   display: flex; gap: 12px; align-items: flex-start; width: 100%;
   padding: 13px; text-align: left;
   border: 1px solid var(--rule); border-radius: var(--r-card);
@@ -1431,18 +1439,32 @@ html, body { overscroll-behavior-y: none; }
   font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--faint); margin-left: 6px;
 }
+/*
+ * A small ring with a thumb-sized hit area.
+ *
+ * This was an 18px circle and the ONLY way to train a skill — the comment
+ * that used to sit here claimed the row was the tap target, and the row is a
+ * <tr> with no handler. Making the button 44px fixed the tap and stretched
+ * the ring into an ellipse, so the ring is drawn inside the button rather
+ * than being it.
+ */
 .skl .mark {
-  /* The row is the tap target here — 44px tall — so the mark can stay small.
-     The ring is --muted rather than --rule: at 18px on a panel, a hairline
-     the colour of a divider is a hairline nobody can see. */
-  width: 18px; height: 18px; padding: 0; min-width: 0;
-  border: 1px solid var(--muted); border-radius: 50%;
-  background: transparent; color: transparent;
+  position: relative; width: 44px; min-width: 0; min-height: 44px; padding: 0;
+  background: transparent; border: 0; border-radius: 0; color: transparent;
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 0.6rem; letter-spacing: 0;
 }
-.skl tr.on .mark { border-color: var(--unharmed); color: var(--unharmed); }
-.skl tr.shut .mark { border-style: dashed; border-color: var(--faint); color: var(--faint); }
+.skl .mark::before {
+  content: ""; position: absolute; inset: 50% auto auto 50%;
+  width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  /* --muted, not --rule: at 18px on a panel, a hairline the colour of a
+     divider is a hairline nobody can see. */
+  border: 1px solid var(--muted);
+}
+.skl tr.on .mark { color: var(--unharmed); }
+.skl tr.on .mark::before { border-color: var(--unharmed); }
+.skl tr.shut .mark { color: var(--faint); }
+.skl tr.shut .mark::before { border-style: dashed; border-color: var(--faint); }
 
 /* ---- the hotbar: a turn is something you aim at ---- */
 .hotbar-wrap { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }

@@ -99,6 +99,12 @@ const pickBackground = async (label) => {
 };
 
 const acolyte = await pickBackground("Acolyte");
+/* And no picker where there is nothing to pick. An acolyte gets two
+   languages and no tools; the tools list was still underneath offering
+   fifty-four of them with an allowance of zero, which reads as a choice
+   somebody forgot to make. */
+ok("a background that grants no tool shows no tool picker",
+  await card.locator('.pl', { hasText: /^TOOLS/ }).count(), 0);
 ok("an acolyte is told what the book gives them",
   /Acolyte gives you two languages\./.test(acolyte), true);
 ok("and is asked for exactly that", /2 languages to choose\./.test(acolyte), true);
@@ -123,7 +129,10 @@ ok("and is asked for one of each",
 await pickBackground("Acolyte");
 await page.screenshot({ path: `${OUT}/80-tongues.png`, fullPage: true });
 
-// The tool list is the compendium's, not one somebody typed out.
+/* The tool list is the compendium's, not one somebody typed out — checked
+   against a background that actually grants a tool, since an acolyte's
+   picker is correctly absent. */
+await pickBackground("Guild Artisan");
 await openPick(page, "Tools");
 const tools = await card.locator('.pl-row[aria-label^="Use "]').allInnerTexts();
 ok("tools come from the item catalogue", tools.length > 30, true);
@@ -132,12 +141,14 @@ ok("and are the mundane ones, not treasure",
 
 /* An acolyte's two are both languages — the tool list is offered as reading,
    not as a choice, and taking one is refused. */
+await pickBackground("Acolyte");
 await openPick(page, "Languages");
 await card.getByRole("button", { name: "Speak Elvish" }).click();
 await page.waitForTimeout(200);
-await openPick(page, "Tools");
-ok("a background that grants no tool does not let you take one",
-  await card.getByRole("button", { name: "Use Herbalism Kit" }).isDisabled(), true);
+/* Not "offered and refused" — not offered at all, which is the stronger
+   version of the same claim. */
+ok("a background that grants no tool offers no tool to take",
+  await card.getByRole("button", { name: "Use Herbalism Kit" }).count(), 0);
 await openPick(page, "Languages");
 await card.getByRole("button", { name: "Speak Orc" }).click();
 await page.waitForTimeout(200);
@@ -152,10 +163,15 @@ const shape = await page.evaluate(() => ({
   pickers: document.querySelectorAll(".pl").length,
 }));
 ok("the step is closed pickers rather than a chip wall", shape.chips, 0);
-ok("one for each list", shape.pickers >= 3, true);
+/* One per list that HAS something in it. An acolyte's tools do not, so an
+   acolyte gets one picker here and a guild artisan gets two. */
+ok("one for each list with something to choose from", shape.pickers >= 1, true);
 ok("and the whole step fits in about two screens", shape.screens < 2.6, true);
 
-/* Opening the longest list must not undo that — it scrolls inside itself. */
+/* Opening the longest list must not undo that — it scrolls inside itself.
+   Checked on a background that grants a tool, since an acolyte has no tool
+   list to open. */
+await pickBackground("Guild Artisan");
 await openPick(page, "Tools");
 await page.waitForTimeout(300);
 const opened = await page.evaluate(() => ({
