@@ -2074,3 +2074,29 @@ html, body { overscroll-behavior-y: none; }
 .feat-book > .label { display: block; padding: 6px 0 4px; }
 .mc-brings { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
 .mc-brought + .mc-brought { margin-top: 12px; }
+
+/* ---- one step, arriving ---- */
+/*
+ * A builder that changes its content in place, under a screen still scrolled
+ * to the last question, reads as a web page. A card that comes in from the
+ * side reads as a step — and the direction says which way you went, so Back
+ * does not look like Continue.
+ *
+ * 180ms: long enough to be seen as movement, short enough that the second
+ * press of a fast tapper is not fighting it.
+ */
+.cr-steps { animation: cr-arrive 180ms ease-out both; }
+.cr-steps.back { animation-name: cr-arrive-back; }
+@keyframes cr-arrive {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cr-arrive-back {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+/* Movement is the one thing some people cannot have. The step still changes;
+   it simply does not slide. */
+@media (prefers-reduced-motion: reduce) {
+  .cr-steps, .cr-steps.back { animation: none; }
+}

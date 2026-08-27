@@ -17,7 +17,7 @@
  * placing scores would quietly homogenise every character at the table.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ABILITIES, abilityModifier, formatModifier, proficiencyBonus, SKILLS, SKILL_IDS,
   type Ability, type SkillId,
@@ -65,7 +65,7 @@ import {
 } from "../store/srd.js";
 import type { CompendiumSpell } from "../import/compendium.js";
 import {
-  byBookOrder, castableBy, isClassFeature, levelLabel, toKnown, type KnownSpell,
+  byBookOrder, castableBy, isClassFeature, toKnown, type KnownSpell,
 } from "../domain/spells.js";
 import {
   ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, CLASS_HUE, describePriority,
@@ -515,16 +515,6 @@ export function CreateCharacter({
     if (!castsAtAll) return () => [] as typeof book;
     const q = spellFilter.trim().toLowerCase();
     const have = new Set(chosenSpells.map((s) => s.id));
-    // The highest slot level that exists, as an index. findLastIndex is not
-    // in this lib target, and a reverse scan says the same thing.
-    const slots = atLevel?.slots ?? [];
-    let topSlot = -1;
-    for (let i = slots.length - 1; i >= 0; i--) {
-      if ((slots[i] ?? 0) > 0) {
-        topSlot = i;
-        break;
-      }
-    }
     /*
      * One list per casting class, not one pooled list.
      *
@@ -775,11 +765,36 @@ export function CreateCharacter({
   const stepIndex = Math.min(step, steps.length - 1);
   const here = steps[stepIndex]!.id;
   const at = (id: string) => here === id;
-  const go = (n: number) => setStep(Math.max(0, Math.min(steps.length - 1, n)));
+  /*
+   * Which way the flow just moved, so the next card comes in from the side
+   * it should — forwards from the right, back from the left. Anything else
+   * reads as the app losing its place.
+   */
+  const [back, setBack] = useState(false);
+  const chrome = useRef<HTMLElement | null>(null);
+
+  const go = (n: number) => {
+    const to = Math.max(0, Math.min(steps.length - 1, n));
+    setBack(to < stepIndex);
+    setStep(to);
+  };
+
+  /*
+   * And put the top of the step under the eye. A phone keeps its scroll
+   * position across a re-render, which on a long step means the next
+   * question opens somewhere in the middle of itself.
+   */
+  useEffect(() => {
+    const el = chrome.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 8;
+    const soft = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top, behavior: soft ? "smooth" : "auto" });
+  }, [here]);
 
   return (
     <>
-      <section className="card cr-chrome">
+      <section className="card cr-chrome" ref={chrome}>
         <div className="card-hd">
           <span className="label">
             {klass ? `${race?.name ?? "Someone"} ${klass.name} ${level}` : "Build a character"}
@@ -817,6 +832,15 @@ export function CreateCharacter({
           <div className="card-body"><p className="faint" style={{ margin: 0 }}>Loading…</p></div>
         )}
 
+        {/*
+          * One step, one card, and it arrives.
+          *
+          * Pressing Continue changed the content under a screen still
+          * scrolled to wherever the last question ended, so every step began
+          * with a scroll back up to find it. Keyed by the step, so it
+          * remounts — which is what makes the animation run.
+          */}
+        <div className={`cr-steps${back ? " back" : ""}`} key={here}>
         {races && classes && at("class") && (
           <div className="card-body">
             {/* Class first: it is what lets every later step advise. */}
@@ -1375,8 +1399,10 @@ export function CreateCharacter({
             )}
           </div>
         )}
+        </div>
       </section>
 
+      <div className={`cr-steps${back ? " back" : ""}`} key={`late-${here}`}>
       {at("abilities") && klass && race && (
         <section className="card">
           <div className="card-hd">
@@ -2413,6 +2439,8 @@ export function CreateCharacter({
           </div>
         </section>
       )}
+
+      </div>
 
       {/*
         * Back and on — and, on the last step, the thing that finishes.

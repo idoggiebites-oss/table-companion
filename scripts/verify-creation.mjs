@@ -251,6 +251,41 @@ const spilling = await player.page.evaluate(() => {
 });
 ok("no card prints over the one beneath it", spilling.join(", "), "");
 
+
+/* --- a step arrives, rather than changing underneath you -----------------
+
+   Pressing Continue used to swap the content while the screen stayed
+   scrolled to wherever the last question ended, so every step began with a
+   scroll back up to find it. That is the difference between a page and an
+   app, and it is measurable: where the screen is afterwards. */
+const flow = await device("flow");
+await flow.page.getByRole("button", { name: "Build a character" }).click();
+await flow.page.waitForSelector(".klass-cards", { timeout: 20000 });
+await flow.page.getByRole("button", { name: "Wizard", exact: true }).click();
+await flow.page.waitForTimeout(400);
+// Where a person is when they finish a long step.
+await flow.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await flow.page.waitForTimeout(300);
+const before = await flow.page.evaluate(() => Math.round(window.scrollY));
+ok("a long step leaves you at the bottom of it", before > 200, true);
+
+await flow.page.getByRole("button", { name: "Continue" }).click();
+await flow.page.waitForTimeout(900);
+const landed = await flow.page.evaluate(() => ({
+  rail: Math.round(document.querySelector(".cr-rail").getBoundingClientRect().top),
+  anim: getComputedStyle(document.querySelector(".cr-steps")).animationName,
+}));
+ok("and the next one opens with the steps in view", landed.rail < 200, true);
+ok("arriving from the side it came from", landed.anim, "cr-arrive");
+
+await flow.page.getByRole("button", { name: "Back" }).click();
+await flow.page.waitForTimeout(600);
+ok("and from the other side going back",
+  await flow.page.evaluate(
+    () => getComputedStyle(document.querySelector(".cr-steps")).animationName,
+  ),
+  "cr-arrive-back");
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();
