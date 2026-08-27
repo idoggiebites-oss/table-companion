@@ -268,6 +268,24 @@ export function PlayerTurn({
       (combat.creatureHp[c.id] ?? 1) > 0,
   );
 
+  /*
+   * An opportunity attack is at the thing that provoked it.
+   *
+   * Answering the DM's offer used to list every creature on the board, which
+   * is not a choice the rules give you — you do not get to swing at whoever
+   * you like because somebody else walked out of your reach. When the offer
+   * names its provoker, that is the only target.
+   *
+   * An UNPROMPTED opportunity attack still offers everyone: nobody has said
+   * who moved, so narrowing it would be the app inventing the trigger.
+   */
+  const provoker =
+    offered && combat.offer?.fromId
+      ? combat.order.find((c) => c.id === combat.offer?.fromId)
+      : undefined;
+  const reactionTargets = provoker ? [provoker] : visibleTargets;
+
+
   if (acting) {
     const surprised = self ? isSurprised(combat, self) : false;
     return (
@@ -743,7 +761,7 @@ export function PlayerTurn({
       {picking === "opportunity" ? (
         <Swing
           attacks={attacks}
-          targets={visibleTargets}
+          targets={reactionTargets}
           stanceAt={stanceAt}
           onCancel={() => setPicking(null)}
           onSend={(swing) => {

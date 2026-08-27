@@ -871,6 +871,9 @@ export function Combat({
                   to: offerTo,
                   because: offerWhy.trim() || "something is happening",
                   from: active?.name ?? "someone",
+                  // By id as well, so the swing that answers is aimed at
+                  // whoever provoked it rather than at the whole board.
+                  ...(active ? { fromId: active.id } : {}),
                 });
                 setOffering(false);
                 setOfferTo([]);

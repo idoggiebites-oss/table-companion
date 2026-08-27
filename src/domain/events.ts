@@ -423,6 +423,8 @@ export type DomainEvent = Meta &
         readonly to: readonly string[];
         readonly because: string;
         readonly from: string;
+        /** The provoker by id, so the swing that answers can be aimed. */
+        readonly fromId?: string;
       }
     | { readonly type: "reactionDeclined"; readonly combatantId: string }
     | { readonly type: "reactionOfferClosed" }

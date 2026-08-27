@@ -162,6 +162,18 @@ export interface ReactionOffer {
   readonly because: string;
   /** Who or what triggered it, for the prompt to name. */
   readonly from: string;
+  /**
+   * The same creature, by id.
+   *
+   * An opportunity attack is at the thing that provoked it — you do not get
+   * to swing at whoever you like because somebody else walked away. The
+   * offer carried only a NAME, so the swing that answered it listed every
+   * creature on the board and left the rule to the table.
+   *
+   * Optional because offers made before this existed replay without it, and
+   * a fight in progress should not break for a field it never had.
+   */
+  readonly fromId?: string;
   /** Answered already, so the prompt clears on their screen only. */
   readonly declined: readonly string[];
 }

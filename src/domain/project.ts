@@ -697,7 +697,13 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
         ...state,
         combat: {
           ...state.combat,
-          offer: { to: e.to, because: e.because, from: e.from, declined: [] },
+          offer: {
+            to: e.to,
+            because: e.because,
+            from: e.from,
+            ...(e.fromId ? { fromId: e.fromId } : {}),
+            declined: [],
+          },
         },
       };
     }
