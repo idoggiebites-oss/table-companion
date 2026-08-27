@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 805 unit tests, 52 browser suites, ~1,060 assertions, run against a
+**Proof.** 813 unit tests, 53 browser suites, ~1,080 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -101,6 +101,17 @@ spread across the other modules.
    the other side of the screen.
 
 ## Done since this list was written
+
+**Push on iOS says what it needs.** Apple gives Web Push to a Home Screen app
+and not to a Safari tab — and this list had the mechanism wrong: it assumed the
+button worked and delivery failed silently. It does not. In a tab the API is
+not exposed at all, so every support check failed and the control rendered
+nothing, which is worse: a player told the app can buzz finds no setting and no
+reason. It now says so, names whose rule it is, and carries the room code into
+the sentence, because an iOS Home Screen app has its own storage and opens
+empty. The check is `!supported() && an uninstalled Apple device`, so if some
+future iOS exposes push to tabs the ordinary button comes back on its own.
+
 
 The player side as a game interface — the panel, the equipment figure, the
 spell grid, the turn's own weapons and spells, and notes. The sheet showing
@@ -155,11 +166,6 @@ switch, the monster piles, and the DM's spell lookup.
   once. When the sync lands between the two clicks the second device reads an
   already-advanced turn, sends a valid `from`, and the fight moves twice —
   the app behaving correctly on the input it got. Passes on re-run.
-
-- **Push on iOS needs the app installed to the home screen.** Apple only
-  delivers to an installed PWA, and the app does not yet say so at the moment
-  a player turns notifications on from Safari — where the button works, the
-  subscription succeeds, and nothing ever arrives.
 
 - **Help is untested end to end.** The sample campaign has one character, so
   the browser suite proves the step exists and says "nobody else is in this

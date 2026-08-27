@@ -512,6 +512,7 @@ export function App() {
               buzz={
                 <Buzz
                   characters={myCharacters}
+                  {...(room ? { room: room.code } : {})}
                   onWatch={(sub) => watch(sub, myCharacters)}
                   onUnwatch={unwatch}
                 />

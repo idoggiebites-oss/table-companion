@@ -19,10 +19,12 @@ import { useEffect, useState } from "react";
 import { current, state as pushState, turnOff, turnOn, type PushState } from "../store/push.js";
 
 export function Buzz({
-  characters, onWatch, onUnwatch,
+  characters, room, onWatch, onUnwatch,
 }: {
   /** Whose turns this device should be told about. */
   characters: readonly string[];
+  /** The room code, to carry to a Home Screen app that starts out empty. */
+  room?: string | undefined;
   onWatch: (sub: { endpoint: string; p256dh: string; auth: string }) => void;
   onUnwatch: (endpoint: string) => void;
 }) {
@@ -48,6 +50,29 @@ export function Buzz({
   if (state === null || state === "unsupported" || state === "unconfigured") {
     // Nothing to offer: no service worker, or this deployment has no key.
     return null;
+  }
+
+  /*
+   * The one unsupported case that is not a dead end.
+   *
+   * Apple gives Web Push to a Home Screen app and not to a Safari tab, so on
+   * an iPhone every support check fails and the button simply was not there.
+   * A player who has been told the app can buzz then finds nothing, and no
+   * amount of looking explains it — which is worse than the feature being
+   * missing, because it looks broken rather than absent.
+   */
+  if (state === "needs-install") {
+    return (
+      <p className="buzz-no">
+        On an iPhone or iPad, only an installed app can buzz — that is Apple's
+        rule, not this app's. Tap <b>Share</b>, then <b>Add to Home Screen</b>,
+        and open Table Companion from there.
+        {room
+          ? <> A Home Screen app starts out empty, so join with <b className="num">{room}</b> again
+            and claim your character; this setting will be waiting.</>
+          : <> A Home Screen app starts out empty, so you will join the room again from there.</>}
+      </p>
+    );
   }
 
   if (state === "blocked") {

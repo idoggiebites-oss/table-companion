@@ -18,6 +18,8 @@ import type { PushSub } from "../sync/protocol.js";
 
 export type PushState =
   | "unsupported"
+  /** An iPhone that has not installed the app. Apple's rule, not ours. */
+  | "needs-install"
   | "unconfigured"
   | "blocked"
   | "off"
@@ -47,6 +49,31 @@ export function supported(): boolean {
   );
 }
 
+/**
+ * Whether this is an Apple device that has not been installed.
+ *
+ * Apple exposes Web Push only to a web app on the Home Screen: in a Safari
+ * tab, `PushManager` and `Notification` do not exist at all. Every check for
+ * support therefore fails, the button disappears, and the player is told
+ * nothing — which is the state a notification setting must never be in.
+ *
+ * iPadOS reports itself as a Mac, so a touch count is what separates it from
+ * a desktop. Read alongside a failed support check, never on its own: if some
+ * future iOS exposes push to tabs, `supported()` becomes true and this stops
+ * being consulted, which is the right way round.
+ */
+function appleUninstalled(): boolean {
+  if (typeof navigator === "undefined" || typeof window === "undefined") return false;
+  const ua = navigator.userAgent;
+  const apple = /iPad|iPhone|iPod/.test(ua)
+    || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (!apple) return false;
+  const installed =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as { standalone?: boolean }).standalone === true;
+  return !installed;
+}
+
 let cachedKey: string | null | undefined;
 
 /** The deployment's public key, or null when push is not configured here. */
@@ -62,8 +89,12 @@ export async function serverKey(): Promise<string | null> {
 }
 
 export async function state(): Promise<PushState> {
-  if (!supported()) return "unsupported";
+  /*
+   * The key first, so a deployment with push switched off says so rather
+   * than telling an iPhone to install an app that would still not buzz.
+   */
   if ((await serverKey()) === null) return "unconfigured";
+  if (!supported()) return appleUninstalled() ? "needs-install" : "unsupported";
   if (Notification.permission === "denied") return "blocked";
   const reg = await navigator.serviceWorker.getRegistration();
   const sub = await reg?.pushManager.getSubscription();
