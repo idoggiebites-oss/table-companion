@@ -1121,20 +1121,20 @@ export function Combat({
       )}
 
 
-      /*
-       * The screen follows the turn.
-       *
-       * It used to be the order, then the statblock, then whatever a
-       * feature needed when it was built. Now it answers the questions a
-       * turn actually raises, in that order: whose turn it is (the header
-       * above), what is WAITING on you, what the one who is up can DO, and
-       * only then the order — which is a reference you glance at rather
-       * than the thing you are working in.
-       *
-       * Claims, a shove, readied actions and a big creature's legendary
-       * actions are all the same kind of thing: somebody else is blocked
-       * until you answer. They belong together and they belong first.
-       */
+      {/*
+        * The screen follows the turn.
+        *
+        * It used to be the order, then the statblock, then whatever a
+        * feature needed when it was built. Now it answers the questions a
+        * turn actually raises, in that order: whose turn it is (the header
+        * above), what is WAITING on you, what the one who is up can DO, and
+        * only then the order — which is a reference you glance at rather
+        * than the thing you are working in.
+        *
+        * Claims, a shove, readied actions and a big creature's legendary
+        * actions are all the same kind of thing: somebody else is blocked
+        * until you answer. They belong together and they belong first.
+        */}
       <div className="track">
         {visible.map((c) => {
           const isActive = active?.id === c.id;

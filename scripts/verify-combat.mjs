@@ -167,6 +167,35 @@ ok("it can be hurt like anything else",
   await dm.getByRole("button", { name: "Hurt or heal Ghast" }).count(), 1);
 await dm.screenshot({ path: `${OUT}/52-reinforcements.png`, fullPage: true });
 
+
+/* --- nothing on screen that was meant for the source ---------------------
+
+   A block comment at JSX child position is literal TEXT. A fourteen-line
+   note about how the combat screen is arranged shipped straight onto the
+   combat screen, mid-fight, and every check passed: the suites measure
+   positions and roles, and none of them read the page for prose that should
+   not be there.
+
+   The source is the wrong place to catch it — a regex cannot tell markup
+   from code without parsing, and the attempt produced a hundred and two
+   false positives. The PAGE can: comment punctuation is never legitimate
+   visible text here. */
+const noSourceOnScreen = async (pg, where) => {
+  const stray = await pg.evaluate(() => {
+    const t = document.body.innerText;
+    const hits = [];
+    for (const m of t.matchAll(/\/\*|\*\//g)) {
+      hits.push(t.slice(Math.max(0, m.index - 30), m.index + 40).replace(/\s+/g, " "));
+    }
+    return [...new Set(hits)];
+  });
+  /* Joined, not compared as arrays: two empty arrays are not equal under
+     the JSON compare this harness uses. */
+  ok(`no source comment on ${where}`, stray.join(" | "), "");
+};
+
+await noSourceOnScreen(dm, "the fight");
+
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;
 await browser.close();

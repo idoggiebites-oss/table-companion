@@ -333,6 +333,14 @@ switch, the monster piles, and the DM's spell lookup.
   race's own questions are derived, and it needs the derivation read rather
   than the symptom chased.
 
+- **Nothing checks that the page says only what it means to say.** A block
+  comment at JSX child position is literal text, and fourteen lines about how
+  the combat screen is arranged shipped onto the combat screen mid-fight. The
+  suites measure positions, roles and counts; not one of them read the page
+  for prose that should not be there. Three suites do now, but only three —
+  and the general lesson is that "I looked at it" is not a check, and I had
+  not looked.
+
 - **43 browser-suite selectors match more than one component.** `.v` is worn
   by seven, `.swing-ask` by six. Nothing is broken today — the right thing
   happens to render first — but it is why changing one dropdown to a readable
