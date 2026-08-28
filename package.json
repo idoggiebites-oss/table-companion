@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
-    "lint": "oxlint src worker && node scripts/check-css.mjs",
+    "lint": "oxlint src worker && node scripts/check-css.mjs && node scripts/check-selectors.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "wrangler types >/dev/null && tsc --noEmit && tsc --noEmit -p worker/tsconfig.json",

@@ -318,6 +318,18 @@ switch, the monster piles, and the DM's spell lookup.
   guard, which is exactly what the guard is for, but it means the next person
   to add anything there has to buy the space rather than find it.
 
+- **43 browser-suite selectors match more than one component.** `.v` is worn
+  by seven, `.swing-ask` by six. Nothing is broken today — the right thing
+  happens to render first — but it is why changing one dropdown to a readable
+  list cost thirty suite edits, and it is how a suite silently began measuring
+  the wrong component after SubclassPick borrowed the feat picker's classes.
+
+  `scripts/check-selectors.mjs` records the 43 and fails on the 44th. The
+  baseline is meant to shrink: driving a suite by role and name instead takes
+  its line out of the file, and it can never come back unnoticed. This is the
+  first thing to attack alongside any UI revision, because a redesign will
+  thrash exactly these.
+
 - **`verify-turns`'s race is arranged, not raced for.** The player goes
   offline before pressing, which is what "at the same instant" means in a
   distributed system. Deterministic across repeated runs, but it proves the
