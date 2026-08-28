@@ -63,6 +63,32 @@ ok("naming the thing held", facts.toLowerCase().includes(name.toLowerCase().spli
 /* Honest about the gap rather than showing an empty panel: not one of the
    10,760 items in the compendium carries a description. */
 ok("and saying why there is no prose", /ships no description/i.test(facts), true);
+/* --- the way out never scrolls away -------------------------------------
+
+   The sheet said "the body scrolls, not the pane" in a comment and did the
+   opposite: overflow sat on the pane, so a long spell scrolled the title and
+   the closing button along with it, and the button — being the last child —
+   ended over text the reader was still in the middle of.
+
+   Checked as a structural property rather than against one long spell: the
+   body is the scroller, and the button is not inside it. That holds however
+   long the text is, which is the claim. */
+const anatomy = await page.evaluate(() => {
+  const pane = document.querySelector(".pop-pane");
+  const body = pane.querySelector(".pop-body");
+  const out = [...pane.querySelectorAll("button")].pop();
+  return {
+    bodyIsScroller: getComputedStyle(body).overflowY === "auto",
+    paneDoesNotScroll: getComputedStyle(pane).overflowY !== "auto",
+    outIsOutsideBody: !body.contains(out),
+    outOnScreen: out.getBoundingClientRect().bottom <= window.innerHeight + 1,
+  };
+});
+ok("the sheet's body is what scrolls", anatomy.bodyIsScroller, true);
+ok("and the pane itself does not", anatomy.paneDoesNotScroll, true);
+ok("so the way out is never carried off with the text", anatomy.outIsOutsideBody, true);
+ok("and is on screen", anatomy.outOnScreen, true);
+
 await page.getByRole("button", { name: "Close", exact: true }).click();
 await page.waitForTimeout(300);
 ok("and it closes", await page.locator(".pop-pane").count(), 0);

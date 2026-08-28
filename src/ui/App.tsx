@@ -152,7 +152,23 @@ export function App() {
       ? offer
       : null;
   const reactionSpare = mineState ? !mineState.economy.reaction : false;
-  const askingReaction = offeredToMe !== null && reactionSpare;
+  /*
+   * And not once they have said yes.
+   *
+   * The prompt used to be an inline card, so leaving it up while the swing
+   * opened underneath was untidy and nothing worse. It is a modal with a
+   * scrim now, and a scrim that outlives its question blocks the very screen
+   * it just sent you to.
+   *
+   * `takingReaction` is no good for this: PlayerTurn clears it the moment it
+   * opens the swing, so the modal came straight back. What is needed is
+   * "I have answered THIS offer" — remembered against the offer itself, so a
+   * second offer later in the fight still interrupts.
+   */
+  const offerKey = offeredToMe ? `${offeredToMe.from}|${offeredToMe.because}` : null;
+  const [answeredOffer, setAnsweredOffer] = useState<string | null>(null);
+  const askingReaction =
+    offeredToMe !== null && reactionSpare && answeredOffer !== offerKey;
 
   const dmTabs: TabDef<TabId>[] = [
     { id: "combat", label: "Combat", dot: state.combat?.phase === "rolling" },
@@ -478,12 +494,14 @@ export function App() {
         <ReactionAsk
           offer={offeredToMe}
           onTake={() => {
+            setAnsweredOffer(offerKey);
             setTab("combat");
             setTakingReaction(true);
           }}
-          onDecline={() =>
-            mySeatId && append({ type: "reactionDeclined", combatantId: mySeatId })
-          }
+          onDecline={() => {
+            setAnsweredOffer(offerKey);
+            if (mySeatId) append({ type: "reactionDeclined", combatantId: mySeatId });
+          }}
         />
       )}
       {mine &&

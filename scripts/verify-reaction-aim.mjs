@@ -129,8 +129,19 @@ await dm.waitForTimeout(900);
 await player.waitForTimeout(900);
 ok("the player is asked, wherever they are",
   await player.getByRole("button", { name: "Take a swing" }).count(), 1);
+/* In the middle of the screen with a scrim, because this is the one moment
+   the table has stopped and five people are waiting on one person. */
+ok("and it interrupts rather than waiting to be found",
+  await player.locator(".react-scrim").count(), 1);
+
 await player.getByRole("button", { name: "Take a swing" }).click();
 await player.waitForTimeout(900);
+/* And it gets out of the way the instant they answer. A scrim that outlives
+   its question blocks the very screen it just sent you to — which is what
+   happened the first time, because the flag it watched was cleared a render
+   later by the screen it opened. */
+ok("and gets out of the way once answered",
+  await player.locator(".react-scrim").count(), 0);
 await player.getByRole("button", { name: /longbow/i }).first().click();
 await player.waitForTimeout(700);
 

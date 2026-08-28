@@ -14,6 +14,17 @@
  * Saying yes takes you to the fight, where the swing is walked through. That
  * navigation is the point rather than a cost — the answer is a real attack
  * roll, and the walkthrough for it already exists.
+ *
+ * It interrupts rather than waiting to be found. It was a card above the
+ * tabs, which is better than tab-local and still wrong: this is the one
+ * moment in the whole app where the table has STOPPED and five people are
+ * looking at one person. A prompt for that should be in the middle of the
+ * screen and hard to miss, not another thing on a page.
+ *
+ * The scrim does not dismiss it. Everything else in this app closes when you
+ * tap outside, and this one must not: "let it go" is an answer the table is
+ * owed, and a reaction that vanished because a thumb brushed the edge leaves
+ * everyone waiting on a question nobody can see any more.
  */
 
 import type { ReactionOffer } from "../domain/combat.js";
@@ -26,15 +37,18 @@ export function ReactionAsk({
   onDecline: () => void;
 }) {
   return (
-    <section className="react-ask">
-      <span className="label">{offer.because}</span>
-      <p className="swing-ask">
-        {offer.from} — this is your reaction, if you want it.
-      </p>
-      <div className="row">
-        <button onClick={onTake}>Take a swing</button>
-        <button onClick={onDecline}>Let it go</button>
-      </div>
-    </section>
+    <>
+      <div className="react-scrim" aria-hidden="true" />
+      <section className="react-ask" role="alertdialog" aria-label="Your reaction">
+        <span className="label">{offer.because}</span>
+        <p className="swing-ask">
+          {offer.from} — this is your reaction, if you want it.
+        </p>
+        <div className="row">
+          <button className="react-yes" onClick={onTake}>Take a swing</button>
+          <button onClick={onDecline}>Let it go</button>
+        </div>
+      </section>
+    </>
   );
 }

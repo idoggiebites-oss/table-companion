@@ -1301,10 +1301,38 @@ html, body { overscroll-behavior-y: none; }
 .ready-row .faint { flex: 1; font-size: 0.78rem; }
 
 /* Owed NOW, above the tabs, on whatever screen you are on. */
+/*
+ * In the middle of the screen, because the table has stopped.
+ *
+ * This was a card above the tabs — better than tab-local, still wrong. It is
+ * the one moment in the app where five people are looking at one person and
+ * waiting, and a prompt for that should interrupt rather than be findable.
+ *
+ * Above the popover sheets deliberately: if a reaction lands while somebody
+ * is reading a spell, the reaction is the thing that matters.
+ */
+.react-scrim {
+  position: fixed; inset: 0; z-index: 40; background: #000a;
+  animation: pop-rise 140ms ease-out;
+}
 .react-ask {
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 14px 16px; margin-top: 12px; border-radius: var(--r-control);
-  background: var(--raised); border: 1px solid var(--steel);
+  position: fixed; z-index: 41;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px; border-radius: var(--r-card);
+  background: var(--panel); border: 1px solid var(--gold);
+  box-shadow: 0 18px 48px #000b;
+  animation: react-land 160ms ease-out;
+}
+/* Yes is the one with weight: it is the answer that costs something. */
+.react-ask .react-yes { flex: 1; border-color: var(--gold); color: var(--gold); }
+@keyframes react-land {
+  from { transform: translate(-50%, -46%); opacity: 0; }
+  to { transform: translate(-50%, -50%); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-ask, .react-scrim { animation: none; }
 }
 
 /* ---- feats: a description, not a dropdown ---- */
@@ -2243,11 +2271,27 @@ html, body { overscroll-behavior-y: none; }
   padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
   background: var(--panel); border-top: 1px solid var(--gold);
   border-radius: var(--r-card) var(--r-card) 0 0;
-  max-height: 62vh; overflow-y: auto;
+  max-height: 76vh;
   animation: pop-rise 160ms ease-out;
 }
-/* The body scrolls, not the pane, so the title and the way out stay put. */
-.pop-body { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+/*
+ * The BODY scrolls, not the pane.
+ *
+ * This comment was here and the CSS did the opposite: `overflow-y` sat on the
+ * pane, so a long spell scrolled the title and the way out along with it —
+ * and the closing button, being the last child, ended up over the text a
+ * reader was still in the middle of. A sheet whose exit moves while you read
+ * is a sheet you have to hunt.
+ *
+ * min-height:0 is what lets a flex child actually shrink; without it the body
+ * refuses to be smaller than its content and the scroll never happens.
+ */
+.pop-body {
+  display: flex; flex-direction: column; gap: 8px;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+}
+/* The title and the way out are the pane's, and they stay. */
+.pop-pane > .label, .pop-pane > button { flex: 0 0 auto; }
 @keyframes pop-rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .pop-pane { animation: none; } }
 @media (min-width: 760px) {

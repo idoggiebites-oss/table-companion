@@ -196,11 +196,34 @@ await dm.page.getByRole("button", { name: "Ask them" }).click();
 await player.page.waitForTimeout(1400);
 ok("the moment arrives on whatever screen they are on",
   /leaving your reach/i.test(await player.page.locator(".react-ask").innerText()), true);
-ok("without moving them off it",
+/* In the middle of the screen with a scrim behind it: the table has stopped
+   and five people are waiting on one person, so it interrupts rather than
+   being another card to find. */
+ok("and it interrupts, rather than waiting to be noticed",
+  await player.page.locator(".react-scrim").count(), 1);
+ok("without moving them off the screen they were on",
   await player.page.locator('[data-tab="gear"].on').count(), 1);
 ok("and the fight is marked, so the way back is obvious",
   await player.page.locator('[data-tab="combat"] .tab-dot').count(), 1);
 await player.page.screenshot({ path: `${OUT}/43-reaction.png`, fullPage: true });
+
+/* Declining first, and taking second, because taking SPENDS the reaction —
+   after which the DM cannot offer another and there is nothing left to
+   decline. The order is the rule, not the suite's convenience. */
+await player.page.getByRole("button", { name: "Let it go" }).click();
+await player.page.waitForTimeout(1000);
+ok("letting it go clears it", await player.page.locator(".react-ask").count(), 0);
+ok("and takes the scrim with it", await player.page.locator(".react-scrim").count(), 0);
+
+await dm.page.getByRole("button", { name: "Offer a reaction" }).click();
+await dm.page.waitForTimeout(300);
+await dm.page.locator(".offer-row", { hasText: "Kira Vance" }).click();
+await dm.page.locator('input[aria-label="Reason for the reaction"]')
+  .fill("it steps past you again");
+await dm.page.getByRole("button", { name: "Ask them" }).click();
+await player.page.waitForTimeout(1400);
+ok("a second offer interrupts again", await player.page.locator(".react-ask").count(), 1);
+
 // Saying yes takes you to the swing rather than asking the question twice.
 await player.page.getByRole("button", { name: "Take a swing" }).click();
 await player.page.waitForTimeout(1000);
@@ -208,11 +231,12 @@ ok("saying yes goes straight to the swing",
   await player.page.locator('[data-tab="combat"].on').count(), 1);
 ok("with the walkthrough already open",
   await player.page.locator(".swing-step").count(), 1);
+/* And the prompt is gone. A scrim that outlived its question would be sitting
+   over the very swing it just opened — which is what happened the first time,
+   because the flag it watched was cleared a render later by that screen. */
+ok("and the prompt got out of the way",
+  await player.page.locator(".react-scrim").count(), 0);
 await backOut();
-
-await player.page.getByRole("button", { name: "Let it go" }).click();
-await player.page.waitForTimeout(1000);
-ok("letting it go clears it", await player.page.locator(".react-ask").count(), 0);
 
 
 // --- the arc the whole thing exists for -----------------------------------
