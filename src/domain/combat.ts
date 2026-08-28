@@ -93,6 +93,40 @@ export interface Combat {
    */
   readonly reactions: Readonly<Record<string, boolean>>;
   /**
+   * What each creature has spent this turn — action, bonus, reaction.
+   *
+   * Players have had this since the beginning and creatures had a single
+   * boolean for the reaction, so a DM running six goblins tracked "has that
+   * one used its bonus action" in their head, six times, every round.
+   *
+   * Cleared when the creature's turn opens, like a player's.
+   */
+  readonly spent: Readonly<Record<string, Economy>>;
+  /**
+   * Legendary actions used this ROUND, by combatant id.
+   *
+   * Per round rather than per turn, because that is how the rule reads: they
+   * come back at the start of the creature's own turn, and between those two
+   * moments the count only goes down. The most-forgotten thing on a
+   * statblock, and 702 of the shipped creatures have them.
+   */
+  readonly legendarySpent: Readonly<Record<string, number>>;
+  /** Budgets the DM stated, where the book did not. See legendaryBudgetSet. */
+  readonly legendaryBudget?: Readonly<Record<string, number>>;
+  /**
+   * What the place itself does, and on what count.
+   *
+   * A lair action belongs to the PLACE rather than to any creature — it
+   * fires on initiative count 20 and is nobody's turn. `usedInRound` is the
+   * round it was last taken, because it is once per round and the DM is the
+   * one who has to remember that while running the dragon it belongs to.
+   */
+  readonly lair?: {
+    readonly at: number;
+    readonly text: string;
+    readonly usedInRound?: number;
+  } | null;
+  /**
    * Conditions on CREATURES, by combatant id. A character's conditions live
    * on their sheet, where they outlast the fight; a creature has no life
    * outside this one. Same split as hit points and reactions.
@@ -265,6 +299,8 @@ export function stageCombat(order: readonly Combatant[]): Combat {
     creatureHp: seedHp(numbered),
     moved: {},
     reactions: {},
+    spent: {},
+    legendarySpent: {},
     creatureConditions: {},
     tags: {},
     offer: null,
@@ -284,6 +320,8 @@ export function startCombat(order: readonly Combatant[]): Combat {
     creatureHp: seedHp(sorted),
     moved: {},
     reactions: {},
+    spent: {},
+    legendarySpent: {},
     creatureConditions: {},
     tags: {},
     offer: null,
@@ -366,6 +404,8 @@ export function beginCombat(combat: Combat): Combat {
     order: sortOrder(rolled),
     moved: {},
     reactions: {},
+    spent: {},
+    legendarySpent: {},
     creatureConditions: {},
     tags: {},
     offer: null,
@@ -440,11 +480,24 @@ export function advance(combat: Combat, from: number): Combat {
   }
   // An offer nobody answered dies with the turn that raised it. Leaving it up
   // would have a player answering a question about a moment that has passed.
+  /*
+   * A creature's own turn hands back everything it spends per turn, and —
+   * per the rule — its legendary actions come back at the START of its turn
+   * rather than at the end of the round.
+   */
+  const spent = { ...combat.spent };
+  const legendarySpent = { ...combat.legendarySpent };
+  if (opening) {
+    delete spent[opening.id];
+    delete legendarySpent[opening.id];
+  }
   const helpedBy = { ...combat.helpedBy };
   for (const [id, who] of Object.entries(helpedBy)) {
     if (who === opening?.id) delete helpedBy[id];
   }
-  const base = { ...combat, moved, reactions, tags, helpedBy, offer: null };
+  const base = {
+    ...combat, moved, reactions, tags, helpedBy, spent, legendarySpent, offer: null,
+  };
   return next >= combat.order.length
     ? { ...base, turn: 0, round: combat.round + 1 }
     : { ...base, turn: next };

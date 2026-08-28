@@ -2368,3 +2368,77 @@ textarea,
 .init-head-row { padding-bottom: 0; min-height: 0; }
 /* One number and three buttons: the box needs to say it is how MUCH. */
 .pm-howmuch { flex: 1 1 100%; margin-bottom: 2px; }
+
+/* ---- a box that says what it is ---- */
+/*
+ * Placeholders were doing this job, and a placeholder disappears the moment
+ * somebody types — so every form read clearly while empty and became a
+ * column of anonymous boxes the second it was filled in.
+ */
+.fld { display: flex; flex-direction: column; gap: 3px; flex: 1 1 130px; min-width: 0; }
+/*
+ * Beside the box, for panels already fighting to stay under one screen. A
+ * stacked label costs about twenty pixels and the sheet went back over the
+ * height verify-panel guards twice because of it.
+ */
+.fld.inline { flex-direction: row; align-items: center; gap: 7px; flex: 0 1 auto; }
+.fld.inline > .label { flex: 0 0 auto; }
+.fld.inline > input { flex: 0 1 72px; min-width: 0; }
+.fld > input, .fld > select, .fld > textarea { width: 100%; }
+.fld-hint { font-size: 0.74rem; color: var(--muted); line-height: 1.35; }
+
+/* The save a monster's own action asks for, above the grid that resolves it. */
+.area-from {
+  margin: 0 0 10px; font-size: 0.84rem; line-height: 1.45; color: var(--accent);
+}
+
+/* ---- what a creature has left ---- */
+/*
+ * Players have had an action economy on screen since the beginning; creatures
+ * had one boolean for the reaction, so a DM running six goblins tracked "has
+ * that one used its bonus action" in their head, six times, every round.
+ *
+ * Small, because a creature row already carries a name, health, two hit
+ * buttons and its conditions — and quiet until spent, because what is GONE is
+ * the thing worth seeing at a glance.
+ */
+.cpips { display: inline-flex; gap: 3px; align-items: center; }
+.cpip {
+  min-width: 26px; min-height: 44px; padding: 0 4px;
+  font-size: 0.68rem; letter-spacing: 0.04em;
+  color: var(--muted); background: none; border: 1px solid var(--line);
+}
+.cpip.gone { color: var(--bloodied); border-color: var(--bloodied); opacity: 0.85; }
+
+/* ---- legendary actions, and the lair ---- */
+/*
+ * The most-forgotten things on a statblock. On screen during OTHER creatures'
+ * turns, which is when a legendary action is available and when nothing else
+ * is asking for the DM's attention.
+ */
+.legend {
+  margin-top: 10px; padding: 8px 10px;
+  border: 1px solid var(--line); border-left: 2px solid var(--gold);
+  border-radius: 0 var(--r-card) var(--r-card) 0;
+}
+.legend-hd {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; width: 100%; min-height: 44px;
+  background: none; border: 0; padding: 0; text-align: left;
+}
+/* The lair is the place, not a creature — a different edge says so. */
+.legend.lair { border-left-color: var(--accent); }
+
+/* Where the book omitted the count, the DM states it once. */
+.legend-ask { gap: 6px; align-items: center; flex-wrap: nowrap; }
+
+/* ---- choosing a path, a domain, an archetype ---- */
+/*
+ * The same shape as the feat picker and deliberately not the same classes: a
+ * subclass list wearing `.feat-pick` made that selector match two different
+ * components, and the feats' own suite began measuring this one.
+ */
+.sub-pick { display: flex; flex-direction: column; gap: 8px; }
+.sub-scroll { max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
+.sub-book { display: flex; flex-direction: column; gap: 4px; }
+.sub-took { margin-top: 4px; }

@@ -128,12 +128,20 @@ await page.waitForTimeout(1400);
 await atStep(page, "Scores");
 ok("a class with a level-1 subclass asks for it",
   await page.getByText("6 · Your class").count(), 1);
-ok("naming the question the book asks",
-  await page.locator('select[aria-label="Divine Domain"]').count(), 1);
-const domains = await page.locator('select[aria-label="Divine Domain"] option').count();
+/* Read off the list rather than a dropdown: a subclass IS its description,
+   so these are rows you can open and read before choosing. */
+const domainCard = page.locator(".chooser", { hasText: "Divine Domain" }).first();
+ok("naming the question the book asks", await domainCard.count(), 1);
+const domains = await domainCard.locator(".menu-row").count();
 ok("with the options read out of its own feature list", domains > 10, true);
 ok("and a filter, because there are dozens",
   await page.locator('input[aria-label="Filter Divine Domain"]').count(), 1);
+/* The point of the change: what each one DOES is readable without picking
+   it first. */
+await domainCard.locator(".menu-hd").first().click();
+await page.waitForTimeout(300);
+ok("and what one does, before you commit to it",
+  (await domainCard.locator(".menu-more .then").first().innerText()).length > 40, true);
 
 await atStep(page, "Class");
 await page.getByRole("button", { name: "Fighter", exact: true }).click();
@@ -141,9 +149,9 @@ await page.waitForTimeout(1200);
 // The same reading finds Fighting Style, which is written the same way.
 await atStep(page, "Scores");
 ok("a fighter is asked for a fighting style at 1",
-  await page.locator('select[aria-label="Fighting Style"]').count(), 1);
+  await page.locator(".chooser", { hasText: "Fighting Style" }).count(), 1);
 ok("but not for an archetype it has not reached",
-  await page.locator('select[aria-label="Martial Archetype"]').count(), 0);
+  await page.locator(".chooser", { hasText: "Martial Archetype" }).count(), 0);
 
 await atStep(page, "Class");
 await page.getByRole("button", { name: "Wizard", exact: true }).click();

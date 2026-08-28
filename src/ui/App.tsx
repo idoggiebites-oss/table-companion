@@ -427,8 +427,11 @@ export function App() {
             <span className="label">Joining the table</span>
           ) : (
             <>
-              <span className="label">I am</span>
+              {/* Associated, not merely adjacent — a label beside a control
+                  is a label only to somebody who can see them together. */}
+              <label className="label" htmlFor="seat-pick">I am</label>
               <select
+                id="seat-pick"
                 aria-label="Seat"
                 value={seat.kind === "dm" ? "dm" : `pc:${seat.characterId}`}
                 onChange={(e) => {

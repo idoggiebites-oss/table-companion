@@ -84,7 +84,7 @@ advantage/disadvantage computed and explained. Casting inside the turn.
 on tablets and desktops. A crash is contained to its tab and reports itself.
 The full 5e compendium ships with the app.
 
-**Proof.** 836 unit tests, 60 browser suites, ~1,090 assertions, run against a
+**Proof.** 853 unit tests, 63 browser suites, ~1,090 assertions, run against a
 real build on two devices — including the push path end to end, decrypted at
 the far end with the key a browser would have used.
 
@@ -101,6 +101,35 @@ spread across the other modules.
    the other side of the screen.
 
 ## Done since this list was written
+
+**A creature has an action economy.** Players have had one since the beginning
+and creatures had a single boolean for the reaction, so a DM running six
+goblins tracked "has that one used its bonus action" in their head, six times a
+round.
+
+**Legendary actions and lair actions.** 702 shipped creatures have legendary
+actions and the app tracked none of it. They sit on screen during OTHER
+creatures' turns — which is when they are available — with the budget, each
+option's cost, and the two rules people get wrong: not on their own turn, and
+back at the start of it. A lair action belongs to the place, fires on its own
+count, and is once a round.
+
+
+**A breath weapon is not an attack roll.** Tapping a monster's action opened
+the swing walkthrough whatever the action was, and four thousand of the twenty
+thousand actions in the compendium ask for a saving throw instead. A save now
+opens the tool that asks the right question — who was caught, and who made it
+— pre-filled with the DC, the ability, the dice and what a success costs, all
+read off the creature's own words. Where the line falls is still the table's.
+
+**A subclass is a readable list, not a dropdown of names.** All 454 official
+options carry a description and the builder showed it only AFTER you committed,
+so comparing nine barbarian paths meant nine round trips.
+
+**Boxes say what they are.** A placeholder disappears the moment somebody
+types, so every form read clearly while empty and became a column of anonymous
+boxes once filled.
+
 
 **Who they are, then what they can do.** The builder asked for skills second —
 before a race, a background or a single ability score existed — so the table it
@@ -282,6 +311,12 @@ switch, the monster piles, and the DM's spell lookup.
   it refuses to start without a server, counts a suite that asserted nothing as
   an error, re-checks the server at the end, and exits non-zero. Silence is not
   success.
+
+- **The sheet sits two pixels under the height verify-panel guards.** It was
+  2579 and is 2598 against a 2600 ceiling, because it gained a label the boxes
+  needed. That is not comfortable: the next addition to the sheet will trip the
+  guard, which is exactly what the guard is for, but it means the next person
+  to add anything there has to buy the space rather than find it.
 
 - **`verify-turns`'s race is arranged, not raced for.** The player goes
   offline before pressing, which is what "at the same instant" means in a

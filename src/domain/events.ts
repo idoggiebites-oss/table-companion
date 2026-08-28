@@ -429,6 +429,50 @@ export type DomainEvent = Meta &
     | { readonly type: "reactionDeclined"; readonly combatantId: string }
     | { readonly type: "reactionOfferClosed" }
     /*
+     * A creature's own action economy. Players have had one since the
+     * beginning; creatures had a single boolean for the reaction, so a DM
+     * running six goblins held "has that one used its bonus action" in their
+     * head, six times, every round.
+     */
+    | {
+        readonly type: "creatureSpent";
+        readonly combatantId: string;
+        readonly kind: EconomyKind;
+        /** False takes it back — a mis-tap mid-fight needs one press. */
+        readonly on: boolean;
+      }
+    /*
+     * A legendary action, taken between somebody else's turns. Carries what
+     * it was and what it cost, so the log reads as the fight rather than as
+     * bookkeeping.
+     */
+    | {
+        readonly type: "legendaryTaken";
+        readonly combatantId: string;
+        readonly what: string;
+        readonly cost: number;
+      }
+    /*
+     * How many legendary actions this one gets, when the book did not say.
+     *
+     * The SRD strips the "Legendary Actions (3/Turn)" heading and ships only
+     * the options, so 84 creatures arrive with a list of things to do and no
+     * budget. Inventing three would be the app making up a rule; asking the
+     * DM once is what it can honestly do.
+     */
+    | {
+        readonly type: "legendaryBudgetSet";
+        readonly combatantId: string;
+        readonly budget: number;
+      }
+    /** The place's own action, on its own count. Once per round. */
+    | {
+        readonly type: "lairSet";
+        readonly at: number;
+        readonly text: string;
+      }
+    | { readonly type: "lairTaken"; readonly round: number }
+    /*
      * The DM saying what the room is like. One event for the whole scene
      * rather than one per fact, because a DM sets a room up in one breath and
      * undoing it should take the room back, not one detail of it.

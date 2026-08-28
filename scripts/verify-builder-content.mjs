@@ -176,8 +176,21 @@ const sel = page.locator('select[aria-label^="Choose"]');
 for (let i = 0; i < (await sel.count()); i++) await sel.nth(i).selectOption({ index: 1 });
 // And whatever the class asks about itself — a domain, a fighting style.
 await atStep(page, "Scores");
-const cls = page.locator(".card", { hasText: "Your class" }).locator("select");
-for (let i = 0; i < (await cls.count()); i++) await cls.nth(i).selectOption({ index: 1 });
+/* Every class choice, answered. A subclass is a readable list now, not a
+   dropdown — open the first unanswered row and take it. "Take …" rather
+   than the first button in the panel, because an already-answered
+   chooser offers "Choose something else" and would be un-chosen. */
+for (let g = 0; g < 8; g++) {
+  const card = page.locator(".card", { hasText: "Your class" });
+  const head = card.locator('.chooser button.menu-hd[aria-expanded="false"]').first();
+  if (!(await head.count())) break;
+  await head.click();
+  await page.waitForTimeout(250);
+  const take = card.getByRole("button", { name: /^Take / }).first();
+  if (!(await take.count())) break;
+  await take.click();
+  await page.waitForTimeout(300);
+}
 await page.waitForTimeout(300);
 await page.waitForTimeout(300);
 await atStep(page, "Review");

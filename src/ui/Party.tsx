@@ -10,6 +10,7 @@
  */
 
 import { Num } from "./Num.js";
+import { Field } from "./Field.js";
 import { useState } from "react";
 import { COMMON_BOONS, describeBoon, type Boon } from "../domain/boons.js";
 import { formatCoins, parseCoins } from "../domain/money.js";
@@ -104,12 +105,13 @@ export function Party({
                 <div className="pm-acts">
                   {/* One number, three buttons, and nothing saying it is how
                       MUCH — the box read as whatever you last used it for. */}
-                  <span className="label pm-howmuch">How much</span>
-                  <Num min={0} value={amountOf(b.id)}
-                    aria-label={`${b.name} amount`}
-                    style={{ width: 62 }}
-                    onChange={(n) => setAmount(b.id, n)}
-                  />
+                  <Field label="How much" htmlFor={`pm-amt-${b.id}`} width={74}>
+                    <Num min={0} value={amountOf(b.id)}
+                      id={`pm-amt-${b.id}`}
+                      aria-label={`${b.name} amount`}
+                      onChange={(n) => setAmount(b.id, n)}
+                    />
+                  </Field>
                   <button onClick={() => append({ type: "damageApplied", who: b.id, amount: amountOf(b.id) })}>
                     Damage
                   </button>
@@ -156,13 +158,15 @@ export function Party({
       {seat.kind === "dm" && (
         <div className="card-body stash">
           <div className="row">
-            <input
-              value={loot}
-              aria-label="Loot"
-              placeholder="120 gp, or an item name"
-              style={{ flex: "2 1 150px", width: "auto" }}
-              onChange={(e) => setLoot(e.target.value)}
-            />
+            <Field label="To the party" htmlFor="pt-loot">
+              <input
+                id="pt-loot"
+                value={loot}
+                aria-label="Loot"
+                placeholder="120 gp, or an item name"
+                onChange={(e) => setLoot(e.target.value)}
+              />
+            </Field>
             <button
               disabled={!loot.trim()}
               onClick={() => {

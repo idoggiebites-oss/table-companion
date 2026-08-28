@@ -22,6 +22,7 @@ import {
 import type { CampaignState } from "../domain/project.js";
 import { loadEquipment } from "../store/srd.js";
 import { useCatalogue } from "./Inventory.js";
+import { Field } from "./Field.js";
 
 const blank = (): Npc => ({
   id: "", name: "", role: "", trader: false, notes: "", stock: [],
@@ -149,23 +150,29 @@ export function Npcs({
       {open && (
         <div className="card-body">
           <div className="row" style={{ gap: 8 }}>
-            <input
-              value={draft.name}
-              aria-label="NPC name"
-              placeholder="Halbrek the Fence"
-              style={{ flex: "2 1 150px", width: "auto" }}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            />
-            <input
-              value={draft.role}
-              aria-label="NPC role"
-              placeholder="shopkeeper"
-              style={{ flex: "1 1 110px", width: "auto" }}
-              onChange={(e) => setDraft({ ...draft, role: e.target.value })}
-            />
+            <Field label="Name" htmlFor="npc-name">
+              <input
+                id="npc-name"
+                value={draft.name}
+                aria-label="NPC name"
+                placeholder="Halbrek the Fence"
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
+            </Field>
+            <Field label="What they are" htmlFor="npc-role" width={128}>
+              <input
+                id="npc-role"
+                value={draft.role}
+                aria-label="NPC role"
+                placeholder="shopkeeper"
+                onChange={(e) => setDraft({ ...draft, role: e.target.value })}
+              />
+            </Field>
           </div>
 
+          <label className="label" htmlFor="npc-notes">What the party knows</label>
           <textarea
+            id="npc-notes"
             className="npc-notes"
             value={draft.notes}
             aria-label="NPC notes"

@@ -114,7 +114,9 @@ export function Scenes({
 
         {draft && (
           <div className={`sc-draft${scenes.length > 0 ? " under" : ""}`}>
+            <label className="label" htmlFor="sc-name">What the place is called</label>
             <input
+              id="sc-name"
               value={draft.name}
               aria-label="Place name"
               placeholder="The cellar under the mill"
@@ -192,11 +194,12 @@ export function Scenes({
             )}
 
             <div className="sc-note">
-              <label>
+              <label htmlFor="sc-note">
                 <span className="label">What you mean to say</span>
                 <span className="sc-ct">{(draft.note ?? "").length} / 400</span>
               </label>
               <textarea
+                id="sc-note"
                 aria-label="Note"
                 maxLength={400}
                 placeholder="The stair gives under your weight. Something below stops moving."

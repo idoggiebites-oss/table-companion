@@ -15,11 +15,19 @@
 import { ConditionStrip } from "./Conditions.js";
 import { SceneSet } from "./SceneSet.js";
 import { Num } from "./Num.js";
+import { Field } from "./Field.js";
+import { CreaturePips } from "./CreaturePips.js";
 import { useWide } from "./useWide.js";
 import { describeRoom, isOpenGround, type Room } from "../domain/terrain.js";
 import type { KnownSpell } from "../domain/spells.js";
 import { useEffect, useMemo, useState } from "react";
 import { mergeStatblocks, type Statblock, type StatblockAction } from "../domain/statblock.js";
+import { saveFromAction } from "../domain/savefrom.js";
+import {
+  lairAction, legendaryBudget, legendaryOptions,
+  type LairAction, type LegendaryOption,
+} from "../domain/legendary.js";
+import { Lair, Legendary } from "./Legendary.js";
 import { actionNumbers, StatblockView } from "./StatblockView.js";
 import { combatantsFor, creaturesFrom, type StagedCreature } from "../domain/stage.js";
 import { loadMonsters } from "../store/srd.js";
@@ -292,26 +300,34 @@ function Arrival({
   return (
     <div className="card-body arrive">
       <span className="label">What arrives</span>
+      {/* Named, because a placeholder is gone the moment you type: "Ghoul,
+          10, d20" is legible and "Ghoul, 10, 16" is three numbers. */}
       <div className="row" style={{ marginTop: 8 }}>
-        <input
-          value={name}
-          aria-label="Arrival name"
-          placeholder="Ghoul"
-          style={{ flex: "2 1 130px", width: "auto" }}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <Num min={1} value={hp}
-          aria-label="Arrival hit points"
-          style={{ flex: "0 0 74px", width: "auto" }}
-          onChange={setHp}
-        />
-        <input
-          type="number" value={init}
-          aria-label="Arrival initiative"
-          placeholder="d20"
-          style={{ flex: "0 0 74px", width: "auto" }}
-          onChange={(e) => setInit(e.target.value)}
-        />
+        <Field label="Name" htmlFor="arr-name">
+          <input
+            id="arr-name"
+            value={name}
+            aria-label="Arrival name"
+            placeholder="Ghoul"
+            onChange={(e) => setName(e.target.value)}
+          />
+        </Field>
+        <Field label="Hit points" htmlFor="arr-hp" width={84}>
+          <Num min={1} value={hp}
+            id="arr-hp"
+            aria-label="Arrival hit points"
+            onChange={setHp}
+          />
+        </Field>
+        <Field label="Initiative" htmlFor="arr-init" width={84}>
+          <input
+            id="arr-init"
+            type="number" value={init}
+            aria-label="Arrival initiative"
+            placeholder="d20"
+            onChange={(e) => setInit(e.target.value)}
+          />
+        </Field>
       </div>
       <div className="row" style={{ marginTop: 10 }}>
         <button
@@ -530,6 +546,14 @@ export function Combat({
 }) {
   const [hit, setHit] = useState(5);
   const [area, setArea] = useState(false);
+  /** Filled in when the area tool was opened off a creature's own action. */
+  const [areaFrom, setAreaFrom] = useState<
+    | {
+        name: string; dc: number; ability: string;
+        amount: number; damageType: string; half: boolean;
+      }
+    | null
+  >(null);
   /** Who a player has chosen to swing at, and what they rolled for damage. */
   const [target, setTarget] = useState<Combatant | null>(null);
   const [dealt, setDealt] = useState(0);
@@ -583,15 +607,49 @@ export function Combat({
   })();
   const needId =
     seat.kind === "dm" && activeSrc?.kind === "creature" ? activeSrc.statblockId : undefined;
+  /* The book is also needed for anybody ELSE'S legendary actions, which are
+     taken between turns — so load it whenever a staged creature came from
+     the catalogue at all. */
+  const anyCreature =
+    seat.kind === "dm" &&
+    (state.combat?.order ?? []).some(
+      (c) => c.source.kind === "creature" && Boolean(c.source.statblockId),
+    );
   /*
    * Loaded on demand and only for the DM: a player never sees this, and the
    * service worker has the file from the moment the fight was staged.
    */
   const [book, setBook] = useState<Statblock[] | null>(null);
   useEffect(() => {
-    if (!needId || book) return;
+    if ((!needId && !anyCreature) || book) return;
     loadMonsters().then(setBook, () => setBook([]));
-  }, [needId, book]);
+  }, [needId, anyCreature, book]);
+  /*
+   * Every creature in this fight that has legendary actions or a lair, by
+   * combatant id. Not just the active one: a legendary action is taken
+   * between OTHER creatures' turns, so the dragon's options have to be on
+   * screen while the rogue is acting — that is the whole point of them.
+   */
+  const bigOnes = useMemo(() => {
+    if (seat.kind !== "dm" || !state.combat) return [];
+    const cat = mergeStatblocks(book ?? [], state.homebrew);
+    const out: {
+      id: string; name: string; budget: number;
+      options: readonly LegendaryOption[]; lair: LairAction | null;
+    }[] = [];
+    for (const c of state.combat.order) {
+      const src = c.source;
+      if (src.kind !== "creature" || !src.statblockId) continue;
+      const sb = cat.find((m) => m.id === src.statblockId);
+      if (!sb) continue;
+      const options = legendaryOptions(sb);
+      const lair = lairAction(sb);
+      if (options.length === 0 && !lair) continue;
+      out.push({ id: c.id, name: c.name, budget: legendaryBudget(sb), options, lair });
+    }
+    return out;
+  }, [seat.kind, state.combat, book, state.homebrew]);
+
   const activeBlock = useMemo(
     () =>
       needId
@@ -1015,6 +1073,16 @@ export function Combat({
                     ? VAGUE_LABEL[healthStep(hp.current, hp.max)]
                     : "—"}
               </span>
+              {/* What it has left this turn. A DM running six goblins was
+                  holding this in their head, six times, every round. */}
+              {seat.kind === "dm" && c.source.kind === "creature" && (
+                <CreaturePips
+                  id={c.id}
+                  name={c.name}
+                  spent={combat.spent[c.id]}
+                  append={append}
+                />
+              )}
               {seat.kind === "dm" && c.source.kind === "creature" && (
                 <>
                   <button
@@ -1150,9 +1218,34 @@ export function Combat({
               m={activeBlock}
               onAct={(a) => {
                 /*
-                 * Tapping an action does not roll it. It carries the numbers
-                 * into the swing — which die, which modifier — and asks the
-                 * table for the result, the same as every other roll here.
+                 * A breath weapon is not an attack roll.
+                 *
+                 * "Each creature in that line must make a DC 18 Dexterity
+                 * saving throw" has no to-hit in it at all, and this opened
+                 * the swing walkthrough anyway — because tapping an action
+                 * led there whatever the action was. Four thousand actions in
+                 * the compendium ask for a save.
+                 *
+                 * So a save goes to the area tool, which already asks the
+                 * right question: who was caught, and who made it.
+                 */
+                const save = saveFromAction(a);
+                if (save) {
+                  setAreaFrom({
+                    name: a.name,
+                    dc: save.dc,
+                    ability: save.ability,
+                    amount: save.average ?? 0,
+                    damageType: save.damageType ?? "",
+                    half: save.half,
+                  });
+                  setArea(true);
+                  return;
+                }
+                /*
+                 * Otherwise it is a swing, and tapping it does not roll it:
+                 * it carries the numbers — which die, which modifier — and
+                 * asks the table for the result.
                  */
                 setUsing(a);
                 setDealt(0);
@@ -1160,6 +1253,39 @@ export function Combat({
               }}
             />
           )}
+        </div>
+      )}
+
+      {/*
+        * What the big things in this fight can do between turns, and what
+        * the place itself does. On screen during OTHER creatures' turns,
+        * because that is exactly when a legendary action is available and
+        * exactly when nothing else wants the DM's attention.
+        */}
+      {seat.kind === "dm" && bigOnes.length > 0 && (
+        <div className="card-body">
+          {bigOnes.map((m) => (
+            <Legendary
+              key={m.id}
+              who={m.id}
+              name={m.name}
+              /* What the book said, or what the DM said when it did not. */
+              budget={combat.legendaryBudget?.[m.id] ?? m.budget}
+              spent={combat.legendarySpent[m.id]}
+              options={m.options}
+              isTheirTurn={active?.id === m.id}
+              append={append}
+            />
+          ))}
+          <Lair
+            lair={
+              combat.lair
+                ? { ...combat.lair }
+                : (bigOnes.find((m) => m.lair)?.lair ?? null)
+            }
+            round={combat.round}
+            append={append}
+          />
         </div>
       )}
 
@@ -1328,7 +1454,12 @@ export function Combat({
           </div>
         )}
         {area && seat.kind === "dm" && (
-          <AreaDamage combat={combat} onApply={append} onClose={() => setArea(false)} />
+          <AreaDamage
+            combat={combat}
+            onApply={append}
+            {...(areaFrom ? { from: areaFrom } : {})}
+            onClose={() => { setArea(false); setAreaFrom(null); }}
+          />
         )}
         {seat.kind === "dm" && !canEnd && (
           <p className="faint" style={{ fontSize: ".84rem", margin: "10px 0 0" }}>

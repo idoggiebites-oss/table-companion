@@ -23,6 +23,7 @@ import {
 } from "../domain/statblock.js";
 import { loadMonsters } from "../store/srd.js";
 import { HomebrewItem } from "./HomebrewItem.js";
+import { Field } from "./Field.js";
 
 const CR_CHOICES = [0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20];
 
@@ -159,16 +160,20 @@ export function Homebrew({
       {open === "creature" && (
         <div className="card-body">
           <div className="row" style={{ gap: 8 }}>
-            <input
-              value={f.name} aria-label="Creature name" placeholder="Bandit Warlord"
-              style={{ flex: "2 1 150px", width: "auto" }}
-              onChange={(e) => setF({ ...f, name: e.target.value })}
-            />
-            <input
-              value={f.type} aria-label="Creature type" placeholder="humanoid"
-              style={{ flex: "1 1 110px", width: "auto" }}
-              onChange={(e) => setF({ ...f, type: e.target.value })}
-            />
+            <Field label="Name" htmlFor="hb-name">
+              <input
+                id="hb-name"
+                value={f.name} aria-label="Creature name" placeholder="Bandit Warlord"
+                onChange={(e) => setF({ ...f, name: e.target.value })}
+              />
+            </Field>
+            <Field label="Kind" htmlFor="hb-type" width={120}>
+              <input
+                id="hb-type"
+                value={f.type} aria-label="Creature type" placeholder="humanoid"
+                onChange={(e) => setF({ ...f, type: e.target.value })}
+              />
+            </Field>
           </div>
 
           <div className="six" style={{ marginTop: 10 }}>
@@ -250,17 +255,21 @@ export function Homebrew({
           )}
 
           <div className="row" style={{ marginTop: 12, gap: 8 }}>
+            <Field label="What it does" htmlFor="hb-act" width={130}>
+              <input
+                id="hb-act"
+                value={f.actionName} aria-label="Action name" placeholder="Greataxe"
+                onChange={(e) => setF({ ...f, actionName: e.target.value })}
+              />
+            </Field>
+            <Field label="How it reads" htmlFor="hb-actd">
             <input
-              value={f.actionName} aria-label="Action name" placeholder="Greataxe"
-              style={{ flex: "1 1 120px", width: "auto" }}
-              onChange={(e) => setF({ ...f, actionName: e.target.value })}
-            />
-            <input
+              id="hb-actd"
               value={f.actionDesc} aria-label="Action description"
               placeholder="+6 to hit, 1d12+4 slashing"
-              style={{ flex: "2 1 180px", width: "auto" }}
               onChange={(e) => setF({ ...f, actionDesc: e.target.value })}
             />
+            </Field>
           </div>
 
           <div className="row" style={{ marginTop: 14 }}>

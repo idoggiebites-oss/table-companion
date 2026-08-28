@@ -86,6 +86,18 @@ function describe(e: DomainEvent, nameOf: (id: string) => string): string | null
       return e.granted ? "The DM said yes" : "The DM said no";
     case "characterRebuilt":
       return `${e.character.base.name} was rebuilt`;
+    /* Bookkeeping the DM does not need read back to them — the pips are on
+       screen. A legendary action IS the fight, so that one is said. */
+    case "creatureSpent":
+      return null;
+    case "legendaryTaken":
+      return `${e.what} — a legendary action`;
+    case "legendaryBudgetSet":
+      return null;
+    case "lairSet":
+      return "The lair itself stirs";
+    case "lairTaken":
+      return "The lair acts";
     case "homebrewItemSaved":
       return `${e.item.name} written up`;
     case "homebrewItemDeleted":

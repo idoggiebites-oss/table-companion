@@ -12,6 +12,7 @@
  */
 
 import { Num } from "./Num.js";
+import { Field } from "./Field.js";
 import { useState } from "react";
 import { targetOf, type Combat, type TargetRef } from "../domain/combat.js";
 import type { EventBody } from "../domain/events.js";
@@ -25,16 +26,35 @@ interface Row {
 }
 
 export function AreaDamage({
-  combat, onApply, onClose,
+  combat, onApply, onClose, from,
 }: {
   combat: Combat;
   onApply: (body: EventBody) => void;
   onClose: () => void;
+  /*
+   * Filled in from a monster's own action, when the DM tapped one that asks
+   * for a save. A breath weapon is not an attack roll — "each creature in
+   * that line must make a DC 18 Dexterity saving throw" has no to-hit in it
+   * — and the fight offered one anyway, because tapping an action led to the
+   * swing whatever the action was.
+   *
+   * Who is caught is still the DM's to say. The app supplies the number, the
+   * ability and what a success costs; where the line falls belongs to the
+   * table. See law four.
+   */
+  from?: {
+    readonly name: string;
+    readonly dc: number;
+    readonly ability: string;
+    readonly amount: number;
+    readonly damageType: string;
+    readonly half: boolean;
+  } | undefined;
 }) {
-  const [label, setLabel] = useState("Fireball");
-  const [amount, setAmount] = useState(28);
-  const [damageType, setDamageType] = useState("fire");
-  const [halfOnSave, setHalfOnSave] = useState(true);
+  const [label, setLabel] = useState(from?.name ?? "Fireball");
+  const [amount, setAmount] = useState(from?.amount ?? 28);
+  const [damageType, setDamageType] = useState(from?.damageType ?? "fire");
+  const [halfOnSave, setHalfOnSave] = useState(from?.half ?? true);
   const [rows, setRows] = useState<Row[]>(() =>
     combat.order.map((c) => ({
       id: c.id,
@@ -57,21 +77,37 @@ export function AreaDamage({
 
   return (
     <div className="area">
+      {/* What the book asks for, read off the creature's own action. The DM
+          still says who was caught — that needs positions, and positions
+          live on the table. */}
+      {from && (
+        <p className="area-from">
+          <b>DC {from.dc} {from.ability.toUpperCase()}</b>
+          {" · "}{from.half ? "half on a save" : "nothing on a save"}
+          {" · "}say who was caught, then who made it
+        </p>
+      )}
       <div className="row" style={{ gap: 8 }}>
+        <Field label="What hit them" htmlFor="area-name">
         <input
+          id="area-name"
           value={label} aria-label="Effect name" placeholder="Fireball"
-          style={{ flex: "2 1 120px", width: "auto" }}
           onChange={(e) => setLabel(e.target.value)}
         />
+        </Field>
+        <Field label="Damage" htmlFor="area-amt" width={84}>
         <Num min={0} value={amount} aria-label="Area damage amount"
-          style={{ flex: "0 0 76px", width: "auto" }}
+          id="area-amt"
           onChange={setAmount}
         />
+        </Field>
+        <Field label="Type" htmlFor="area-type" width={96}>
         <input
+          id="area-type"
           value={damageType} aria-label="Area damage type" placeholder="fire"
-          style={{ flex: "1 1 84px", width: "auto" }}
           onChange={(e) => setDamageType(e.target.value)}
         />
+        </Field>
       </div>
 
       <div className="chips" style={{ marginTop: 10 }}>

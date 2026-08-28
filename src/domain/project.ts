@@ -733,6 +733,58 @@ function reduce(state: CampaignState, e: DomainEvent): CampaignState {
       if (state.combat === null) return state;
       return { ...state, combat: { ...state.combat, scene: e.scene } };
     }
+    case "creatureSpent": {
+      if (state.combat === null) return state;
+      const had = state.combat.spent[e.combatantId] ?? FRESH_ECONOMY;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          spent: { ...state.combat.spent, [e.combatantId]: { ...had, [e.kind]: e.on } },
+        },
+      };
+    }
+    case "legendaryTaken": {
+      if (state.combat === null) return state;
+      const used = state.combat.legendarySpent[e.combatantId] ?? 0;
+      return {
+        ...state,
+        combat: {
+          ...state.combat,
+          legendarySpent: {
+            ...state.combat.legendarySpent,
+            [e.combatantId]: used + e.cost,
+          },
+        },
+      };
+    }
+    case "legendaryBudgetSet":
+      return state.combat === null
+        ? state
+        : {
+            ...state,
+            combat: {
+              ...state.combat,
+              legendaryBudget: {
+                ...state.combat.legendaryBudget,
+                [e.combatantId]: e.budget,
+              },
+            },
+          };
+    case "lairSet":
+      return state.combat === null
+        ? state
+        : { ...state, combat: { ...state.combat, lair: { at: e.at, text: e.text } } };
+    case "lairTaken":
+      return state.combat?.lair
+        ? {
+            ...state,
+            combat: {
+              ...state.combat,
+              lair: { ...state.combat.lair, usedInRound: e.round },
+            },
+          }
+        : state;
     case "reactionOfferClosed": {
       if (state.combat === null) return state;
       return { ...state, combat: { ...state.combat, offer: null } };

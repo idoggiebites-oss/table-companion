@@ -191,3 +191,46 @@ describe("help lasts until the helper's next turn", () => {
     expect(after.tags["b"] ?? []).not.toContain("dodging");
   });
 });
+
+/* --- a creature's economy and its legendary actions ----------------------
+
+   Creatures had a single boolean for the reaction, so a DM running six
+   goblins tracked "has that one used its bonus action" in their head. And
+   legendary actions come back at the START of the creature's turn, which is
+   the rule and is also the only moment the app can hand them back. */
+describe("what a creature gets back on its turn", () => {
+  const roll = (id: string, name: string, initiative: number) => ({
+    id, name, initiative,
+    source: { kind: "creature" as const, maxHp: 10 },
+    controller: { kind: "dm" as const },
+    disclosure: "exact" as const,
+  });
+  const fight = () => ({
+    ...startCombat([roll("a", "Dragon", 20), roll("b", "Goblin", 10)]),
+    spent: { a: { action: true, bonus: true, reaction: true } },
+    legendarySpent: { a: 3 },
+  });
+
+  it("hands back its action economy when its turn opens", () => {
+    let c = advance(fight(), 0);   // → Goblin
+    expect(c.spent["a"]).toBeDefined();
+    c = advance(c, 1);             // → round 2, Dragon
+    expect(c.order[c.turn]?.name).toBe("Dragon");
+    expect(c.spent["a"]).toBeUndefined();
+  });
+
+  it("and its legendary actions with them", () => {
+    let c = advance(fight(), 0);
+    expect(c.legendarySpent["a"]).toBe(3);
+    c = advance(c, 1);
+    expect(c.legendarySpent["a"]).toBeUndefined();
+  });
+
+  /* Somebody else's turn opening must not refill the dragon — that would give
+     it three legendary actions per creature rather than per round. */
+  it("but nobody else's turn refills them", () => {
+    const c = advance(fight(), 0);
+    expect(c.order[c.turn]?.name).toBe("Goblin");
+    expect(c.legendarySpent["a"]).toBe(3);
+  });
+});

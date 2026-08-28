@@ -73,13 +73,14 @@ import {
   featureOf, mechanicalTraits, shapeOf,
 } from "../domain/guidance.js";
 import { FeatPick } from "./FeatPick.js";
+import { SubclassPick } from "./SubclassPick.js";
 import { describeGrants, grantsOf } from "../domain/background.js";
 import { Num } from "./Num.js";
 import { PickList } from "./PickList.js";
 import { SpellPick } from "./SpellPick.js";
 import { choicesBy, findChoices } from "../domain/subclass.js";
 import { describeGrant, multiclassGrant } from "../domain/multiclassing.js";
-import { bookOf, byBook } from "../domain/books.js";
+import { byBook } from "../domain/books.js";
 import type { CompendiumFeat } from "../import/compendium.js";
 import {
   indexItems, isArmour, isShield, isWeapon, type Item, type Stack,
@@ -199,7 +200,6 @@ export function CreateCharacter({
   >({});
   const [featList, setFeatList] = useState<CompendiumFeat[]>([]);
   const [classPicks, setClassPicks] = useState<Record<string, string>>({});
-  const [pickFilter, setPickFilter] = useState<Record<string, string>>({});
   const [subraceId, setSubraceId] = useState<string>("");
   const [method, setMethod] = useState<ScoreMethod>("array");
   const [assigned, setAssigned] = useState<Partial<Record<Ability, number>>>({});
@@ -2107,7 +2107,6 @@ export function CreateCharacter({
                * builder that hides them everywhere except the one dropdown
                * where you choose your subclass is not hiding them.
                */
-              const q = (pickFilter[c.of] ?? "").trim().toLowerCase();
               /*
                * On the FULL name, marker and all. The display name has its
                * trailing parenthetical stripped for the menu, so filtering on
@@ -2122,8 +2121,9 @@ export function CreateCharacter({
                * no way back to the game's own list.
                */
               const marked = c.options.filter((o) => !isCore(o.full)).length;
-              const shown = (allowed.length > 0 ? allowed : c.options)
-                .filter((o) => !q || o.name.toLowerCase().includes(q));
+              /* The picker does its own filtering, so it takes the list the
+                 compendium switch allows and searches inside that. */
+              const offered = allowed.length > 0 ? allowed : c.options;
               return (
                 <div className="chooser" key={c.of}>
                   <div className="chooser-hd" style={{ cursor: "default" }}>
@@ -2131,62 +2131,26 @@ export function CreateCharacter({
                     <span className="faint num">level {c.level}</span>
                   </div>
                   <div className="chooser-body">
-                    {c.options.length > 12 && (
-                      <input
-                        value={pickFilter[c.of] ?? ""}
-                        aria-label={`Filter ${c.of}`}
-                        placeholder={`filter ${c.options.length}…`}
-                        onChange={(e) =>
-                          setPickFilter((f) => ({ ...f, [c.of]: e.target.value }))
-                        }
-                      />
-                    )}
-                    {marked > 0 && (
-                      <div className="row" style={{ marginTop: 8 }}>
-                        <HomebrewToggle on={homebrew} hidden={marked} onChange={setHomebrew} />
-                      </div>
-                    )}
-                    <select
-                      aria-label={c.of}
-                      value={classPicks[c.of] ?? ""}
-                      style={{ marginTop: 8 }}
-                      onChange={(e) => setClassPicks((p) => ({ ...p, [c.of]: e.target.value }))}
-                    >
-                      <option value="">choose…</option>
-                      {/*
-                        * Grouped by the book it came from, in publication
-                        * order. The compendium does not carry that — see
-                        * books.ts — and without it a list of thirty officials
-                        * is thirty names with no shape.
-                        */}
-                      {byBook(shown, /fighting style/i.test(c.of) ? "style" : "subclass").map(([book, options]) => (
-                        <optgroup key={book} label={book}>
-                          {options.slice(0, 120).map((o) => (
-                            <option key={o.name} value={o.name}>{o.name}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
                     {/*
-                      * What it does, once one is chosen. Every other step
-                      * says something about the choice you just made; this
-                      * one handed over a name and left you to look it up.
+                      * A list you can read, not a dropdown of names.
+                      *
+                      * A subclass IS its description — "Path of the
+                      * Battlerager" is not a choice; what a Battlerager does
+                      * is the choice. The text was there all along and the
+                      * builder showed it only AFTER you committed, so
+                      * comparing nine paths meant nine round trips.
                       */}
-                    {(() => {
-                      const took = c.options.find((o) => o.name === classPicks[c.of]);
-                      if (!took?.text) return null;
-                      const book = bookOf(
-                        took.name,
-                        /fighting style/i.test(c.of) ? "style" : "subclass",
-                      );
-                      return (
-                        <p className="cr-blurb" style={{ marginTop: 8 }}>
-                          {book && <b>{book.short} · </b>}
-                          {took.text.slice(0, 260)}
-                          {took.text.length > 260 ? "…" : ""}
-                        </p>
-                      );
-                    })()}
+                    <SubclassPick
+                      of={c.of}
+                      options={offered}
+                      hidden={marked}
+                      homebrew={homebrew}
+                      onHomebrew={setHomebrew}
+                      {...(classPicks[c.of] ? { taken: classPicks[c.of] } : {})}
+                      onPick={(name) =>
+                        setClassPicks((p) => ({ ...p, [c.of]: name ?? "" }))
+                      }
+                    />
                   </div>
                 </div>
               );

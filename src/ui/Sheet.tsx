@@ -19,6 +19,7 @@ import type { RollMode } from "../domain/roll.js";
 import { RollPad, type RollTarget } from "./RollPad.js";
 import type { CampaignState } from "../domain/project.js";
 import { HpBar, healthStep, VAGUE_LABEL } from "./HpBar.js";
+import { Field } from "./Field.js";
 import { useCatalogue } from "./Inventory.js";
 import { Doll } from "./Doll.js";
 import { Drawer } from "./Drawer.js";
@@ -245,9 +246,13 @@ export function Sheet({
           </div>
           <HpBar current={state.currentHp} max={build.maxHp} />
 
+          {/* One number and three buttons: without a name it read as
+              whatever you last used it for. */}
           <div className="controls">
-            <input type="number" min={0} value={amount} aria-label="Amount"
-              onChange={(e) => setAmount(Math.max(0, +e.target.value || 0))} />
+            <Field label="How much" htmlFor="sh-amount" width={84}>
+              <input id="sh-amount" type="number" min={0} value={amount} aria-label="Amount"
+                onChange={(e) => setAmount(Math.max(0, +e.target.value || 0))} />
+            </Field>
             <button onClick={() => append({ type: "damageApplied", who, amount })}>Damage</button>
             <button onClick={() => append({ type: "healingApplied", who, amount })}>Heal</button>
             <button onClick={() => append({ type: "tempHpGranted", who, amount })}>Temp</button>
@@ -294,7 +299,11 @@ export function Sheet({
                 ))}
               </select>
             )}
-            <input type="number" min={1} max={die} value={roll} aria-label="Rolled"
+            {/* No stacked label here on purpose. The die selector and the
+                Spend button beside it already name this box, and the sheet
+                has room for one label before it stops being a panel — see
+                verify-panel, which measures exactly that. */}
+            <input id="sh-roll" type="number" min={1} max={die} value={roll} aria-label="Rolled"
               onChange={(e) => setRoll(Math.max(1, Math.min(die, +e.target.value || 1)))} />
             <button
               disabled={hitDiceLeft <= 0 || state.currentHp >= build.maxHp}

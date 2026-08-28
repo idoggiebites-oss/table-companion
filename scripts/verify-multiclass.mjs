@@ -97,8 +97,21 @@ await atStep(page, "Gear");
 const sel = page.locator('select[aria-label^="Choose"]');
 for (let i = 0; i < (await sel.count()); i++) await sel.nth(i).selectOption({ index: 1 });
 await atStep(page, "Scores");
-const cls = page.locator(".card", { hasText: "Your class" }).locator("select");
-for (let i = 0; i < (await cls.count()); i++) await cls.nth(i).selectOption({ index: 1 });
+/* Every class choice, answered. A subclass is a readable list now, not a
+   dropdown — open the first unanswered row and take it. "Take …" rather
+   than the first button in the panel, because an already-answered
+   chooser offers "Choose something else" and would be un-chosen. */
+for (let g = 0; g < 8; g++) {
+  const card = page.locator(".card", { hasText: "Your class" });
+  const head = card.locator('.chooser button.menu-hd[aria-expanded="false"]').first();
+  if (!(await head.count())) break;
+  await head.click();
+  await page.waitForTimeout(250);
+  const take = card.getByRole("button", { name: /^Take / }).first();
+  if (!(await take.count())) break;
+  await take.click();
+  await page.waitForTimeout(300);
+}
 await atStep(page, "Gear");
 const kit = page.locator(".kit select");
 for (let i = 0; i < (await kit.count()); i++) await kit.nth(i).selectOption({ index: 1 });
@@ -212,8 +225,21 @@ await p2.waitForTimeout(700);
 await atStep(p2, "Scores");
 await p2.getByRole("button", { name: "Recommend" }).click();
 await p2.waitForTimeout(600);
-const cls2 = p2.locator(".card", { hasText: "Your class" }).locator("select");
-for (let i = 0; i < (await cls2.count()); i++) await cls2.nth(i).selectOption({ index: 1 });
+/* Every class choice, answered. A subclass is a readable list now, not a
+   dropdown — open the first unanswered row and take it. "Take …" rather
+   than the first button in the panel, because an already-answered
+   chooser offers "Choose something else" and would be un-chosen. */
+for (let g = 0; g < 8; g++) {
+  const card = p2.locator(".card", { hasText: "Your class" });
+  const head = card.locator('.chooser button.menu-hd[aria-expanded="false"]').first();
+  if (!(await head.count())) break;
+  await head.click();
+  await p2.waitForTimeout(250);
+  const take = card.getByRole("button", { name: /^Take / }).first();
+  if (!(await take.count())) break;
+  await take.click();
+  await p2.waitForTimeout(300);
+}
 const imp = p2.locator(".card", { hasText: "Improvements" }).locator(".chip:not([disabled])");
 for (let i = 0; i < Math.min(2, await imp.count()); i++) {
   await imp.first().click();
@@ -283,13 +309,23 @@ ok("a second class brings questions, so the build is not done",
   await create2.isDisabled(), true);
 
 await atStep(p2, "Scores");
-const unanswered = p2.locator(".chooser select");
-for (let i = 0; i < (await unanswered.count()); i++) {
-  const sel = unanswered.nth(i);
-  if ((await sel.inputValue()) === "") {
-    await sel.selectOption({ index: 1 });
-    await p2.waitForTimeout(250);
-  }
+/* Each unanswered choice is a list of readable rows now: open the first and
+   take it. A dropdown was right for picking something you already know and
+   wrong for choosing between things you have never read. */
+/* Unanswered ones only. An answered chooser renders its head as a DIV rather
+   than a button, so targeting the BUTTON walks past the ones already done —
+   and "Take …" rather than the first .menu-take, because an answered chooser
+   offers "Choose something else" and this loop would un-answer it. */
+for (let guard = 0; guard < 6; guard++) {
+  const card2 = p2.locator(".card", { hasText: "Your class" });
+  const head = card2.locator('.chooser button.menu-hd[aria-expanded="false"]').first();
+  if (!(await head.count())) break;
+  await head.click();
+  await p2.waitForTimeout(250);
+  const take = card2.getByRole("button", { name: /^Take / }).first();
+  if (!(await take.count())) break;
+  await take.click();
+  await p2.waitForTimeout(300);
 }
 await atStep(p2, "Review");
 ok("and answering them finishes it", await create2.isDisabled(), false);
