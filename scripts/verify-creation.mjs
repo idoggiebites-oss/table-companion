@@ -129,6 +129,32 @@ await atStep(player.page, "Class");
 await atStep(player.page, "Race");
 await atStep(player.page, "Class");
 ok("class is asked first", await player.page.locator(".cr-step").first().innerText(), "1 · CLASS");
+
+/* --- nothing is finished before it is asked ------------------------------
+
+   Skills and Gear ticked themselves on a brand-new character. With no class
+   there is nothing to pick, so "as many as are needed" was 0 === 0 and
+   "nothing left unchosen" was vacuously true — and the rail told a player two
+   steps were done before they had chosen anything at all.
+
+   Read off the rail as a player sees it: a tick, or a number. */
+const freshRail = await player.page.locator(".cr-rail .cr-dot").allInnerTexts();
+ok("a brand-new build has nothing ticked",
+  freshRail.filter((t) => t.trim() === "✓").length, 0);
+/* Joined rather than compared as an array: innerText carries invisible
+   characters that make two identical-looking lists unequal. */
+ok("every step shows its number instead",
+  freshRail.map((t) => t.replace(/\D/g, "")).join(""), "1234567");
+
+/* And a step whose question does not exist yet says so, rather than drawing
+   an empty card with a Back and a Continue and nothing between them. */
+await atStep(player.page, "Gear");
+await player.page.waitForTimeout(500);
+ok("a step you cannot answer yet says what it needs",
+  /needs a class and a race/i.test(
+    await player.page.locator(".cr-waiting").innerText().catch(() => "")),
+  true);
+await atStep(player.page, "Class");
 // One question per screen: race is its own step now, reached after this one.
 ok("race is not offered until then",
   await player.page.locator('select[aria-label="Race"]').count(), 0);

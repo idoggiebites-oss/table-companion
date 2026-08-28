@@ -2442,3 +2442,19 @@ textarea,
 .sub-scroll { max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
 .sub-book { display: flex; flex-direction: column; gap: 4px; }
 .sub-took { margin-top: 4px; }
+
+/* ---- a step that cannot be answered yet ---- */
+/*
+ * Every builder section past the story is gated on a class and a race, and
+ * the rail did not know: landing on one without them drew an empty card with
+ * a Back and a Continue and nothing between them. The builder knew what was
+ * missing the whole time.
+ */
+/* A step that cannot be answered yet reads as not-yet rather than as todo. */
+.cr-node.waiting { opacity: 0.5; }
+.cr-waiting {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+  margin: 14px 0 0; padding: 12px 14px;
+  border: 1px dashed var(--line); border-radius: var(--r-card);
+  font-size: 0.88rem; color: var(--ink-dim);
+}

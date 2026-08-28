@@ -867,7 +867,31 @@ export function CreateCharacter({
    * because changing your race after picking spells is a normal thing to want
    * and a linear flow that forbids it is worse than the scroll was.
    */
-  const steps: { readonly id: string; readonly label: string; readonly done: boolean }[] = [
+  /*
+   * What each step is waiting on before it can be answered at all.
+   *
+   * Every section from the story onwards is gated on `klass && race` in the
+   * markup, and the rail did not know — so a step you could not yet answer
+   * rendered an empty card with a Back and a Continue and no explanation,
+   * and two of them ticked themselves because "nothing left unchosen" is
+   * vacuously true when there is nothing to choose from.
+   */
+  const needsClass = klass === undefined;
+  const needsRace = race === undefined;
+  const waitingOn = (want: "class" | "both"): string | null => {
+    if (want === "class") return needsClass ? "a class" : null;
+    if (needsClass && needsRace) return "a class and a race";
+    if (needsClass) return "a class";
+    return needsRace ? "a race" : null;
+  };
+
+  const steps: {
+    readonly id: string;
+    readonly label: string;
+    readonly done: boolean;
+    /** What it is waiting on, or null when it can be answered now. */
+    readonly waiting?: string | null;
+  }[] = [
     /*
      * Who they are, then what they can do.
      *
@@ -887,23 +911,77 @@ export function CreateCharacter({
     {
       id: "race",
       label: "Race",
+      waiting: waitingOn("class"),
       done:
         race !== undefined &&
         freeSpent === freeOwed &&
         raceSkills.length >= freeSkills &&
         (!offersFeat || raceFeat !== null),
     },
-    { id: "background", label: "Story", done: bgSkills.length >= 2 && bgName.trim() !== "" },
+    {
+      id: "background",
+      label: "Story",
+      done: bgSkills.length >= 2 && bgName.trim() !== "",
+      waiting: waitingOn("both"),
+    },
     {
       id: "abilities",
       label: "Scores",
       done: allAssigned && improvementsDone && picksDone,
+      waiting: waitingOn("both"),
     },
-    { id: "skills", label: "Skills", done: classSkills.length === skillsNeeded },
-    ...(castsAtAll ? [{ id: "spells", label: "Spells", done: true }] : []),
-    { id: "gear", label: "Gear", done: gearMode !== "kit" || unpicked.length === 0 },
-    { id: "review", label: "Review", done: gaps.length === 0 },
+    /*
+     * Answered, not merely unobjectionable.
+     *
+     * These two ticked themselves on a brand-new character: with no class
+     * there is nothing to pick, so "picked as many as are needed" was 0 === 0
+     * and "nothing left unchosen" was vacuously true. The rail told a player
+     * two steps were finished before they had chosen a class.
+     *
+     * A step whose question does not exist yet is not done — it is not ready.
+     * Both of these are the class's questions, so both wait for one.
+     */
+    {
+      id: "skills",
+      label: "Skills",
+      done: klass !== undefined && classSkills.length === skillsNeeded,
+      waiting: waitingOn("class"),
+    },
+    /* Only ever in the list for a caster, and a caster needs a class — but
+       said out loud, because `true` is how the other two got it wrong. */
+    ...(castsAtAll
+      ? [{ id: "spells", label: "Spells", done: klass !== undefined, waiting: waitingOn("both") }]
+      : []),
+    {
+      id: "gear",
+      label: "Gear",
+      /*
+       * And not before the equipment has arrived.
+       *
+       * `unpicked` is computed from the catalogue, so while it is still
+       * loading there is nothing unpicked and the step ticked itself — then
+       * un-ticked a moment later when the data landed. A step that reports
+       * done and then changes its mind is worse than one that waits.
+       */
+      done:
+        klass !== undefined &&
+        gear !== null &&
+        (gearMode !== "kit" || unpicked.length === 0),
+      waiting: waitingOn("both"),
+    },
+    { id: "review", label: "Review", done: gaps.length === 0, waiting: waitingOn("both") },
   ];
+  /*
+   * A step that is waiting cannot be done.
+   *
+   * Said once here rather than repeated into every step's own condition,
+   * because it is the same rule each time and the two that got it wrong got
+   * it wrong by being written out separately. "Nothing left to choose" is
+   * vacuously true when the thing that would offer choices has not been
+   * chosen yet.
+   */
+  const rail = steps.map((s) => (s.waiting ? { ...s, done: false } : s));
+
   const stepIndex = Math.min(step, steps.length - 1);
   const here = steps[stepIndex]!.id;
   const at = (id: string) => here === id;
@@ -955,11 +1033,15 @@ export function CreateCharacter({
 
         {races && classes && (
           <nav className="cr-rail" aria-label="Steps">
-            {steps.map((st, i) => (
+            {rail.map((st, i) => (
               <button
                 key={st.id}
-                className={`cr-node${i === stepIndex ? " on" : ""}${st.done ? " done" : ""}`}
+                className={`cr-node${i === stepIndex ? " on" : ""}${st.done ? " done" : ""}${st.waiting ? " waiting" : ""}`}
                 aria-current={i === stepIndex ? "step" : undefined}
+                /* The reason lives in the visible note, not here: every suite
+                   in the app finds a step by `Step N, Label` exactly, and
+                   appending to it would break twenty of them for a sentence
+                   that is already on screen. */
                 aria-label={`Step ${i + 1}, ${st.label}`}
                 onClick={() => go(i)}
               >
@@ -2559,6 +2641,21 @@ export function CreateCharacter({
         * it. It was still gold, still the biggest thing on the screen, and
         * pressing it did nothing at all.
         */}
+      {/*
+        * A step you cannot answer yet says why.
+        *
+        * Every section from the story onwards is gated on a class and a race
+        * in the markup, so landing on one without them rendered an empty
+        * card with a Back and a Continue and nothing between them. The
+        * builder knew what was missing and did not say.
+        */}
+      {races && classes && steps[stepIndex]?.waiting && (
+        <p className="cr-waiting">
+          {steps[stepIndex]!.label} needs {steps[stepIndex]!.waiting} first.
+          <button className="linky" onClick={() => go(0)}>Go back and choose</button>
+        </p>
+      )}
+
       {races && classes && (
         <div className="cr-nav">
           <button disabled={stepIndex === 0} onClick={() => go(stepIndex - 1)}>Back</button>

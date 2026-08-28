@@ -318,6 +318,13 @@ switch, the monster piles, and the DM's spell lookup.
   guard, which is exactly what the guard is for, but it means the next person
   to add anything there has to buy the space rather than find it.
 
+- **The builder rail still settles.** With a class and a race chosen, Gear
+  reads as done until you visit it, and Race reads as not-done until you leave
+  it — both flip once you navigate. The false ticks on a BRAND-NEW build are
+  fixed and guarded; this remaining flicker is in how the gear choices and the
+  race's own questions are derived, and it needs the derivation read rather
+  than the symptom chased.
+
 - **43 browser-suite selectors match more than one component.** `.v` is worn
   by seven, `.swing-ask` by six. Nothing is broken today — the right thing
   happens to render first — but it is why changing one dropdown to a readable
