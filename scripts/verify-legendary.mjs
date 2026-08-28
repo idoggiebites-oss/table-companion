@@ -22,6 +22,14 @@ const ok = (label, got, want) => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${label}: ${JSON.stringify(got)}${pass ? "" : ` (want ${JSON.stringify(want)})`}`);
   if (!pass) process.exitCode = 1;
 };
+const device = async () => {
+  const ctx = await browser.newContext({ viewport: { width: 430, height: 1500 } });
+  const pg = await ctx.newPage();
+  pg.on("pageerror", (e) => errors.push(`${e}`));
+  pg.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  await pg.goto(URL, { waitUntil: "networkidle" });
+  return pg;
+};
 const page = await (await browser.newContext({ viewport: { width: 430, height: 1500 } })).newPage();
 page.on("pageerror", (e) => errors.push(`${e}`));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -33,6 +41,7 @@ const go = async (tab) => {
 
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
+const code = await page.locator(".rb-code").innerText();
 await page.getByRole("button", { name: "Load sample" }).click();
 await page.waitForSelector(".seatbar");
 await page.selectOption('select[aria-label="Seat"]', "dm");
@@ -141,6 +150,66 @@ await page.getByRole("button", { name: "Next turn" }).click();
 await page.waitForTimeout(900);
 ok("and by the next round they are back",
   /3 of 3 left/i.test((await page.locator(".legend").first().locator(".legend-hd").first().innerText()).replace(/\s+/g, " ")), true);
+
+/* --- the screen follows the turn -----------------------------------------
+
+   It used to be the order, then the statblock, then whatever a feature
+   needed when it was built. It now answers the questions a turn raises, in
+   that order: what is WAITING on you, what the one who is up can DO, and
+   only then the order — a reference you glance at rather than the thing you
+   are working in.
+
+   Measured by where things actually sit on the page, because "the code is in
+   this order" and "a DM sees them in this order" are different claims. */
+const layout = async (pg) => pg.evaluate(() => {
+  const at = (sel) => {
+    const e = document.querySelector(sel);
+    return e ? Math.round(e.getBoundingClientRect().top + window.scrollY) : null;
+  };
+  return { legend: at(".legend"), stat: at(".sb-turn"), track: at(".track"), next: at(".next-turn") };
+});
+
+const onOthers = await layout(page);
+ok("on somebody else's turn the legendary actions come first",
+  onOthers.legend !== null && onOthers.legend < onOthers.track, true);
+ok("and the order sits below them", onOthers.track < onOthers.next, true);
+
+await page.getByRole("button", { name: "Next turn" }).click();
+await page.waitForTimeout(900);
+const onTheirs = await layout(page);
+ok("on its own turn what it can do comes first",
+  onTheirs.stat !== null && onTheirs.stat < onTheirs.track, true);
+ok("and its legendary actions are not offered at all", onTheirs.legend, null);
+ok("with the order still below", onTheirs.track < onTheirs.next, true);
+
+/* --- and a player sees none of it ----------------------------------------
+
+   The same decision as the Book tab and the statblock. A player who can read
+   a creature's legendary actions knows what it is about to do to them, and
+   the lair tells them what the room is going to do — both of which are the
+   DM's to reveal when it happens, which is what the disclosure ladder is
+   for. Asked for explicitly, so asserted explicitly.
+
+   With a control: the player IS in the fight and on the combat screen, so
+   "they cannot see it" is a claim about disclosure rather than about them
+   being on another page. */
+const player = await device("player");
+await player.locator('input[aria-label="Room code"]').fill(code);
+await player.getByRole("button", { name: "Join", exact: true }).click();
+await player.waitForSelector(".seatbar", { timeout: 20000 });
+const joinRow = player.locator(".join-row", { hasText: "Kira Vance" });
+if (await joinRow.count()) await joinRow.first().click();
+await player.waitForTimeout(1500);
+const ptab = player.locator('[data-tab="combat"]');
+if (await ptab.count()) { await ptab.first().click(); await player.waitForTimeout(700); }
+
+ok("the player is in the same fight", await player.locator(".cbt").count() > 0, true);
+ok("and sees no legendary actions", await player.locator(".legend").count(), 0);
+ok("nor the lair", await player.locator(".legend.lair").count(), 0);
+ok("nor the creature's statblock", await player.locator(".sb-turn").count(), 0);
+/* Nor the pips: what a creature has spent is the DM's bookkeeping, and a
+   player reading "its reaction is gone" knows it cannot be shielded. */
+ok("nor what a creature has left to spend", await player.locator(".cpips").count(), 0);
 
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 await browser.close();

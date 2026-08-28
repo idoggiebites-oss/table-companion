@@ -102,6 +102,14 @@ spread across the other modules.
 
 ## Done since this list was written
 
+**The combat screen follows the turn.** It was the order, then the statblock,
+then whatever each feature needed when it was built. It now answers the
+questions a turn raises, in that order: what is WAITING on you, what the one
+who is up can DO, and only then the order — a reference you glance at rather
+than the thing you work in. Legendary actions appear on somebody else's turn,
+which is when they are available, and vanish on the creature's own.
+
+
 **A creature has an action economy.** Players have had one since the beginning
 and creatures had a single boolean for the reaction, so a DM running six
 goblins tracked "has that one used its bonus action" in their head, six times a

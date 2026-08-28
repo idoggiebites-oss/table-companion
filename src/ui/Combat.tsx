@@ -1018,6 +1018,123 @@ export function Combat({
         </div>
       )}
 
+
+      {/*
+        * What the big things in this fight can do between turns, and what
+        * the place itself does. On screen during OTHER creatures' turns,
+        * because that is exactly when a legendary action is available and
+        * exactly when nothing else wants the DM's attention.
+        */}
+      {seat.kind === "dm" && bigOnes.length > 0 && (
+        <div className="card-body">
+          {bigOnes.map((m) => (
+            <Legendary
+              key={m.id}
+              who={m.id}
+              name={m.name}
+              /* What the book said, or what the DM said when it did not. */
+              budget={combat.legendaryBudget?.[m.id] ?? m.budget}
+              spent={combat.legendarySpent[m.id]}
+              options={m.options}
+              isTheirTurn={active?.id === m.id}
+              append={append}
+            />
+          ))}
+          <Lair
+            lair={
+              combat.lair
+                ? { ...combat.lair }
+                : (bigOnes.find((m) => m.lair)?.lair ?? null)
+            }
+            round={combat.round}
+            append={append}
+          />
+        </div>
+      )}
+
+      {/*
+        * The creature whose turn it is, whole.
+        *
+        * Staging kept its hit points, its armour class and the actions that
+        * deal damage — 17 of 57 entries across seven common monsters. The
+        * rest was readable in the Book tab, which means leaving the fight on
+        * the one screen you cannot leave. Multiattack is dropped from nearly
+        * every statblock in the game, so the app was quietest about the line
+        * that says how many times to swing.
+        *
+        * DM only, and for the same reason the Book tab is: a player who can
+        * read the statblock knows the armour class, which is what the
+        * disclosure ladder exists to withhold.
+        */}
+      {seat.kind === "dm" && activeBlock && (
+        <div className="card-body sb-turn">
+          <button
+            className="sb-turn-hd"
+            aria-expanded={sbOpen}
+            aria-label={`${activeBlock.name} statblock`}
+            onClick={() => setSbOpen(!sbOpen)}
+          >
+            <span className="label">{active?.name ?? activeBlock.name}</span>
+            <span className="faint">{sbOpen ? "Hide" : "Show"}</span>
+          </button>
+          {sbOpen && (
+            <StatblockView
+              m={activeBlock}
+              onAct={(a) => {
+                /*
+                 * A breath weapon is not an attack roll.
+                 *
+                 * "Each creature in that line must make a DC 18 Dexterity
+                 * saving throw" has no to-hit in it at all, and this opened
+                 * the swing walkthrough anyway — because tapping an action
+                 * led there whatever the action was. Four thousand actions in
+                 * the compendium ask for a save.
+                 *
+                 * So a save goes to the area tool, which already asks the
+                 * right question: who was caught, and who made it.
+                 */
+                const save = saveFromAction(a);
+                if (save) {
+                  setAreaFrom({
+                    name: a.name,
+                    dc: save.dc,
+                    ability: save.ability,
+                    amount: save.average ?? 0,
+                    damageType: save.damageType ?? "",
+                    half: save.half,
+                  });
+                  setArea(true);
+                  return;
+                }
+                /*
+                 * Otherwise it is a swing, and tapping it does not roll it:
+                 * it carries the numbers — which die, which modifier — and
+                 * asks the table for the result.
+                 */
+                setUsing(a);
+                setDealt(0);
+                if (!target) setDmPicking("target");
+              }}
+            />
+          )}
+        </div>
+      )}
+
+
+      /*
+       * The screen follows the turn.
+       *
+       * It used to be the order, then the statblock, then whatever a
+       * feature needed when it was built. Now it answers the questions a
+       * turn actually raises, in that order: whose turn it is (the header
+       * above), what is WAITING on you, what the one who is up can DO, and
+       * only then the order — which is a reference you glance at rather
+       * than the thing you are working in.
+       *
+       * Claims, a shove, readied actions and a big creature's legendary
+       * actions are all the same kind of thing: somebody else is blocked
+       * until you answer. They belong together and they belong first.
+       */
       <div className="track">
         {visible.map((c) => {
           const isActive = active?.id === c.id;
@@ -1188,106 +1305,6 @@ export function Combat({
         })}
       </div>
 
-      {/*
-        * The creature whose turn it is, whole.
-        *
-        * Staging kept its hit points, its armour class and the actions that
-        * deal damage — 17 of 57 entries across seven common monsters. The
-        * rest was readable in the Book tab, which means leaving the fight on
-        * the one screen you cannot leave. Multiattack is dropped from nearly
-        * every statblock in the game, so the app was quietest about the line
-        * that says how many times to swing.
-        *
-        * DM only, and for the same reason the Book tab is: a player who can
-        * read the statblock knows the armour class, which is what the
-        * disclosure ladder exists to withhold.
-        */}
-      {seat.kind === "dm" && activeBlock && (
-        <div className="card-body sb-turn">
-          <button
-            className="sb-turn-hd"
-            aria-expanded={sbOpen}
-            aria-label={`${activeBlock.name} statblock`}
-            onClick={() => setSbOpen(!sbOpen)}
-          >
-            <span className="label">{active?.name ?? activeBlock.name}</span>
-            <span className="faint">{sbOpen ? "Hide" : "Show"}</span>
-          </button>
-          {sbOpen && (
-            <StatblockView
-              m={activeBlock}
-              onAct={(a) => {
-                /*
-                 * A breath weapon is not an attack roll.
-                 *
-                 * "Each creature in that line must make a DC 18 Dexterity
-                 * saving throw" has no to-hit in it at all, and this opened
-                 * the swing walkthrough anyway — because tapping an action
-                 * led there whatever the action was. Four thousand actions in
-                 * the compendium ask for a save.
-                 *
-                 * So a save goes to the area tool, which already asks the
-                 * right question: who was caught, and who made it.
-                 */
-                const save = saveFromAction(a);
-                if (save) {
-                  setAreaFrom({
-                    name: a.name,
-                    dc: save.dc,
-                    ability: save.ability,
-                    amount: save.average ?? 0,
-                    damageType: save.damageType ?? "",
-                    half: save.half,
-                  });
-                  setArea(true);
-                  return;
-                }
-                /*
-                 * Otherwise it is a swing, and tapping it does not roll it:
-                 * it carries the numbers — which die, which modifier — and
-                 * asks the table for the result.
-                 */
-                setUsing(a);
-                setDealt(0);
-                if (!target) setDmPicking("target");
-              }}
-            />
-          )}
-        </div>
-      )}
-
-      {/*
-        * What the big things in this fight can do between turns, and what
-        * the place itself does. On screen during OTHER creatures' turns,
-        * because that is exactly when a legendary action is available and
-        * exactly when nothing else wants the DM's attention.
-        */}
-      {seat.kind === "dm" && bigOnes.length > 0 && (
-        <div className="card-body">
-          {bigOnes.map((m) => (
-            <Legendary
-              key={m.id}
-              who={m.id}
-              name={m.name}
-              /* What the book said, or what the DM said when it did not. */
-              budget={combat.legendaryBudget?.[m.id] ?? m.budget}
-              spent={combat.legendarySpent[m.id]}
-              options={m.options}
-              isTheirTurn={active?.id === m.id}
-              append={append}
-            />
-          ))}
-          <Lair
-            lair={
-              combat.lair
-                ? { ...combat.lair }
-                : (bigOnes.find((m) => m.lair)?.lair ?? null)
-            }
-            round={combat.round}
-            append={append}
-          />
-        </div>
-      )}
 
       {seat.kind === "dm" && (
         <div className="card-body" style={{ paddingBottom: 0 }}>
