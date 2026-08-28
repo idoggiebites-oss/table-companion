@@ -172,10 +172,20 @@ const steps = await player.page.getByRole("button", { name: /^Step \d+, / })
 for (const label of steps) {
   const name = label.replace(/^Step \d+, /, "");
   await atStep(player.page, name);
-  const picks = player.page.locator(".chooser select");
-  for (let i = 0; i < (await picks.count()); i++) {
-    await picks.nth(i).selectOption({ index: 1 }).catch(() => {});
-    await player.page.waitForTimeout(200);
+  /* Readable rows now rather than a dropdown. Unanswered ones only: an
+     answered chooser renders its head as a div, and "Take …" rather than the
+     first button in the panel, since an answered one offers "Choose
+     something else" and this loop would un-answer it. */
+  for (let g = 0; g < 6; g++) {
+    const card = player.page.locator(".card", { hasText: "Your class" });
+    const head = card.locator('.chooser button.menu-hd[aria-expanded="false"]').first();
+    if (!(await head.count())) break;
+    await head.click();
+    await player.page.waitForTimeout(250);
+    const take = card.getByRole("button", { name: /^Take / }).first();
+    if (!(await take.count())) break;
+    await take.click();
+    await player.page.waitForTimeout(300);
   }
 }
 await atStep(player.page, "Review");

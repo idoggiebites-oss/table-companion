@@ -238,12 +238,14 @@ if ((await toggle.getAttribute("aria-pressed")) === "true") {
   await page.waitForTimeout(400);
 }
 
-const archetypes = page.locator('select[aria-label="Ranger Archetype"]');
-await archetypes.first().scrollIntoViewIfNeeded();
-const shape = await archetypes.first().evaluate((el) => ({
-  groups: [...el.querySelectorAll("optgroup")].map((g) => g.label),
-  options: [...el.querySelectorAll("optgroup option")].map((o) => o.textContent),
-  loose: [...el.children].filter((c) => c.tagName === "OPTION").length,
+/* A readable list now, not a dropdown: a subclass IS its description, and a
+   dropdown of names made comparing eight archetypes eight round trips. The
+   claims are unchanged — what is offered, and under which book. */
+await chooser.scrollIntoViewIfNeeded();
+const shape = await chooser.evaluate((el) => ({
+  groups: [...el.querySelectorAll(".sub-book > .label")].map((g) => g.textContent.trim()),
+  options: [...el.querySelectorAll(".sub-book .menu-hd .nm")].map((o) => o.textContent.trim()),
+  loose: 0,
 }));
 ok("a ranger is offered the eight the game printed", shape.options.length, 8);
 ok("and nothing from anybody else",
@@ -252,7 +254,9 @@ ok("grouped by the book that printed them",
   shape.groups, ["Player's Handbook", "Xanathar's", "Tasha's", "Fizban's"]);
 ok("in publication order, not alphabetical",
   shape.groups.indexOf("Xanathar's") < shape.groups.indexOf("Tasha's"), true);
-ok("with only 'choose…' loose outside a group", shape.loose, 1);
+/* There is no "choose…" row in a list you read — you open one and take it,
+   so there is nothing loose outside a book. */
+ok("and nothing outside a book", shape.loose, 0);
 console.log(`      ${shape.options.join(" · ")}`);
 
 /* Races, backgrounds and feats get the same treatment — the compendium says
@@ -299,21 +303,27 @@ ok("and the playtest duplicates are behind the switch",
   subs.names.some((n) => /WGtE|\(TP\)/.test(n)), false);
 
 await atStep(page, "Scores");
-const styleGroups = await page.locator('select[aria-label="Fighting Style"]').evaluate(
-  (el) => [...el.querySelectorAll("optgroup")].map((g) => `${g.label}:${g.children.length}`),
+const styleCard = page.locator(".chooser", { hasText: "Fighting Style" }).first();
+const styleGroups = await styleCard.evaluate((el) =>
+  [...el.querySelectorAll(".sub-book")].map(
+    (g) => `${g.querySelector(".label").textContent.trim()}:${g.querySelectorAll(".menu-row").length}`,
+  ),
 );
 ok("fighting styles are placed as styles, not as subclasses",
   styleGroups, ["Player's Handbook:6", "Tasha's:5"]);
 
-/* And what a choice DOES, where the choice is made. The slim class file
-   carries the first few lines for official choices — 679 rows, a fifth of a
-   megabyte — because a list of names and nothing else sends you to a wiki. */
-await page.selectOption('select[aria-label="Fighting Style"]', { label: "Dueling" });
+/* And what a choice DOES, read BEFORE it is made rather than after. The slim
+   class file carries the first few lines for official choices — 679 rows, a
+   fifth of a megabyte — because a list of names and nothing else sends you
+   to a wiki. */
+await styleCard.getByRole("button", { name: "Dueling", exact: true }).click();
 await page.waitForTimeout(400);
-const said = await page.locator(".chooser", { hasText: "Fighting Style" })
-  .locator(".cr-blurb").innerText();
-ok("choosing one says what it does", /\+2 bonus to damage/i.test(said), true);
-ok("and which book it is from", /Player's Handbook/.test(said), true);
+const said = await styleCard.locator(".menu-more .then").first().innerText();
+ok("reading one says what it does", /\+2 bonus to damage/i.test(said), true);
+await styleCard.getByRole("button", { name: "Take Dueling" }).click();
+await page.waitForTimeout(400);
+ok("and once taken, which book it is from",
+  /Player's Handbook/.test(await styleCard.innerText()), true);
 
 /* The rest are not gone, they are behind the switch that always meant this. */
 const martial = page.locator(".chooser", { hasText: "Martial Archetype" }).first();
@@ -321,8 +331,8 @@ const more = martial.getByRole("button", { name: "Show homebrew and third-party 
 ok("the rest are one press away", await more.count(), 1);
 await more.click();
 await page.waitForTimeout(600);
-const opened = await page.locator('select[aria-label="Martial Archetype"]').evaluate(
-  (el) => [...el.querySelectorAll("optgroup option")].length,
+const opened = await martial.evaluate(
+  (el) => el.querySelectorAll(".sub-book .menu-row").length,
 );
 ok("and turning it on brings them back", opened > 50, true);
 

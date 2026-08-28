@@ -24,6 +24,7 @@ suites=0
 for f in scripts/verify*.mjs; do
   n=$(basename "$f")
   out=$(node "$f" 2>&1)
+  code=$?
   p=$(printf '%s' "$out" | grep -cE '^PASS')
   x=$(printf '%s' "$out" | grep -cE '^FAIL')
   skipped=$(printf '%s' "$out" | grep -cE '^SKIP')
@@ -33,8 +34,21 @@ for f in scripts/verify*.mjs; do
   if [ "$x" != "0" ]; then
     echo "FAILED  $n: $p pass, $x fail"
     printf '%s' "$out" | grep -E '^FAIL' | head -5
+  elif [ "$code" != "0" ]; then
+    #
+    # The signal that was there all along.
+    #
+    # A suite that throws PART WAY through prints its passes, prints no
+    # failures, and exits non-zero — and this script called that clean three
+    # separate times. verify-builder-content silently dropped from 27
+    # assertions to 12 and nothing noticed, because "12 pass, 0 fail" looks
+    # exactly like a suite that had 12 assertions.
+    #
+    # Counting is not enough. The exit code is the verdict.
+    empty=$((empty + 1))
+    echo "BROKE   $n: exited $code after $p assertion(s) — it did not finish"
+    printf '%s' "$out" | grep -E 'Error|Timeout|waiting for' | head -3
   elif [ "$p" = "0" ] && [ "$skipped" = "0" ]; then
-    # Ran and asserted nothing: a crash, a timeout, or a dead server.
     empty=$((empty + 1))
     echo "EMPTY   $n: produced no assertions"
     printf '%s' "$out" | grep -E 'Error|Timeout|ECONNREFUSED' | head -2
