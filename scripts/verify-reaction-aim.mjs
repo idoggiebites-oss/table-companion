@@ -134,6 +134,39 @@ ok("the player is asked, wherever they are",
 ok("and it interrupts rather than waiting to be found",
   await player.locator(".react-scrim").count(), 1);
 
+/* And it covers the page from its FIRST frame.
+
+   The scrim used to run the sheet's own `pop-rise`, which rises 14px — so its
+   bottom edge was 14 pixels short for the length of the animation. Worse on a
+   laptop: that keyframe is redefined inside the 760px query to keep a centred
+   pane centred, and keyframes are document-wide when their query matches, so
+   the scrim began half a viewport to the left. Measured at 800px it started
+   at left −400, right 400, with the right half of the page unscrimmed.
+
+   Read at currentTime 0 rather than eyeballed mid-flight: the first frame is
+   the one that was wrong. */
+const covers = await player.evaluate(() => {
+  const el = document.querySelector(".react-scrim");
+  /* Replayed, not caught in flight. A 140ms animation is over long before a
+     suite can look at it, and a finished one is no longer in
+     getAnimations() — so the first version of this check measured the
+     settled scrim and passed against the very bug it was written for. */
+  el.style.animation = "none";
+  void el.offsetWidth;
+  el.style.animation = "";
+  const anim = el.getAnimations()[0];
+  if (!anim) return "no animation to read";
+  anim.pause();
+  anim.currentTime = 0;
+  const r = el.getBoundingClientRect();
+  anim.play();
+  return r.left <= 0 && r.top <= 0
+    && r.right >= window.innerWidth && r.bottom >= window.innerHeight
+    ? true
+    : `first frame at ${Math.round(r.left)},${Math.round(r.top)} to ${Math.round(r.right)},${Math.round(r.bottom)} in ${window.innerWidth}x${window.innerHeight}`;
+});
+ok("and covers the page from its first frame", covers, true);
+
 await player.getByRole("button", { name: "Take a swing" }).click();
 await player.waitForTimeout(900);
 /* And it gets out of the way the instant they answer. A scrim that outlives

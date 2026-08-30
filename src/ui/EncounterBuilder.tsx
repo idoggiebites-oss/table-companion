@@ -15,7 +15,7 @@
  * See non-srd.ts for why that matters.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   crBand, creatureKind, CR_BANDS, CR_LABEL, CREATURE_KINDS,
   type CrBand, type CreatureKind,
@@ -81,7 +81,13 @@ function Working({
               which is reserved for creatures. */}
           <div className="gauge">
             <i className="b1" /><i className="b2" /><i className="b3" /><i className="b4" /><i className="b5" />
-            <span className="pin" style={{ left: `${pct(t.adjustedXp)}%` }} />
+            {/* The position is a custom property because the pin moves on
+                `transform` now, and a percentage translate is relative to the
+                element's own width — see .pin in app.css. */}
+            <span
+              className="pin"
+              style={{ "--pin": `${pct(t.adjustedXp)}%` } as CSSProperties}
+            />
           </div>
           <div className="ticks">
             {([["Easy", budget.easy], ["Medium", budget.medium],

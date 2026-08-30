@@ -112,6 +112,58 @@ spread across the other modules, and MODULES.md's table is the whole of it.
 
 ## Done since this list was written
 
+**The motion, reviewed against somebody else's bar.** An animation review
+skill was pointed at the app — twenty-odd motion declarations, no animation
+library, all of it hand-written CSS. Eight findings, all applied.
+
+The one that mattered: **the reaction scrim was uncovering half the screen.**
+It borrowed the sheet's `pop-rise` keyframes, and `pop-rise` is redefined
+inside the 760px query so a centred pane keeps its `translateX(-50%)` while it
+rises. Keyframes are document-wide when their query matches, so on any laptop
+the scrim started half a viewport to the left: measured at 800px, its first
+frame sat at left −400, right 400. On a phone it was 14 pixels of daylight at
+the top. That is the one moment in the app where five people are waiting on
+one person, and the scrim exists to say so. It has its own fade now, and it
+never travels.
+
+The check for it is the useful part. The first version paused the scrim's
+animation and measured the box — and passed against the bug, because a 140ms
+animation is finished long before a suite can look at it and a finished CSS
+animation is no longer in `getAnimations()`. It was measuring the settled
+scrim. It now replays the animation deliberately (`animation: none`, reflow,
+restore), pauses at `currentTime` 0, and reads the first frame. Confirmed to
+fail against the old stylesheet, quoting the box it found.
+
+**Two things were animating `left`** — the difficulty gauge's pin and the
+homebrew toggle's knob — which is layout, paint and composite on every frame.
+Both move on `transform` now. The pin's position is a percentage of the gauge
+and a percentage translate is relative to the element's own width, so the pin
+is the full width of the gauge and draws its two visible pixels at its own
+left edge.
+
+**The press is asymmetric.** It ran 60ms in both directions; the press is the
+person acting and is now instant, while the hand coming off eases over 160ms
+— which is also inside the 100–160ms a press wants, where 60 was not.
+
+**Fourteen hover rules, none of them gated.** On a phone a tap fires `:hover`
+and leaves it on the control until you touch something else, so a pressed
+button stayed lit. All fourteen are behind
+`@media (hover: hover) and (pointer: fine)`.
+
+And the smaller ones: the XP bar was 400ms against a 300ms ceiling with no
+reason; the pin and the toggle knob had no reduced-motion rule while four
+other motion sites in the file did; and the builder's step change was running
+a 180ms slide and a browser-timed smooth scroll at once, two motions of
+different lengths against each other, so the scroll is instant now and the
+slide carries the change.
+
+Cleared rather than changed: the HP bar's `--hp` on the parent driving two
+children's `scaleX` looks like the recalc-storm pattern and is not one — the
+subtree is two elements, and the single variable is deliberately the single
+source of truth for the fill and its lagging ghost.
+
+63 suites, 1267 assertions, none failing and none empty.
+
 **A combat screen read against a reference image, again.** The mockup was
 compared to the running app rather than reimplemented from it — the same
 method as last time, and again most of it was already there: the two bands,

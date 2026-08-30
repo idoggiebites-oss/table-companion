@@ -1045,8 +1045,14 @@ export function CreateCharacter({
     const el = chrome.current;
     if (!el) return;
     const top = el.getBoundingClientRect().top + window.scrollY - 8;
-    const soft = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({ top, behavior: soft ? "smooth" : "auto" });
+    /*
+     * Not smooth. The step itself slides in over 180ms with its own curve,
+     * and a smooth scroll is a second motion of a different length running
+     * against it — the card lands while the page is still moving under it.
+     * One motion carries the step change; this just puts the top of it where
+     * the eye already is.
+     */
+    window.scrollTo({ top, behavior: "auto" });
   }, [here]);
 
   return (

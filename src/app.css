@@ -236,7 +236,16 @@ button {
   border-radius: var(--r-control);
   padding: 10px 14px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.12s, transform 0.06s;
+  /*
+   * Asymmetric on purpose: the release eases, the press does not.
+   *
+   * Both directions ran at 60ms, which is under the hundred-to-a-hundred-and-
+   * sixty a press wants and symmetric besides. The press is the person
+   * acting, so it is instant — see the `:active` rule below; this is the
+   * hand coming back off.
+   */
+  transition: color 0.15s, border-color 0.15s, background 0.12s,
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 /*
  * A single word alone on the last line reads as a mistake in the copy rather
@@ -249,7 +258,7 @@ button {
 p { text-wrap: pretty; }
 h1, h2, h3 { text-wrap: balance; }
 
-button:hover:not(:disabled) { color: var(--ink); border-color: var(--faint); }
+@media (hover: hover) and (pointer: fine) { button:hover:not(:disabled) { color: var(--ink); border-color: var(--faint); } }
 /*
  * The press, acknowledged.
  *
@@ -265,6 +274,8 @@ button:hover:not(:disabled) { color: var(--ink); border-color: var(--faint); }
  * row under a thumb that is still on it.
  */
 button:active:not(:disabled) {
+  /* Nothing to wait for on the way down. */
+  transition: transform 0s;
   transform: translateY(1px);
   background: var(--panel);
   border-color: var(--faint);
@@ -437,7 +448,7 @@ section.card {
 .fr .d { flex: 1 1 auto; min-width: 0; }
 .fr.undone .d { color: var(--faint); text-decoration: line-through; }
 .fr button { padding: 5px 9px; font-size: 0.6rem; background: transparent; border-color: transparent; color: var(--steel); }
-.fr button:hover:not(:disabled) { border-color: var(--rule); }
+@media (hover: hover) and (pointer: fine) { .fr button:hover:not(:disabled) { border-color: var(--rule); } }
 
 /* ---- shared utilities ---- */
 .muted { color: var(--muted); }
@@ -473,7 +484,7 @@ section.card {
 }
 .rp-title .num { color: var(--steel); margin-left: 6px; }
 .rp-close { padding: 6px 11px; background: transparent; border-color: transparent; color: var(--muted); font-size: 0.88rem; letter-spacing: 0; }
-.rp-close:hover:not(:disabled) { border-color: var(--rule); }
+@media (hover: hover) and (pointer: fine) { .rp-close:hover:not(:disabled) { border-color: var(--rule); } }
 
 .rp-modes { display: flex; gap: 5px; margin-top: 12px; flex-wrap: wrap; }
 .rp-modes button { font-size: 0.6rem; padding: 8px 11px; }
@@ -500,7 +511,7 @@ section.card {
 
 /* the row you tapped stays marked while the pad is up */
 .stat.rollable { cursor: pointer; width: 100%; text-align: left; background: transparent; border-left: 0; border-right: 0; border-top: 0; text-transform: none; letter-spacing: 0; font-size: 0.88rem; font-weight: 400; }
-.stat.rollable:hover:not(:disabled) { background: var(--raised); }
+@media (hover: hover) and (pointer: fine) { .stat.rollable:hover:not(:disabled) { background: var(--raised); } }
 .stat.sel { background: var(--raised); box-shadow: inset 2px 0 0 var(--steel); }
 .stat.sel .n { color: var(--ink); }
 
@@ -574,7 +585,7 @@ input[type="file"] { padding: 8px; font-size: 0.84rem; }
   color: var(--ink-dim);
 }
 .atk:last-child { border-bottom: 0; }
-.atk:hover:not(:disabled) { background: var(--raised); color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .atk:hover:not(:disabled) { background: var(--raised); color: var(--ink); } }
 .atk.sel { background: var(--raised); box-shadow: inset 2px 0 0 var(--steel); color: var(--ink); }
 .atk .n { min-width: 0; }
 .atk .d {
@@ -603,7 +614,7 @@ input[type="file"] { padding: 8px; font-size: 0.84rem; }
 .ub-text { font-size: 0.88rem; color: var(--ink); }
 .updatebar button { padding: 7px 12px; font-size: 0.6rem; }
 .ub-dismiss { background: transparent; border-color: transparent; color: var(--muted); }
-.ub-dismiss:hover:not(:disabled) { border-color: var(--rule); }
+@media (hover: hover) and (pointer: fine) { .ub-dismiss:hover:not(:disabled) { border-color: var(--rule); } }
 
 /*
  * Suppress the iOS elastic bounce, which transiently detaches position:fixed
@@ -1061,7 +1072,7 @@ html, body { overscroll-behavior-y: none; }
   background: transparent; text-transform: none; letter-spacing: 0;
   font-size: 0.94rem; font-weight: 400; color: var(--ink-dim);
 }
-.mrow:hover:not(:disabled) { color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .mrow:hover:not(:disabled) { color: var(--ink); } }
 .mrow.open { color: #fff; }
 .mrow .ty { font-size: 0.78rem; }
 .mrow .cr { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
@@ -1090,7 +1101,7 @@ html, body { overscroll-behavior-y: none; }
   text-transform: none; letter-spacing: 0; font-size: 0.88rem; font-weight: 400;
   color: var(--ink-dim);
 }
-.pick:hover:not(:disabled) { color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .pick:hover:not(:disabled) { color: var(--ink); } }
 .pick .faint { font-size: 0.78rem; }
 
 .ents { margin-top: 12px; border-top: 1px solid var(--rule); }
@@ -1124,7 +1135,28 @@ html, body { overscroll-behavior-y: none; }
 .gauge i { flex: 1; height: 100%; border-radius: 1px; }
 .b1 { background: #2a3238; } .b2 { background: #3c4a54; } .b3 { background: #52646f; }
 .b4 { background: #6e8fa8; } .b5 { background: #9cbbd1; }
-.pin { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); transition: left .35s ease; }
+/*
+ * The pin travels on `transform`, not on `left`.
+ *
+ * `left` is layout, paint and composite on every frame of the move. The
+ * position is a percentage of the GAUGE, and a percentage translate is
+ * relative to the element's own width — so the pin is the full width of the
+ * gauge, carries the transform, and draws its two visible pixels at its own
+ * left edge.
+ */
+.pin {
+  position: absolute; top: -5px; bottom: -5px; left: 0; width: 100%;
+  pointer-events: none;
+  transform: translateX(var(--pin, 0));
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.pin::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 2px; background: var(--ink);
+}
+/* A position change is the thing reduced motion asks to lose. It still
+   lands where it belongs; it simply does not slide there. */
+@media (prefers-reduced-motion: reduce) { .pin { transition: none; } }
 .ticks { position: relative; height: 30px; margin-top: 6px; }
 .tk { position: absolute; transform: translateX(-50%); text-align: center; white-space: nowrap; }
 .tk b { display: block; font-weight: 500; font-size: 0.54rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
@@ -1175,7 +1207,7 @@ html, body { overscroll-behavior-y: none; }
 .xpb i {
   position: absolute; inset: 0; transform-origin: left;
   background: var(--steel); border-radius: 2px 0 0 2px;
-  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 280ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .owe {
   font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.11em;
@@ -1254,7 +1286,7 @@ html, body { overscroll-behavior-y: none; }
   text-align: left; padding: 6px 8px; font-size: 0.66rem;
   background: transparent; border-color: transparent; color: var(--ink-dim);
 }
-.cr-name:hover:not(:disabled) { border-color: var(--rule); color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .cr-name:hover:not(:disabled) { border-color: var(--rule); color: var(--ink); } }
 .cr-val { font-size: 1.0rem; color: var(--ink); }
 .cr-ab.empty .cr-val { color: var(--faint); }
 .cr-bonus { font-size: 0.78rem; color: var(--steel); text-align: right; }
@@ -1432,8 +1464,20 @@ html, body { overscroll-behavior-y: none; }
  */
 .react-scrim {
   position: fixed; inset: 0; z-index: 40; background: #000a;
-  animation: pop-rise 140ms ease-out;
+  /*
+   * Its own fade, not the sheet's rise.
+   *
+   * This ran `pop-rise`, which is redefined inside the 760px query so a
+   * centred pane keeps its `translateX(-50%)` while it rises — and keyframes
+   * are document-wide when their query matches. So on any laptop the scrim
+   * started half a viewport to the left: measured at 800px, its first frame
+   * sat at left −400, right 400, leaving the right half of the page
+   * unscrimmed for 140ms of the one moment five people are waiting on one
+   * person. A scrim covers; it does not travel.
+   */
+  animation: scrim-in 140ms ease-out;
 }
+@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
 .react-ask {
   position: fixed; z-index: 41;
   left: 50%; top: 50%; transform: translate(-50%, -50%);
@@ -1451,7 +1495,9 @@ html, body { overscroll-behavior-y: none; }
   to { transform: translate(-50%, -50%); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .react-ask, .react-scrim { animation: none; }
+  /* The scrim still fades — it is opacity, which is not movement. The dialog
+     stops travelling and arrives. */
+  .react-ask { animation: none; }
 }
 
 /* ---- feats: a description, not a dropdown ---- */
@@ -1736,11 +1782,16 @@ html, body { overscroll-behavior-y: none; }
 .hb-toggle i::after {
   content: ""; position: absolute; top: 1px; left: 1px;
   width: 8px; height: 8px; border-radius: 50%; background: var(--faint);
-  transition: left 0.12s, background 0.12s;
+  /* Ten pixels of travel on the GPU. `left` was layout on every frame of a
+     control that is pressed to be watched. */
+  transition: transform 0.12s cubic-bezier(0.23, 1, 0.32, 1), background 0.12s ease;
 }
 .hb-toggle.on { color: var(--ink-dim); border-color: var(--steel); }
 .hb-toggle.on i { border-color: var(--steel); }
-.hb-toggle.on i::after { left: 11px; background: var(--steel); }
+.hb-toggle.on i::after { transform: translateX(10px); background: var(--steel); }
+@media (prefers-reduced-motion: reduce) {
+  .hb-toggle i::after { transition: background 0.12s ease; }
+}
 
 /* ---- what a spell is for, before you read a word of it ---- */
 .spick { display: flex; flex-direction: column; gap: 10px; }
@@ -2309,7 +2360,7 @@ html, body { overscroll-behavior-y: none; }
   background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
   color: var(--ink); font: inherit;
 }
-.sb-act:hover { border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .sb-act:hover { border-color: var(--gold); } }
 .sb-act-n { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .sb-act-n b { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.84rem; }
 .sb-act-n .faint { font-size: 0.8rem; }
@@ -2370,7 +2421,7 @@ html, body { overscroll-behavior-y: none; }
   padding: 0; color: inherit; font: inherit;
   text-transform: none; letter-spacing: normal;
 }
-.nm-edit:hover { border-bottom-color: var(--rule); }
+@media (hover: hover) and (pointer: fine) { .nm-edit:hover { border-bottom-color: var(--rule); } }
 /*
  * Quieter than Next turn, and beside it. Taking a turn back is a correction,
  * not a move — a DM reaches for it once an evening and must never hit it
@@ -2774,7 +2825,7 @@ textarea,
 .turnbar .tb .l {
   font-size: 0.54rem; letter-spacing: 0.1em; text-transform: uppercase;
 }
-.turnbar .tb:hover:not(:disabled) { color: var(--ink); background: var(--raised); }
+@media (hover: hover) and (pointer: fine) { .turnbar .tb:hover:not(:disabled) { color: var(--ink); background: var(--raised); } }
 .turnbar .tb:active:not(:disabled) { background: var(--ground); transform: none; }
 .turnbar .tb:disabled .g, .turnbar .tb:disabled { color: var(--faint); }
 /* Taken, and still true: dodging is a stance that lasts until your next turn. */
@@ -2800,7 +2851,7 @@ textarea,
   font-size: 0.54rem; letter-spacing: 0.08em;
   color: var(--faint); text-transform: none;
 }
-.end-round:hover:not(:disabled) { color: var(--ink-dim); border-color: var(--faint); }
+@media (hover: hover) and (pointer: fine) { .end-round:hover:not(:disabled) { color: var(--ink-dim); border-color: var(--faint); } }
 
 /* ---- stepping the turn from where the turn is named ---- */
 /*
@@ -2819,5 +2870,5 @@ textarea,
   font-size: 1.1rem; line-height: 1;
   color: var(--faint); background: none; border: 0;
 }
-.up-step .us:hover:not(:disabled) { color: var(--gold); background: none; }
+@media (hover: hover) and (pointer: fine) { .up-step .us:hover:not(:disabled) { color: var(--gold); background: none; } }
 .up-step .us:disabled { color: var(--rule); }
