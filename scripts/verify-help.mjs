@@ -42,11 +42,12 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector(".seatbar");
+await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
 /* The ally is a separate press, on purpose: "load the sample" means one known
    character on twenty screens, and quietly making it two would change what
    every one of them is showing. */
 // The sample panel folds away once a character exists; Add character opens it.
+await dm.page.getByRole("button", { name: "This device" }).click();
 await dm.page.getByRole("button", { name: "Add character" }).click();
 await dm.page.waitForTimeout(400);
 await dm.page.getByRole("button", { name: "Add an ally" }).click();
@@ -64,7 +65,7 @@ const bram = await device("bram");
 for (const [d, who] of [[kira, "Kira Vance"], [bram, "Bram Holt"]]) {
   await d.page.locator('input[aria-label="Room code"]').fill(code);
   await d.page.getByRole("button", { name: "Join", exact: true }).click();
-  await d.page.waitForSelector(".seatbar", { timeout: 20000 });
+  await d.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
   const row = d.page.locator(".join-row", { hasText: who });
   if (await row.count()) await row.first().click();
   await d.page.waitForSelector(".hp-big", { timeout: 20000 });

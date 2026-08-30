@@ -91,6 +91,7 @@ await page.waitForSelector(".chips .chip", { timeout: 180000 });
 await page.getByRole("button", { name: "Import", exact: true }).click();
 await page.waitForSelector(".src-row:nth-child(2)", { timeout: 300000 });
 
+await page.getByRole("button", { name: "This device" }).click();
 await page.getByRole("button", { name: "Add character" }).click();
 await page.getByRole("button", { name: "Build a character" }).click();
 await atStep(page, "Class");
@@ -210,6 +211,7 @@ ok("the character is made from imported content and reads normally",
    official. And nothing anywhere said which BOOK an official one came from —
    the compendium does not carry it. */
 // A fresh builder: the one above has already produced a character.
+await page.getByRole("button", { name: "This device" }).click();
 await page.getByRole("button", { name: "Add character" }).click();
 await page.waitForTimeout(400);
 await page.getByRole("button", { name: "Build a character" }).click();

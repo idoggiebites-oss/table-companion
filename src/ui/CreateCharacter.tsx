@@ -161,7 +161,16 @@ export function CreateCharacter({
   const [classes, setClasses] = useState<ClassEntry[] | null>(null);
   const [levels, setLevels] = useState<ClassLevels | null>(null);
   const [gear, setGear] = useState<Item[] | null>(null);
-  const [book, setBook] = useState<CompendiumSpell[]>([]);
+  /*
+   * `null` until the compendium answers, like every other loader here.
+   *
+   * It was `[]`, which made "the spell list has not arrived" and "this device
+   * has no spell list" the same value — and the Spells step read one of them
+   * as the other. Its four siblings above are nullable for exactly this
+   * reason; this one was the exception and it is what the step got wrong.
+   */
+  const [loadedBook, setLoadedBook] = useState<CompendiumSpell[] | null>(null);
+  const book = loadedBook ?? [];
   const [spellFilter, setSpellFilter] = useState("");
   /** Which picker is open, keyed by class and kind: "wizard:cantrip". */
   const [openPicker, setOpenPicker] = useState<string | null>(null);
@@ -234,7 +243,7 @@ export function CreateCharacter({
     loadClassLevels().then(setLevels, () => setLevels({}));
     loadEquipment().then(setGear, () => setGear([]));
     loadBackgrounds().then(setBackgrounds, () => setBackgrounds([]));
-    loadSpells().then(setBook, () => setBook([]));
+    loadSpells().then(setLoadedBook, () => setLoadedBook([]));
     loadFeats().then(setFeatList, () => setFeatList([]));
   }, []);
 
@@ -950,7 +959,35 @@ export function CreateCharacter({
     /* Only ever in the list for a caster, and a caster needs a class — but
        said out loud, because `true` is how the other two got it wrong. */
     ...(castsAtAll
-      ? [{ id: "spells", label: "Spells", done: klass !== undefined, waiting: waitingOn("both") }]
+      ? [
+          {
+            id: "spells",
+            label: "Spells",
+            /*
+             * Having a class is not having chosen spells — the same mistake as
+             * the two above, one step removed: it asked whether the QUESTION
+             * existed rather than whether it had been answered, so a brand-new
+             * warlock got a green tick against Spells before seeing the list.
+             *
+             * The criterion is the one the card itself prints in its header:
+             * so many of so many cantrips, so many of so many spells. A
+             * prepared caster has no "spells known" and the table says zero,
+             * which is why that half is conditional rather than a comparison
+             * against nothing.
+             *
+             * An empty book once the compendium HAS answered is done: there is
+             * nothing on this device to pick, the card says so, and a step
+             * that can never be satisfied would strand Review forever.
+             */
+            done:
+              klass !== undefined &&
+              loadedBook !== null &&
+              (loadedBook.length === 0 ||
+                (pickedCantrips >= cantripsKnown &&
+                  (spellsKnown === 0 || pickedSpells >= spellsKnown))),
+            waiting: waitingOn("both"),
+          },
+        ]
       : []),
     {
       id: "gear",
@@ -1045,7 +1082,24 @@ export function CreateCharacter({
                 aria-label={`Step ${i + 1}, ${st.label}`}
                 onClick={() => go(i)}
               >
-                <span className="cr-dot">{st.done && i !== stepIndex ? "✓" : i + 1}</span>
+                {/*
+                  * A tick is a tick on the step you are standing on too.
+                  *
+                  * This read `st.done && i !== stepIndex`, and it is the whole
+                  * of what was written down as "the rail settles": Gear is
+                  * done before you reach it, so it showed a tick and then LOST
+                  * it when you arrived; Race becomes done while you stand
+                  * there answering it, so it showed a number until you left.
+                  * One rule, seen from both sides, and neither is a
+                  * derivation problem — both were right the entire time.
+                  *
+                  * Nothing is lost by ticking it: `.on` already puts the dot
+                  * in gold, so where you ARE and what is ANSWERED are two
+                  * marks rather than one that has to choose. And the step
+                  * ticks under the choice that finished it, which is where a
+                  * person is looking when they finish it.
+                  */}
+                <span className="cr-dot">{st.done ? "✓" : i + 1}</span>
                 <span className="cr-lb">{st.label}</span>
               </button>
             ))}
@@ -1053,7 +1107,7 @@ export function CreateCharacter({
         )}
 
         {(!races || !classes) && (
-          <div className="card-body"><p className="faint" style={{ margin: 0 }}>Loading…</p></div>
+          <div className="card-body"><p className="faint note">Loading…</p></div>
         )}
 
         {/*
@@ -1123,7 +1177,7 @@ export function CreateCharacter({
             </div>
 
             {classes.some((c) => c.extra) && (
-              <div className="row" style={{ marginTop: 12 }}>
+              <div className="row mt-3">
                 <HomebrewToggle
                   on={homebrew}
                   hidden={classes.filter((c) => c.extra).length}
@@ -1147,7 +1201,7 @@ export function CreateCharacter({
 
             {klass && (
               <>
-                <div className="row" style={{ marginTop: 10 }}>
+                <div className="row mt-2">
                   <span className="label">Starting at level</span>
                   <Num
                     min={1} max={20} value={level}
@@ -1156,7 +1210,7 @@ export function CreateCharacter({
                     onChange={setLevel}
                   />
                   {level > 1 && (
-                    <span className="faint" style={{ fontSize: ".8rem" }}>
+                    <span className="faint aside">
                       joining a campaign in progress
                     </span>
                   )}
@@ -1196,7 +1250,7 @@ export function CreateCharacter({
           <div className="card-body">
             {classes && (
               <div className="mc">
-                <div className="cnt" style={{ marginBottom: 8 }}>
+                <div className="cnt mb-2">
                   <span>Is this character more than one class?</span>
                   <b>{level + extras.reduce((n, c) => n + c.level, 0)}</b>
                 </div>
@@ -1224,13 +1278,13 @@ export function CreateCharacter({
 
                 {/* The rule cuts both ways, and people forget the first half. */}
                 {mcBlock && (
-                  <p className="lv-block" style={{ marginTop: 8 }}>{mcBlock}</p>
+                  <p className="lv-block mt-2">{mcBlock}</p>
                 )}
 
                 <select
                   aria-label="Add a class"
                   value=""
-                  style={{ marginTop: 8 }}
+                  className="mt-2"
                   onChange={(e) => {
                     const k = classes.find((x) => x.id === e.target.value);
                     if (!k) return;
@@ -1266,7 +1320,7 @@ export function CreateCharacter({
         {races && classes && at("skills") && klass && (
           <div className="card-body">
             <span className="label cr-step">2 · Skills</span>
-            <p className="cr-blurb" style={{ marginTop: 6 }}>
+            <p className="cr-blurb mt-1">
               What a {klass.name.toLowerCase()} trains in. Your background adds
               two more, at the story step.
             </p>
@@ -1282,7 +1336,7 @@ export function CreateCharacter({
                       * than hidden — "why is Stealth not here" is a question
                       * an absent row cannot answer.
                       */}
-                    <div className="cnt" style={{ marginTop: 12 }}>
+                    <div className="cnt mt-3">
                       <span>Proficiency adds to whatever you take</span>
                       <b>{formatModifier(prof)}</b>
                     </div>
@@ -1368,7 +1422,7 @@ export function CreateCharacter({
                       : SKILL_IDS;
                   return (
                     <div className="mc-brought" key={c.id}>
-                      <p className="cr-note" style={{ marginTop: 0 }}>
+                      <p className="cr-note mt-0">
                         {describeGrant(c.name, grant)}
                       </p>
                       {owed > 0 && (
@@ -1405,7 +1459,7 @@ export function CreateCharacter({
                 The filter appears only when the list is long enough to need
                 it, so the common case stays a single control. */}
             {hiddenRaces > 0 || homebrew ? (
-              <div className="row" style={{ marginBottom: 10 }}>
+              <div className="row mb-2">
                 <HomebrewToggle on={homebrew} hidden={hiddenRaces} onChange={setHomebrew} />
               </div>
             ) : null}
@@ -1414,7 +1468,7 @@ export function CreateCharacter({
                 value={raceFilter}
                 aria-label="Filter races"
                 placeholder={`filter ${races.length} races…`}
-                style={{ marginBottom: 8 }}
+                className="mb-2"
                 onChange={(e) => setRaceFilter(e.target.value)}
               />
             )}
@@ -1484,7 +1538,7 @@ export function CreateCharacter({
                   <select
                     aria-label="Subrace"
                     value={subraceId}
-                    style={{ marginTop: 8 }}
+                    className="mt-2"
                     onChange={(e) => setSubraceId(e.target.value)}
                   >
                     {byBook(shown, "race").map(([book, list]) => (
@@ -1496,7 +1550,7 @@ export function CreateCharacter({
                     ))}
                   </select>
                   {hidden > 0 && (
-                    <div className="row" style={{ marginTop: 8 }}>
+                    <div className="row mt-2">
                       <HomebrewToggle on={homebrew} hidden={hidden} onChange={setHomebrew} />
                     </div>
                   )}
@@ -1517,9 +1571,9 @@ export function CreateCharacter({
             {/* What the race casts. Stated where it is granted, because a
                 spell appearing on the sheet from nowhere is a mystery. */}
             {race && hasInnate(innate) && (
-              <div className="cnt" style={{ marginTop: 16, display: "block" }}>
+              <div className="cnt block mt-4">
                 <span className="label">{race.name} casts</span>
-                <p className="cr-note" style={{ margin: "6px 0 0" }}>
+                <p className="cr-note mt-1">
                   {innateAt(innate, level).map((g) => g.name).join(", ") || "nothing yet"}
                   {innate.spells.some((g) => g.level > level) && (
                     <>
@@ -1544,7 +1598,7 @@ export function CreateCharacter({
 
             {race && freeBonus && (
               <>
-                <div className="cnt" style={{ marginTop: 16 }}>
+                <div className="cnt mt-4">
                   <span>
                     {race.name} leaves {freeBonus.count} point
                     {freeBonus.count === 1 ? "" : "s"} to you
@@ -1584,7 +1638,7 @@ export function CreateCharacter({
 
             {freeSkills > 0 && (
               <>
-                <div className="cnt" style={{ marginTop: 16 }}>
+                <div className="cnt mt-4">
                   <span>and {freeSkills} skill{freeSkills === 1 ? "" : "s"} of your choice</span>
                   <b>{raceSkills.length} of {freeSkills}</b>
                 </div>
@@ -1609,7 +1663,7 @@ export function CreateCharacter({
 
             {offersFeat && (
               <>
-                <div className="cnt" style={{ marginTop: 16 }}>
+                <div className="cnt mt-4">
                   <span>and a feat, at level one</span>
                   <b>{raceFeat ? "taken" : "0 of 1"}</b>
                 </div>
@@ -1675,7 +1729,7 @@ export function CreateCharacter({
             <div className="cr-assign">
               {method === "rolled" && rolled.length < 6 && (
                 <div className="cr-roll">
-                  <p className="cr-note" style={{ marginTop: 0 }}>
+                  <p className="cr-note mt-0">
                     Roll <strong>4d6</strong>, drop the lowest, and tap each total.
                     {" "}{6 - rolled.length} to go.
                   </p>
@@ -1709,7 +1763,7 @@ export function CreateCharacter({
                       {v}
                     </button>
                   ))}
-                  <span className="faint" style={{ fontSize: ".78rem", alignSelf: "center" }}>
+                  <span className="faint aside">
                     tap a value, then an ability
                   </span>
                 </div>
@@ -1773,11 +1827,11 @@ export function CreateCharacter({
                 );
               })}
 
-              <div className="row" style={{ marginTop: 12 }}>
+              <div className="row mt-3">
                 <button onClick={recommend}>Recommend</button>
                 <button onClick={() => resetScores(method)}>Clear</button>
                 {method === "pointBuy" && (
-                  <span className="faint num" style={{ fontSize: ".8rem" }}>
+                  <span className="faint aside num">
                     {POINT_BUY_BUDGET - pointsSpent(buy)} of {POINT_BUY_BUDGET} left
                   </span>
                 )}
@@ -1793,7 +1847,7 @@ export function CreateCharacter({
                 <div><span className="l">Speed</span><span className="v num">{race.speed}</span></div>
               </div>
               {level > 1 && (
-                <p className="cr-note" style={{ marginTop: 0 }}>
+                <p className="cr-note mt-0">
                   Level {level}: average hit points per level, proficiency{" "}
                   {formatModifier(prof)}
                   {atLevel?.slots.length ? `, slots ${atLevel.slots.join("/")}` : ""}
@@ -1808,7 +1862,7 @@ export function CreateCharacter({
                 </div>
               ))}
               {classSkills.length + bgSkills.length === 0 && (
-                <p className="faint" style={{ fontSize: ".82rem", margin: 0 }}>None yet.</p>
+                <p className="faint note">None yet.</p>
               )}
             </div>
           </div>
@@ -1819,14 +1873,14 @@ export function CreateCharacter({
         <section className="card">
           <div className="card-hd">
             <span className="label">4 · Background</span>
-            <span className="faint" style={{ fontSize: ".78rem" }}>{bgSkills.length} of 2 skills</span>
+            <span className="faint aside">{bgSkills.length} of 2 skills</span>
           </div>
           <div className="card-body">
             {/* Imported backgrounds fill in the name and the skills; the
                 custom route stays underneath, because a table invents one
                 more often than it looks one up. */}
             {(hiddenBackgrounds > 0 || homebrew) && (
-              <div className="row" style={{ marginBottom: 10 }}>
+              <div className="row mb-2">
                 <HomebrewToggle on={homebrew} hidden={hiddenBackgrounds} onChange={setHomebrew} />
               </div>
             )}
@@ -1841,7 +1895,7 @@ export function CreateCharacter({
                 <select
                   aria-label="Background"
                   value={bgId}
-                  style={{ marginTop: 8 }}
+                  className="mt-2"
                   onChange={(e) => {
                     const b = backgrounds.find((x) => x.id === e.target.value);
                     setBgId(e.target.value);
@@ -1913,7 +1967,7 @@ export function CreateCharacter({
               value={bgName}
               aria-label="Background name"
               placeholder="Greenwarden's apprentice"
-              style={{ marginTop: 12 }}
+              className="mt-3"
               onChange={(e) => setBgName(e.target.value)}
             />
           </div>
@@ -1933,14 +1987,14 @@ export function CreateCharacter({
         <section className="card">
           <div className="card-hd">
             <span className="label">5 · Languages &amp; tools</span>
-            <span className="faint" style={{ fontSize: ".78rem" }}>
+            <span className="faint aside">
               {pickedLangs.length + pickedTools.length} of {langPicks + toolPicks}
             </span>
           </div>
           <div className="card-body">
             {(raceLangs.known.length > 0 || classTools.known.length > 0) && (
               <>
-                <p className="cr-note" style={{ marginTop: 0 }}>
+                <p className="cr-note mt-0">
                   {race.name} gives you{" "}
                   <b>{raceLangs.known.join(", ") || "no language"}</b>
                   {classTools.known.length > 0 && (
@@ -1961,7 +2015,7 @@ export function CreateCharacter({
               <p className="cr-note">{describeGrants(bgGives, bgName)}</p>
             )}
 
-            <p className="cr-blurb" style={{ marginTop: 10 }}>
+            <p className="cr-blurb mt-2">
               {langPicks + toolPicks > 0
                 ? `${[
                     langPicks > 0 ? `${langPicks} language${langPicks === 1 ? "" : "s"}` : "",
@@ -2027,10 +2081,10 @@ export function CreateCharacter({
         <section className="card">
           <div className="card-hd">
             <span className="label">6 · Who are they?</span>
-            <span className="faint" style={{ fontSize: ".78rem" }}>optional</span>
+            <span className="faint aside">optional</span>
           </div>
           <div className="card-body">
-            <div className="row" style={{ marginBottom: 12 }}>
+            <div className="row mb-3">
               <span className="label">Alignment</span>
               <select
                 aria-label="Alignment"
@@ -2071,7 +2125,7 @@ export function CreateCharacter({
         <section className="card">
           <div className="card-hd">
             <span className="label cr-step">5 · Equipment</span>
-            <span className="faint" style={{ fontSize: ".78rem" }}>
+            <span className="faint aside">
               {gearMode === "gold" ? "buying your own" : `${starting.items.length} items`}
             </span>
           </div>
@@ -2177,7 +2231,7 @@ export function CreateCharacter({
         <section className="card">
           <div className="card-hd">
             <span className="label cr-step">6 · Your class</span>
-            <span className="faint" style={{ fontSize: ".78rem" }}>
+            <span className="faint aside">
               {classChoices.filter((c) => classPicks[c.of]).length} of {classChoices.length}
             </span>
           </div>
@@ -2240,7 +2294,7 @@ export function CreateCharacter({
             {/* Recorded, never mechanised — the app cannot know what
                 eighty-five domains do, and half-applying them would be worse
                 than being clear that it applies none. */}
-            <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
+            <p className="faint note">
               Written on your sheet. What each one grants is yours to read and
               tell the table.
             </p>
@@ -2257,12 +2311,12 @@ export function CreateCharacter({
         <section className="card">
           <div className="card-hd">
             <span className="label cr-step">6 · Improvements</span>
-            <span className="faint" style={{ fontSize: ".78rem" }}>
+            <span className="faint aside">
               {earnedLevels.filter((l) => spentAt(l)).length} of {earnedLevels.length} taken
             </span>
           </div>
           <div className="card-body">
-            <p className="cr-blurb" style={{ marginTop: 0 }}>
+            <p className="cr-blurb mt-0">
               Starting at {level} means you have already passed{" "}
               {earnedLevels.length === 1 ? "an improvement" : `${earnedLevels.length} improvements`}.
               Two points each, or a feat instead.
@@ -2370,7 +2424,7 @@ export function CreateCharacter({
         <section className="card">
           <div className="card-hd">
             <span className="label cr-step">6 · Spells</span>
-            <span className="faint" style={{ fontSize: ".78rem" }}>
+            <span className="faint aside">
               {cantripsKnown > 0 && `${pickedCantrips} of ${cantripsKnown} cantrips`}
               {cantripsKnown > 0 && (spellsKnown > 0 || hasSlots) && " · "}
               {/* A prepared caster has no "spells known" and the table says so
@@ -2389,7 +2443,7 @@ export function CreateCharacter({
                * a rule the app can check — a wizard/cleric picks from both
                * books, and the counts are what the tables say.
                */
-              <p className="cr-note" style={{ marginTop: 0 }}>
+              <p className="cr-note mt-0">
                 Both lists are offered:{" "}
                 <b>{casters.map((c) => `${c.name} ${c.level}`).join(" and ")}</b>. The
                 allowance is the two added together; which class each spell
@@ -2397,7 +2451,7 @@ export function CreateCharacter({
               </p>
             )}
             {book.length === 0 ? (
-              <p className="cr-note" style={{ marginTop: 0 }}>
+              <p className="cr-note mt-0">
                 No spell list on this device. The SRD data shipped here has
                 none — a compendium provides it, and you can pick spells later
                 under Spells.
@@ -2405,7 +2459,7 @@ export function CreateCharacter({
             ) : (
               <>
                 {book.some((sp) => !isCore(sp.name)) && (
-                  <div className="row" style={{ marginBottom: 10 }}>
+                  <div className="row mb-2">
                     <HomebrewToggle
                       on={homebrew}
                       hidden={book.filter((sp) => !isCore(sp.name)).length}
@@ -2414,7 +2468,7 @@ export function CreateCharacter({
                   </div>
                 )}
                 {chosenSpells.length > 0 && (
-                  <div className="chips" style={{ marginBottom: 10 }}>
+                  <div className="chips mb-2">
                     {casters.flatMap((c) =>
                       (chosenByClass[c.id] ?? []).map((sp) => (
                         <button
@@ -2517,7 +2571,7 @@ export function CreateCharacter({
                             />
                           </div>
                           {full && (
-                            <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
+                            <p className="faint note">
                               That is all {limit}. Remove one above to swap.
                             </p>
                           )}
@@ -2528,7 +2582,7 @@ export function CreateCharacter({
                   }),
                 )}
 
-                <p className="faint" style={{ fontSize: ".8rem", margin: "12px 0 0" }}>
+                <p className="faint note">
                   {spellsKnown === 0 && hasSlots
                     ? `A ${klass.name.toLowerCase()} prepares from a book rather than knowing a fixed few, so there is no number to hit here. Take what you like, or leave it — the Spells tab does the same job afterwards.`
                     : "Take what you like now or leave it — the Spells tab does the same job afterwards."}
@@ -2547,7 +2601,7 @@ export function CreateCharacter({
         <section className="card cr-review">
           <div className="card-hd">
             <span className="label">Your hero</span>
-            <span className="faint" style={{ fontSize: ".78rem" }}>
+            <span className="faint aside">
               nothing is saved until you say so
             </span>
           </div>
@@ -2622,8 +2676,8 @@ export function CreateCharacter({
               )}
             </div>
 
-            <div className="row" style={{ marginTop: 14 }}>
-              <span className="faint" style={{ fontSize: ".82rem" }}>
+            <div className="row mt-3">
+              <span className="faint aside">
                 {gaps.length > 0 ? `Still needed: ${gaps.join(", ")}.` : "Ready to play."}
               </span>
             </div>

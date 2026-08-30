@@ -82,6 +82,7 @@ await go(page, "sheet");
 
 // a hand-entered attack derives its bonus from ability and proficiency
 page.once("dialog", (d) => d.accept()); // must be armed before the click
+await page.getByRole("button", { name: "This device" }).click();
 await page.getByRole("button", { name: "Start over" }).click();
 await page.waitForSelector('input[type="file"]');
 // The manual form is folded away by default now — thirty fields should not

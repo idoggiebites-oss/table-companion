@@ -147,7 +147,7 @@ export function Sources() {
           </div>
         )}
         {meta === null && (
-          <p className="faint" style={{ margin: "6px 0 0", fontSize: ".84rem" }}>
+          <p className="faint note">
             Nothing imported. The app ships the SRD only — a compendium is
             yours to supply.
           </p>
@@ -189,7 +189,7 @@ export function Sources() {
                   </button>
                 ))}
               </div>
-              <div className="row" style={{ marginTop: 12 }}>
+              <div className="row mt-3">
                 <button disabled={want.length === 0 || busy !== null} onClick={() => void importNow()}>
                   Import
                 </button>
@@ -199,7 +199,7 @@ export function Sources() {
           )}
 
           {!found && !busy && (
-            <p className="faint" style={{ fontSize: ".84rem", margin: "10px 0 0" }}>
+            <p className="faint note">
               A Fight Club 5e compendium XML. It stays on this device and is
               never sent to the room — every device imports its own.
             </p>

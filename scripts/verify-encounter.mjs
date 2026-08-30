@@ -44,7 +44,7 @@ await laptop.page.getByRole("button", { name: "Start a room" }).click();
 await laptop.page.waitForSelector(".rb-code");
 const code = await laptop.page.locator(".rb-code").innerText();
 await laptop.page.getByRole("button", { name: "Load sample" }).click();
-await laptop.page.waitForSelector(".seatbar");
+await laptop.page.waitForSelector('select[aria-label="Seat"], .join-row');
 await laptop.page.selectOption('select[aria-label="Seat"]', "dm");
 await laptop.page.waitForSelector(".pm-name");
 
@@ -92,15 +92,22 @@ ok("saved for later", await laptop.page.locator(".sv-row .nm").innerText(), "Roa
 const tablet = await device("tablet");
 await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
-await tablet.page.waitForSelector(".seatbar", { timeout: 20000 });
+await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1000);
 // The DM's second device is still the DM, but it has to prove it — joining
 // with the room code makes you a player, whoever you are.
+/* The table's own controls live in a sheet now — the header keeps the code
+   and a dot, and everything pressed is behind the gear. "The room" is a
+   different thing on this screen: the place the fight is in. */
+await laptop.page.getByRole("button", { name: "The table" }).click();
 await laptop.page.getByRole("button", { name: "DM key" }).click();
-const dmKey = await laptop.page.locator(".rb-second .rb-code").innerText();
+const dmKey = await laptop.page.locator(".rm-key").innerText();
+await laptop.page.getByRole("button", { name: "Close The table" }).click();
+await tablet.page.getByRole("button", { name: "The table" }).click();
 await tablet.page.getByRole("button", { name: /I.m the DM/ }).click();
 await tablet.page.locator('input[aria-label="DM key"]').fill(dmKey);
 await tablet.page.getByRole("button", { name: "Claim DM" }).click();
+await tablet.page.getByRole("button", { name: "Close The table" }).click();
 await tablet.page.waitForTimeout(1200);
 await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
 await tablet.page.waitForTimeout(600);
@@ -130,7 +137,7 @@ await laptop.page.waitForTimeout(900);
 const playerView = await device("player");
 await playerView.page.locator('input[aria-label="Room code"]').fill(code);
 await playerView.page.getByRole("button", { name: "Join", exact: true }).click();
-await playerView.page.waitForSelector(".seatbar", { timeout: 20000 });
+await playerView.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await sitAs(playerView.page, "Kira Vance");
 await playerView.page.waitForTimeout(1200);
 const seen = await playerView.page.locator(".cbt .nm").allInnerTexts();

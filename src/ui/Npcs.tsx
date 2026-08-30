@@ -181,7 +181,7 @@ export function Npcs({
             onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
           />
 
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="row mt-2">
             <button
               className={`chip${draft.trader ? " on" : ""}`}
               aria-pressed={draft.trader}
@@ -189,7 +189,7 @@ export function Npcs({
             >
               Trades with the party
             </button>
-            <span className="faint" style={{ fontSize: ".78rem" }}>
+            <span className="faint aside">
               {draft.trader ? "Has stock to sell." : "Most people don't."}
             </span>
           </div>
@@ -235,7 +235,7 @@ export function Npcs({
                 </div>
               ))}
 
-              <div className="row" style={{ marginTop: 8, gap: 8 }}>
+              <div className="row tight mt-2">
                 <input
                   value={find}
                   aria-label="Find stock"
@@ -275,7 +275,7 @@ export function Npcs({
             </div>
           )}
 
-          <div className="row" style={{ marginTop: 14 }}>
+          <div className="row mt-3">
             <button disabled={!draft.name.trim()} onClick={save}>
               {editing ? "Save changes" : "Save"}
             </button>

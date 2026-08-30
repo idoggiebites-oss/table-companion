@@ -81,7 +81,7 @@ export function Gear({
             </div>
           ))}
           {attacks.length === 0 && (
-            <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+            <p className="faint note">
               Nothing drawn. Equip a weapon and it appears here and on your sheet.
             </p>
           )}

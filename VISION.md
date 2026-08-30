@@ -114,6 +114,33 @@ which is visibly wrong rather than plausibly wrong. A spell whose text does not
 say a save halves the damage takes nothing on a save — the rule's default, and
 the safer way to be wrong.
 
+## 7. A screen is ordered by the questions it raises
+
+Not by the order its features were built. That order is invisible to whoever
+wrote it and obvious to everyone else — it is what "tacked on" means, and it
+is what every screen here drifted into, because a new card has to go
+*somewhere* and the bottom is always free.
+
+So each screen answers, top to bottom:
+
+1. **What is waiting on me?** — the thing that stopped the table. A save owed,
+   a reaction offered, a roll asked for.
+2. **What can I do about it?** — the actions this moment allows.
+3. **What is true right now?** — the live values. Hit points, conditions,
+   whose turn it is.
+4. **What am I?** — the reference you looked up once and glance at since.
+
+The fight screen was rebuilt this way first: what is waiting, then what the
+creature whose turn it is can do, then the order — which is a reference you
+glance at, not the thing you work in. The character sheet followed: conditions
+and concentration had been sitting last, under fourteen hundred pixels of
+equipment, so the way to learn you were poisoned was to scroll past your boots.
+
+The test for a new card is not "is there room" but "which of those four is
+it, and is it above everything further down the list than itself." A card that
+is none of them — a description with nothing on the other end — is a card that
+should not be on a play screen at all.
+
 ---
 
 # What it refuses

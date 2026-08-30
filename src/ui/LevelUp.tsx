@@ -246,7 +246,7 @@ export function LevelUp({
       {!open ? (
         <div className="card-body">
           <button onClick={() => setOpen(true)}>Resolve it</button>
-          <p className="faint" style={{ fontSize: ".84rem", margin: "10px 0 0" }}>
+          <p className="faint note">
             Nothing is waiting on this. Take it at a rest.
           </p>
         </div>
@@ -258,7 +258,7 @@ export function LevelUp({
             * reaches 5 and dips warlock, having played four sessions as a
             * fighter.
             */}
-          <div className="row" style={{ marginBottom: 12 }}>
+          <div className="row mb-3">
             <span className="label">In</span>
             <select
               aria-label="Class to level"
@@ -291,7 +291,7 @@ export function LevelUp({
             </p>
           )}
           {isNew && !block && (
-            <p className="cr-note" style={{ marginTop: 0 }}>
+            <p className="cr-note mt-0">
               A first level in {classId} brings its hit die and its own
               proficiencies — not the ones a {classId} gets at level 1 from
               scratch. Saving throws stay with your first class.
@@ -321,7 +321,7 @@ export function LevelUp({
 
               {route === "asi" ? (
                 <>
-                  <p className="faint" style={{ fontSize: ".82rem", margin: "8px 0" }}>
+                  <p className="faint note">
                     Two points: both into one ability, or one each into two.
                     Nothing goes above 20. {2 - spent} left.
                   </p>
@@ -347,7 +347,7 @@ export function LevelUp({
                     })}
                   </div>
                   {spent > 0 && (
-                    <button onClick={() => setBumps({})} style={{ marginTop: 8 }}>
+                    <button onClick={() => setBumps({})} className="mt-2">
                       Start over
                     </button>
                   )}
@@ -466,7 +466,7 @@ export function LevelUp({
                     </div>
                   </div>
                 ))}
-                <div className="row" style={{ marginTop: 8 }}>
+                <div className="row mt-2">
                   {hidden > 0 && (
                     <button
                       aria-label={`Browse all ${c.of}`}
@@ -480,7 +480,7 @@ export function LevelUp({
                   )}
                 </div>
                 {pick[c.of] && (
-                  <p className="faint" style={{ fontSize: ".82rem", margin: "8px 0 0" }}>
+                  <p className="faint note">
                     {c.options.find((o) => o.name === pick[c.of])?.text?.slice(0, 220) ??
                       "Chosen. The features it grants are on your sheet."}
                   </p>
@@ -498,7 +498,7 @@ export function LevelUp({
                   : "spells"}
               </span>
               {(book ?? []).some((sp) => !isCore(sp.name)) && (
-                <div className="row" style={{ marginBottom: 8 }}>
+                <div className="row mb-2">
                   <HomebrewToggle
                     on={homebrew}
                     hidden={(book ?? []).filter((sp) => !isCore(sp.name)).length}
@@ -507,7 +507,7 @@ export function LevelUp({
                 </div>
               )}
               {book === null ? (
-                <p className="faint" style={{ fontSize: ".84rem", margin: "6px 0 0" }}>
+                <p className="faint note">
                   Looking up what you can learn…
                 </p>
               ) : (
@@ -518,7 +518,7 @@ export function LevelUp({
                 />
               )}
               {learned.length > 0 && (
-                <div className="chips" style={{ marginTop: 8 }}>
+                <div className="chips mt-2">
                   {learned.map((sp) => (
                     <button
                       key={sp.id}
@@ -537,7 +537,7 @@ export function LevelUp({
           <p className="lv-ask">
             Roll a <strong>d{die}</strong> for hit points.
           </p>
-          <p className="faint" style={{ fontSize: ".85rem", margin: "0 0 12px" }}>
+          <p className="faint note">
             Add your Constitution modifier of {formatModifier(conMod)}. Tap what you rolled.
           </p>
           <div className="lv-pad">
@@ -553,7 +553,7 @@ export function LevelUp({
             Take the average · {average}
           </button>
 
-          <p className="faint" style={{ fontSize: ".82rem", margin: "14px 0 0" }}>
+          <p className="faint note">
             Everything derived moves with it — proficiency, skills, saves,
             attacks, hit dice. Choices like a new spell are yours to make,
             here or in your builder.

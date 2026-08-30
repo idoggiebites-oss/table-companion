@@ -48,14 +48,14 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector(".seatbar");
+await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
 // Making a character seats you in it, so the DM device has to step back out.
 await dm.page.selectOption('select[aria-label="Seat"]', "dm");
 await dm.page.waitForSelector(".pm-name");
 
 await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
-await player.page.waitForSelector(".seatbar", { timeout: 15000 });
+await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 15000 });
 await sitAs(player.page, "Kira Vance");
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
@@ -138,8 +138,10 @@ ok("one move, not two", await activeName(dm), "Ambusher");
    hidden from them, so no row on their screen is the active one, and that is
    the ladder working rather than a stale render. What they can see is that
    the turn is no longer theirs. */
+await player.page.getByRole("button", { name: "The table" }).click();
 ok("the player is back on the same log",
   await player.page.locator(".rb-status").innerText(), "LIVE · 2 JOINED");
+await player.page.getByRole("button", { name: "Close The table" }).click();
 ok("and their turn is over, so nothing is offered to end",
   await player.page.getByRole("button", { name: "End turn" }).count(), 0);
 ok("both devices agree on the turn", await dm.page.locator(".cbt.on").count(), 1);

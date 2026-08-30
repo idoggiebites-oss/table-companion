@@ -57,7 +57,7 @@ export function Swing({
   if (attacks.length === 0) {
     return (
       <div className="swing-step">
-        <p className="faint" style={{ margin: 0 }}>
+        <p className="faint note">
           Nothing to attack with. Equip a weapon under Gear.
         </p>
         <button onClick={onCancel}>Back</button>
@@ -103,7 +103,7 @@ export function Swing({
             </button>
           ))}
           {targets.length === 0 && (
-            <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+            <p className="faint note">
               Nothing you can see.
             </p>
           )}
@@ -143,7 +143,7 @@ export function Swing({
               Next
             </button>
           </div>
-          <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
+          <p className="faint note">
             Add the {formatModifier(attack.toHit)} yourself and type the total —
             the number you would say out loud.
           </p>
@@ -180,7 +180,7 @@ export function Swing({
               Send to the DM
             </button>
           </div>
-          <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
+          <p className="faint note">
             Roll it even if you think you missed — the DM decides, and it saves
             asking you again.
           </p>
@@ -191,7 +191,7 @@ export function Swing({
       {step === "sent" && (
         <>
           <span className="label">Sent</span>
-          <p className="faint" style={{ margin: "4px 0 8px", fontSize: ".86rem" }}>
+          <p className="faint note">
             The DM has your roll. Nothing changes until they say it lands.
           </p>
           <button onClick={onCancel}>Done</button>

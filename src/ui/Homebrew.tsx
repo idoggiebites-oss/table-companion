@@ -176,7 +176,7 @@ export function Homebrew({
             </Field>
           </div>
 
-          <div className="six" style={{ marginTop: 10 }}>
+          <div className="six mt-2">
             <div>
               <label className="label" htmlFor="hb-ac">Armour class</label>
               <input id="hb-ac" aria-label="Homebrew armour class" {...num("ac", 1)} />
@@ -204,7 +204,7 @@ export function Homebrew({
               : "That isn't a dice expression — try 5d8+5."}
           </p>
 
-          <div className="six" style={{ marginTop: 12 }}>
+          <div className="six mt-3">
             {(["str", "dex", "con", "int", "wis", "cha"] as const).map((a) => (
               <div key={a}>
                 <label className="label" htmlFor={`hb-${a}`}>{a}</label>
@@ -213,7 +213,7 @@ export function Homebrew({
             ))}
           </div>
 
-          <div className="row" style={{ marginTop: 12, gap: 8 }}>
+          <div className="row tight mt-3">
             <div style={{ flex: "1 1 120px" }}>
               <label className="label" htmlFor="hb-cr">Challenge</label>
               <select
@@ -246,7 +246,7 @@ export function Homebrew({
             </div>
           </div>
           {suggested !== null && suggested !== f.xp && (
-            <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
+            <p className="faint note">
               SRD creatures at CR {formatCr(f.cr)} are usually worth{" "}
               <button className="linky" onClick={() => setF({ ...f, xp: suggested })}>
                 {suggested} XP
@@ -254,7 +254,7 @@ export function Homebrew({
             </p>
           )}
 
-          <div className="row" style={{ marginTop: 12, gap: 8 }}>
+          <div className="row tight mt-3">
             <Field label="What it does" htmlFor="hb-act" width={130}>
               <input
                 id="hb-act"
@@ -272,11 +272,11 @@ export function Homebrew({
             </Field>
           </div>
 
-          <div className="row" style={{ marginTop: 14 }}>
+          <div className="row mt-3">
             <button disabled={!f.name.trim() || !dice} onClick={save}>
               Save creature
             </button>
-            <span className="faint" style={{ fontSize: ".8rem" }}>
+            <span className="faint aside">
               Appears in search and the encounter builder like any other.
             </span>
           </div>

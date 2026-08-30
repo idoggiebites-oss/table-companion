@@ -12,10 +12,22 @@ set -u
 cd "$(dirname "$0")/.."
 URL="${URL:-http://127.0.0.1:8787/}"
 
-if ! curl -s -o /dev/null --max-time 5 "$URL"; then
-  echo "SWEEP ABORTED: nothing is serving $URL"
-  exit 2
-fi
+#
+# Three servers, not one. Six suites drive a built preview on 4319 or 4173
+# rather than the worker on 8787, and this check knew about the worker only —
+# so a sweep with no preview running started happily and reported those six as
+# "empty" at the end, which reads as a suite problem rather than as the missing
+# server it actually is. Same lesson as the empty-suite rule: state the
+# precondition up front, where the message can still name the cause.
+#
+for u in "$URL" http://localhost:4319/ http://localhost:4173/; do
+  if ! curl -s -o /dev/null --max-time 5 "$u"; then
+    echo "SWEEP ABORTED: nothing is serving $u"
+    echo "  worker  : npx wrangler dev            (8787)"
+    echo "  preview : npx vite preview --port N   (4319 and 4173, after a build)"
+    exit 2
+  fi
+done
 
 fails=0
 empty=0

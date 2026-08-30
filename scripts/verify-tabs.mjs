@@ -105,6 +105,27 @@ ok("the DM's sections are their responsibilities",
 ok("and an empty table opens on the party, not on a fight that is not happening",
   await activeTab(dm.page), "party");
 ok("with session zero right there", await dm.page.getByText("Session zero").count(), 1);
+
+/* --- prep is ordered by what a DM comes here to do -----------------------
+
+   VISION law 7, on the DM's side. Places led this screen: the tallest card on
+   it and the one that does the least — a description with nothing on the
+   other end. Prep between sessions is building the fight, deciding who is in
+   it, and inventing what the books do not carry; somewhere to put it is the
+   last of those.
+
+   Pinned for the same reason as the sheet's: the next card added here has to
+   be placed on purpose rather than appended because the bottom was free. */
+await dm.page.locator('[data-tab="prep"]').click();
+await dm.page.waitForTimeout(600);
+const prepOrder = await dm.page.evaluate(() =>
+  [...document.querySelectorAll(".card")]
+    .filter((c) => !c.parentElement.closest(".card"))
+    .map((c) => (c.querySelector(".card-hd .label, .label")?.textContent ?? "?").trim()));
+ok("prep leads with the fight, not with the scenery",
+  prepOrder.join(" > "), "Encounters > People > Homebrew > Places");
+await dm.page.locator('[data-tab="party"]').click();
+await dm.page.waitForTimeout(400);
 await dm.page.screenshot({ path: `${OUT}/51-dm-tabs.png`, fullPage: true });
 
 const p1 = await device("kira");

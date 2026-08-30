@@ -38,14 +38,14 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector(".seatbar");
+await dm.waitForSelector('select[aria-label="Seat"], .join-row');
 await dm.selectOption('select[aria-label="Seat"]', "dm");
 await dm.waitForSelector(".pm-name");
 
 const player = await device("player");
 await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector(".seatbar", { timeout: 20000 });
+await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.locator(".join-row", { hasText: "Kira Vance" });
 if (await join.count()) await join.first().click();
 await player.waitForSelector(".hp-big", { timeout: 20000 });
@@ -93,8 +93,94 @@ await dm.waitForTimeout(700);
 const upNow = (await dm.locator(".up").innerText()).replace(/\s+/g, " ");
 ok("whose turn it is, in words", /UP NOW Kira Vance/i.test(upNow), true);
 ok("and who follows", /THEN Ghoul 1/i.test(upNow), true);
+
+/* --- your turn, from wherever you are looking -----------------------------
+
+   A player wanders off to their sheet between turns — which is what that
+   screen is for — and then it is their turn and the app says so with a dot on
+   a tab. The answer to "I did not notice" was never a louder dot.
+
+   Both halves, because the bar and the padding that makes room for it come
+   from ONE condition and must never disagree: a gap with no bar is a hole at
+   the foot of the page, and a bar with no gap covers the last control on it.
+   The first draft of this had exactly that bug — the padding condition left
+   out the tab check. */
+await go(player, "sheet");
+await player.waitForTimeout(600);
+console.log("      DEBUG seat:", await player.locator('select[aria-label="Seat"]').inputValue().catch(()=>"-"));
+console.log("      DEBUG up now:", await player.locator(".up-now .n").innerText().catch(()=>"-"));
+console.log("      DEBUG tabs dot:", await player.locator('[data-tab="combat"]').getAttribute("aria-label").catch(()=>"-"));
+ok("on another tab during your turn, the turn comes with you",
+  await player.locator(".turnbar").count(), 1);
+ok("and the page keeps its own foot",
+  await player.locator(".pane-main").evaluate((e) => getComputedStyle(e).paddingBottom),
+  "84px");
+await go(player, "combat");
+await player.waitForTimeout(600);
+ok("but not on the fight, where the whole turn is already on screen",
+  await player.locator(".turnbar").count(), 0);
+ok("and no gap is left behind it",
+  await player.locator(".pane-main").evaluate((e) => getComputedStyle(e).paddingBottom),
+  "0px");
+
 ok("with the turn counted, not just the round",
   /turn 1 of 3/i.test(await dm.locator(".card-hd").first().innerText()), true);
+
+/* --- stepping the turn where the turn is named ----------------------------
+
+   Next turn stays the primary and is asserted below; this is the pair beside
+   the NAME, for the two moments the big button is wrong for — the name
+   showing is not the one you meant, or you want to see who is coming.
+
+   Both directions, and the round is checked too: going forward and back
+   should land on the same name in the same round, which a stepper that
+   quietly advanced twice would not. */
+const upLine = async () => (await dm.locator(".up").innerText()).replace(/\s+/g, " ");
+ok("the turn can be stepped from where it is named",
+  await dm.locator(".up-step .us").count(), 2);
+ok("and back is refused before anything has been advanced",
+  await dm.getByRole("button", { name: "Back a turn" }).first().isDisabled(), true);
+await dm.locator(".up-step .us").last().click();
+await dm.waitForTimeout(700);
+ok("forward hands to the next in the order", /UP NOW Ghoul 1/i.test(await upLine()), true);
+await dm.getByRole("button", { name: "Back a turn" }).first().click();
+await dm.waitForTimeout(700);
+ok("and back returns the same name", /UP NOW Kira Vance/i.test(await upLine()), true);
+ok("in the same round, not a new one",
+  /ROUND 1/i.test((await dm.locator(".card-hd").first().innerText()).replace(/\s+/g, " ")), true);
+
+/* --- ending a round from its own header -----------------------------------
+
+   It advances past everyone left to the top of the next round, which means
+   those creatures do not act. That is a thing a DM sometimes wants and never
+   wants by accident, so the control states the cost on its face.
+
+   Three combatants, sitting on turn 1: it stands in for three presses and
+   skips the two people who have not gone. Checked on the round AND the turn,
+   because landing on turn 1 of the same round would also read as "turn 1 of
+   3" and mean something completely different. */
+const roundLine = async () =>
+  (await dm.locator(".card-hd").first().innerText()).replace(/\s+/g, " ");
+ok("the round can be ended from its own header",
+  await dm.getByRole("button", { name: /^End round/ }).count(), 1);
+ok("and it says how many turns that skips",
+  /skips 2/i.test(await dm.locator(".end-round").innerText()), true);
+await dm.getByRole("button", { name: /^End round/ }).click();
+await dm.waitForTimeout(800);
+ok("pressing it reaches the next round", /ROUND 2/i.test(await roundLine()), true);
+ok("at the top of it", /TURN 1 OF 3/i.test(await roundLine()), true);
+ok("with the first in the order up again",
+  /UP NOW Kira Vance/i.test((await dm.locator(".up").innerText()).replace(/\s+/g, " ")), true);
+/* And it is gone on the last turn, where Next turn already does this. */
+await dm.getByRole("button", { name: "Next turn" }).click();
+await dm.waitForTimeout(400);
+await dm.getByRole("button", { name: "Next turn" }).click();
+await dm.waitForTimeout(600);
+ok("but not offered on the last turn, where Next turn ends it anyway",
+  await dm.getByRole("button", { name: /^End round/ }).count(), 0);
+/* Put the fight back where the rest of this suite expects it. */
+await dm.getByRole("button", { name: "Next turn" }).click();
+await dm.waitForTimeout(600);
 
 const next = dm.getByRole("button", { name: "Next turn" });
 ok("the control a DM presses most is its own", await next.count(), 1);
@@ -125,6 +211,58 @@ await dm.locator('input[aria-label="Amount for Ghoul 2"]').fill("99");
 await dm.getByRole("button", { name: "Heal Ghoul 2", exact: true }).click();
 await dm.waitForTimeout(500);
 ok("healing stops at what it started with", await hpOf("Ghoul 2"), "22/22");
+
+
+/* --- a creature is two bands, not four ------------------------------------
+
+   The row is a grid, and it had been sized for the five children that existed
+   when it was written. Everything added since — the action economy, the
+   condition +, the hurt menu — became a sixth, seventh and eighth child and
+   fell onto implicit rows of its own. At 390px a creature stood FOUR ragged
+   bands tall with its initiative number thirty-six pixels below its own name,
+   and the left column alternating between two different x positions.
+
+   Measured as distinct vertical bands rather than as a height, because a
+   height can be got right by accident and this is a claim about alignment:
+   the name line is exactly the player's, and everything a DM presses is one
+   strip under it. */
+const bandsOf = async (page, name) =>
+  page.locator(".cbt", { hasText: name }).first().evaluate((row) => {
+    const top = row.getBoundingClientRect().top;
+    /* Clustered on each element's CENTRE, not its top: a 44px button and a
+       21px number sitting on the same line have tops 12px apart, so bucketing
+       tops splits one visual band into two and the count means nothing. */
+    const centres = [];
+    for (const el of row.querySelectorAll("*")) {
+      if (el.children.length > 0) continue;
+      const r = el.getBoundingClientRect();
+      if (r.height === 0) continue;
+      centres.push(r.top - top + r.height / 2);
+    }
+    centres.sort((a, z) => a - z);
+    let bands = 0, last = -Infinity;
+    for (const y of centres) {
+      if (y - last > 24) bands += 1;
+      last = y;
+    }
+    return bands;
+  });
+await dm.setViewportSize({ width: 390, height: 1300 });
+await dm.waitForTimeout(400);
+ok("a creature's row is two bands: what it is, then what a DM presses",
+  await bandsOf(dm, "Ghoul 1"), 2);
+/* And the player row it has to line up with is one. */
+ok("a character's row is one", await bandsOf(dm, "Kira Vance"), 1);
+/* The initiative number sits on the name's line, which is the thing that
+   actually broke: it had drifted a whole band below it. */
+ok("the initiative number is on the same line as the name it belongs to",
+  await dm.locator(".cbt", { hasText: "Ghoul 1" }).first().evaluate((row) => {
+    const i = row.querySelector(".i").getBoundingClientRect();
+    const n = row.querySelector(".nm").getBoundingClientRect();
+    return Math.abs((i.top + i.height / 2) - (n.top + n.height / 2)) < 12;
+  }), true);
+await dm.setViewportSize({ width: 430, height: 1300 });
+await dm.waitForTimeout(400);
 
 // --- conditions, without moving the list ----------------------------------
 const rowTop = async () =>

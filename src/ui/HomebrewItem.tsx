@@ -129,7 +129,7 @@ export function HomebrewItem({
         {/* Labelled, not just placeheld. A placeholder disappears the moment
             the box is filled, so a DM coming back to an edit sees four boxes
             of numbers and no way to tell which is which. */}
-        <div className="row" style={{ gap: 8, marginTop: 10 }}>
+        <div className="row tight mt-2">
           <div style={{ flex: "2 1 150px" }}>
             <label className="label" htmlFor="hbi-name">Name</label>
             <input
@@ -154,7 +154,7 @@ export function HomebrewItem({
 
         {d.kind === "weapon" && (
           <>
-            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+            <div className="row tight mt-2">
               <div style={{ flex: "0 0 92px" }}>
                 <label className="label" htmlFor="hbi-dmg">Damage</label>
                 <input
@@ -177,7 +177,7 @@ export function HomebrewItem({
               </div>
             </div>
 
-            <div className="chips" style={{ marginTop: 10 }}>
+            <div className="chips mt-2">
               <button
                 className={`chip${d.martial ? " on" : ""}`}
                 aria-pressed={Boolean(d.martial)}
@@ -211,7 +211,7 @@ export function HomebrewItem({
             </div>
 
             {(d.properties ?? []).includes("versatile") && (
-              <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <div className="row tight mt-2">
                 <div style={{ flex: "0 0 92px" }}>
                   <label className="label" htmlFor="hbi-2h">In two hands</label>
                   <input
@@ -230,7 +230,7 @@ export function HomebrewItem({
             )}
 
             {((d.properties ?? []).includes("thrown") || d.ranged) && (
-              <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <div className="row tight mt-2">
                 <div style={{ flex: "0 0 92px" }}>
                   <label className="label" htmlFor="hbi-rn">Range</label>
                   <input
@@ -261,7 +261,7 @@ export function HomebrewItem({
 
         {d.kind === "armour" && (
           <>
-            <div className="chips" style={{ marginTop: 10 }}>
+            <div className="chips mt-2">
               {(["Light", "Medium", "Heavy"] as const).map((w) => (
                 <button
                   key={w}
@@ -282,7 +282,7 @@ export function HomebrewItem({
                 noisy
               </button>
             </div>
-            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+            <div className="row tight mt-2">
               <div style={{ flex: "0 0 92px" }}>
                 <label className="label" htmlFor="hbi-ac">Armour class</label>
                 <input
@@ -305,7 +305,7 @@ export function HomebrewItem({
         )}
 
         {d.kind === "shield" && (
-          <div className="row" style={{ gap: 8, marginTop: 10 }}>
+          <div className="row tight mt-2">
             <div style={{ flex: "0 0 92px" }}>
               <label className="label" htmlFor="hbi-sh">Adds</label>
               <input
@@ -341,7 +341,7 @@ export function HomebrewItem({
           </p>
         </div>
 
-        <div className="row" style={{ marginTop: 12 }}>
+        <div className="row mt-3">
           <button
             disabled={!named}
             aria-label="Save the item"

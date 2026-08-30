@@ -93,14 +93,429 @@ the far end with the key a browser would have used.
 ## Next
 
 The builder module is done bar its export, which is parked. What is left is
-spread across the other modules.
+spread across the other modules, and MODULES.md's table is the whole of it.
 
-1. **The recap reports; it does not prompt.** *Guidance.* It says what
-   happened. Nothing says "here is what changed on your sheet", and nothing
-   is offered to the DM about what to prepare next — the same question from
-   the other side of the screen.
+1. **A creature's conditions are shown to everyone.** *Disclosure.* The
+   ladder decides what a player may learn about a creature — hidden, present,
+   vague, exact — and the conditions on it were never put behind it. Shown to
+   the table is the right default, because the table watches the goblin fall
+   over; a DM who wants one hidden has no way to hide it.
+
+2. **Help has never been tested against a real ally.** *The Turn.* It is the
+   one action whose whole meaning is another character, and every suite that
+   drives it drives it alone.
+
+3. **Provenance is a trap for the next list drawn from a compendium.**
+   *Content.* Ordering by book has been fixed twice, in two places, after the
+   same bug. A third list will have it a third time unless it is written
+   against `marks.ts` from the start.
 
 ## Done since this list was written
+
+**A combat screen read against a reference image, again.** The mockup was
+compared to the running app rather than reimplemented from it — the same
+method as last time, and again most of it was already there: the two bands,
+the round header with End round in it, Up now and Then with the step pair
+between them, the claim card with its sword and shield, The room line with its
+plus, the initiative strip, the disclosure chip, the gold. Four things were
+genuinely different, and one of them was worth most of the work.
+
+**One row of chrome, not three.** The room bar, the app's own name with two
+buttons beside it, and the seat picker were three stacked bars: about 280
+pixels above the tabs, on every screen, on a phone. The fight — the screen a
+DM reads forty times an evening — started below the fold. Everything in those
+bars except the seat and the code is pressed roughly twice a session.
+
+So the header keeps what is READ: who you are, the code that gets read aloud,
+and a dot for the connection with its meaning on its own label, because a
+colour is not a state anybody can name. What is pressed went into two sheets,
+split by what it acts on rather than by what fits: **The table** holds the
+connection, the DM key and Leave; **This device** holds Add character and
+Start over, which is exactly the line the app already draws between the log
+and the things that never leave your phone. The fight card's top moved from
+405px to 225px.
+
+Not "The room": that name is already on this very screen, on the control that
+says where the fight is happening, and two controls answering to one name is
+an ambiguity for anything driving by name — a browser suite or a screen
+reader. The gear is the table.
+
+The app's name is now said once, to a screen reader, and drawn nowhere. It was
+a 1.2rem heading above every screen, spending thirty pixels of a phone telling
+somebody the name of the app they had just opened — but dropping it outright
+would have left the page with no h1 at all, which is how a screen reader finds
+the top of a document.
+
+**A creature is an object, not a line in a list.** The rows ran flush into
+each other with a hairline between, so the strip of seven controls under a
+name read as belonging to the LIST rather than to the creature above it, and
+at a glance the whole fight was one grey slab. Each row is its own box now.
+That is the mockup's idea and it is a good one; what was not taken from it is
+the gold border on the active creature — active is carried by luminance here,
+because gold already means "the thing you are about to commit to" and red
+already means damage.
+
+**What the suites had been leaning on.** `.seatbar` used to mean "the campaign
+has arrived", because it only rendered once this device had characters — and
+thirty-two suites waited on it before picking a seat. The header row now
+appears the moment you are in a room, which is right (a player who has joined
+and has nobody to sit in yet still needs the way out), and useless as that
+signal. Sixty-six waits now wait for the thing they actually need: a seat to
+pick, or a character to claim. Three suites had been passing on the old
+meaning by luck and started failing honestly the moment it changed.
+
+The sweep after it: 63 suites, 1266 assertions, none failing and none empty —
+run in four slices rather than one, because the twenty-minute version kept
+being cut off, and a sweep that does not reach its own verdict says nothing.
+
+Declined, and why. **The bottom action bar** of ATTACK / DODGE / USE ITEM
+under a screen headed "I am the DM" — declined once already, for the same
+reason: a DM does not dodge, and those are a character's turn actions. It
+exists, for players, off the fight. **ACT / BON / REA on a player's row** on
+the DM's screen: the action economy belongs to the person spending it, and two
+devices tracking one turn is how a table ends up arguing about whether the
+bonus action was used. **End round on the last turn of a round**, where Next
+turn already does it.
+
+**A comment is checked where it is written, not where it lands.** `/* … */`
+among JSX children is not a comment, it is TEXT — and fourteen lines about how
+the combat screen is arranged shipped onto the combat screen, in a fight,
+under the initiative order. Three browser suites were taught to read their own
+page for comment punctuation afterwards, which is the right check in the wrong
+place three times over: it costs a browser, it covers only the screens
+somebody thought to visit, and it can only ever find what has already shipped.
+
+`check-prose` asks it of every `.tsx` in the repo, in a tenth of a second. The
+earlier attempt to read it out of the source with a regular expression
+produced a hundred and two false positives, because "is this line inside JSX
+children" is not a question text can answer — so it is not asked of text.
+TypeScript parses the file and every `JsxText` node is examined: the parser's
+own word for "this renders". No heuristics, nothing to tune, and proved by
+putting one back and watching it go red. The three page-reading assertions
+stay, because a template literal could still carry one past the parser.
+
+**44px, measured on the page.** `check-css` refuses a `min-height` under 44
+without a stated reason, and cannot see the case that caused three of the four
+known violations: a control that never declares one at all, sized by its
+padding, its content, or a class it borrowed. Only the rendered box knows.
+
+`verify-taps` walks twenty states at 390px — the room, five DM screens, six
+player screens, the sheet with its drawers open, and the builder step by step,
+which is where three of the four lived — and measures every button, select and
+input a finger is meant to land on. It asserts nothing about styling. All
+twenty are clean today, which is the point: this is a guard, not a repair. It
+was proved by dropping the base button rule to 33px and watching all twenty
+fail with the offenders named, because a check that has never failed is a
+check nobody has tested. A new SCREEN still has to be added to its list.
+
+**The builder rail settles, and it was one condition.** Written down as
+needing "the derivation read rather than the symptom chased" — and the
+derivations were right the whole time. The dot rendered a tick on
+`st.done && i !== stepIndex`: the step you are STANDING on never showed its
+own. That is both halves of what was reported. Gear is finished before you
+ever reach it, because a starting kit's option (a) is a real choice the
+character genuinely gets — so it ticked, and then lost the tick when you
+arrived. Class and Race become finished while you stand there answering them,
+so they held their number until you walked away.
+
+Nothing was lost by ticking it. `.on` already puts that dot in gold, so where
+you ARE and what is ANSWERED were two marks fighting over one; now the step
+ticks under the choice that just finished it, which is where the person who
+finished it is looking.
+
+The lesson is the diagnosis, not the fix: the symptom was described in terms
+of loading and derivation, and reading it in a browser — printing the rail
+after each choice and again after each move — put the cause on screen in one
+run. Three assertions in `verify-creation` hold it: a done step ticks where
+you stand, an unanswered one keeps its number, and the whole rail is
+unchanged by walking away from it.
+
+**The recap prompts.** It reported and stopped, and the two questions arrive
+together: a table that has just read "you levelled and came away with three
+things" is the table about to ask what that changed on their sheet — and the
+DM reading the same night back is asking it from the other side of the screen,
+where it is called what do I prepare next.
+
+Nine rules, four on a player's screen and five on the DM's, each one a fact
+out of the log with the screen that settles it. A player is told about a level
+nobody took, the hit points the night left them on, what is still spent, the
+class features they have never once used, and the spells they know and have
+never cast. The DM is told about the fight nobody ended, who is owed a level,
+fights that earned nothing in an XP campaign, loot still sitting in the stash,
+saved encounters the party has just outgrown, and an empty drawer.
+
+Three rules decide what may be one. It has to be TRUE from the log rather than
+inferred from what a session usually means — "you are on 7 of 24" is a fact,
+"you had a rough night" is a story, and the story belongs to the people who
+were there. Something has to be doable about it. And it has to have somewhere
+to GO: a prompt naming a screen this device does not have is dropped rather
+than rendered as a button that lands on the home screen, which is why a player
+never gets one about prep and a wide screen never gets one about the fight.
+
+Four of them are decisions rather than code. Nothing is said about XP in a
+milestone campaign, because a night with three fights and nothing handed out is
+how milestone campaigns work and the app would be arguing with a decision the
+DM already made. Nothing is said about hit points to somebody who did not get
+back up — the recap says that one line above, and saying it twice is the app
+telling somebody the worst thing that happened to them again. Nothing is said
+about the untouched half of a sheet to a character who was not at the table:
+being told on the day you are made that you have neglected half of yourself is
+the app calling a new player behind before they have sat down. And the
+outgrown-encounter rule fires only after a level is gained, or it is a standing
+complaint about fights that were fine when they were written.
+
+The seam is asserted twice, because it is the one that matters: prompts are
+built from the events handed in, so a player's come from a player's log, and
+the DM's half only ever runs in the DM's seat. Unit tests assert a player is
+shown none of the five, and `verify-recap` drives two real devices through a
+session and reads them off the screen.
+
+What it turned up: every button in this app is uppercase, and until now every
+button was a LABEL of one or two words. These are sentences, and the first
+render shouted them. The browser suite caught it and the unit tests could not
+have — `innerText` returns what is rendered, and the string in the source was
+sentence case all along.
+
+Thirty unit tests and eight browser assertions on top of the suite that
+already reads the recap. The sweep after it: 62 suites, 1241 assertions, none
+failing and none empty.
+
+**The three things declined from the mockup, built anyway.** Shipped as three
+separate deploys so each could be verified on its own.
+
+**A turn bar that follows you off the fight.** A player wanders to their sheet
+between turns — which is what that screen is for — and then it is their turn
+and the app says so with a dot on a tab. The answer to "I did not notice" was
+never a louder dot. Five items matching the reference; Dodge is the one that
+ACTS from the bar, because it is the only common action needing no target, no
+roll and no choice. It appears only off the fight, where the whole turn is
+already on screen. The bar and the padding that makes room for it come from
+one named condition — the first draft had them disagree, which is a hole at
+the foot of the page.
+
+**End round, in the round's own header.** It advances past everyone left to
+the top of the next round, which means those creatures do not act — so it says
+how many turns it is about to skip rather than making that a discovery. Absent
+on the last turn, where Next turn already does it.
+
+**Stepping the turn where the turn is named.** Next turn stays the primary and
+the biggest thing on the screen; this is the pair beside the NAME, for the two
+moments the big button is wrong for. The foot's "Back a turn" was REMOVED
+rather than duplicated — `verify-group` caught two controls answering to the
+same name, which is an ambiguity for anything driving by name, browser suites
+and screen readers alike.
+
+One sweep failed on `verify-guidance` and passed 25/25 alone; a clean run on a
+fresh server passed. Recorded as flake, not as a fix — the dev server dying
+under repeated runs is still on the list below.
+
+**Two marks from the mockup.** A combat screen was handed over as a reference
+image and read against the running app rather than reimplemented. Most of it
+already existed — the two bands, the aligned strip, ACT/BON/REA, the gold
+accent — which is the useful outcome of comparing a mockup to the thing rather
+than to a memory of it. Three things were genuinely absent:
+
+`.pc` answers a question six rows of initiative could not: which of these is
+somebody at the table. A goblin and a player character were the same shape of
+row with the same kind of number, and the only tell was that creatures carry a
+disclosure chip, which you have to already know to read.
+
+`.vg` puts the meaning on the two buttons that resolve an attack. They sit
+side by side, are pressed at speed, and "It hits" and "Missed" are the same
+length and weight; a sword and a shield are not. And the add-condition control
+is now the one gold thing on a creature's row — the only control there that
+puts something NEW on the table rather than spending or revealing.
+
+Glyphs from the set the hotbar already uses, not an icon library: this app
+ships no webfont, and an icon font would be the same mistake wearing a
+different hat. Each was checked against a private-use codepoint to confirm the
+system font actually draws it — a glyph with nothing behind it renders as a
+tofu box, which is worse than no glyph. The first version of that check was
+worthless (it compared against an invalid font family, which falls back to the
+default that DOES have the glyph) and was rewritten.
+
+Not taken from the mockup, and why: **a bottom action bar** of ATTACK / DODGE /
+USE ITEM under a screen headed "I am the DM" — a DM does not dodge, and those
+are a character's turn actions; **END ROUND** beside the round counter, which
+duplicates Next turn; and **moving turn navigation into the Up-now band**,
+which would demote the one control a DM presses forty times an evening from
+the biggest thing on the screen to a chevron.
+
+**A press is acknowledged.** taste-skill's redesign audit, run against the
+code rather than recited: a hundred and forty buttons and not one `:active`
+rule. On a phone the finger covers the target, so the only confirmation a tap
+registered was whatever changed afterwards — and here "afterwards" is often a
+round trip to the DM's device. That is a good part of what reads as clunky and
+it cost two lines.
+
+A pixel down and a shade darker, not a scale: these sit in lists of 44px rows
+and anything that changes a button's SIZE reflows the row under a thumb still
+resting on it. `prefers-reduced-motion` drops the movement and keeps the
+colour. Asserted on the live element rather than read off the stylesheet — a
+rule that exists and a rule that WINS are different claims — and confirmed to
+fail with the transform removed.
+
+Two more from the same audit: `text-wrap: pretty` on paragraphs and `balance`
+on headings, so a single word is never left alone on a last line; and the
+content region is a `<main>`, which it had never been — 572 divs, 60 sections,
+two navs and no landmark, so a screen reader had no way past the room code and
+the tab bar to the thing the page is about.
+
+What the audit did NOT change: the system font stack (it wants a display face
+with character; this app ships no webfont on purpose, because a table opens it
+on a phone with no signal and a font that arrives late moves the layout while
+somebody is reading it), and the 48 uppercase labels (it dislikes all-caps
+subheaders; here they are the one consistent naming device and the app's own
+voice).
+
+**A caster's turn leads with what a caster does.** It led with the weapon, so
+a wizard's turn opened with "Attack with Quarterstaff" — a thing a wizard does
+roughly never — and their cantrip sat a tap further behind a question. The
+small print beside it read "or something else", which sounds like every option
+on the turn and means another WEAPON.
+
+That wording sent me to the weapon picker twice while looking for the spell,
+and on the strength of it I reported to the table that a caster is never
+offered their cantrip on their turn. That was wrong: the cast strip was there
+the whole time, under "What else can I do?". The bug was that the one route a
+caster wants was the one route the obvious button did not go to.
+
+Now both are primaries, ordered by `leadsWithSpell` — the numbers, not a guess
+about the class. A wizard swings at +1 and throws a Fire Bolt at +5, so the
+spell leads; a ranger shoots at +7 and casts at +5, so the bow does; ties go to
+the weapon rather than moving a screen somebody has already learnt. The button
+also does what it says now: pressing "Cast Fire Bolt" aims Fire Bolt instead of
+opening a menu and asking again.
+
+Both directions are unit-tested, because a rule that only ever answers one way
+is not a rule — and the ranger is the half that keeps it honest.
+
+**A spell's damage is read from its own text when the data carries none.**
+Fire Bolt arrived at the DM as "0 damage" — and the tell was the word: the
+claim said "damage" rather than "fire", and the type is only generic when
+`damageFor` found no roll to name it.
+
+`rolls` is a Fight Club extension, not something a compendium must carry. The
+one a real table imports has 317 spells and NOT ONE `<roll>` element, and 76
+bundled spells state dice in prose and carry none either. Where that happens
+the caster is asked for an attack roll, never asked for damage, and the claim
+is sent as zero. `mergeById` already refuses to let an empty list overwrite a
+full one — but a device that imported before that fix has the stripped copy
+persisted locally, and stored content wins on reload, which is why this
+survives a refresh and could not be reproduced on a clean device.
+
+So `damageFor` now falls back to the spell's prose: the base line ("takes
+1d10 fire damage", "10d6 + 40 force damage", bare "3d8 damage") and a
+cantrip's own upgrade table, which scales on the CASTER's level. Of 1322
+bundled spells whose text mentions dice, 1280 have usable data and 1074 are
+recoverable from prose alone — 84%.
+
+It deliberately does NOT invent slot scaling from prose like "an extra d6 for
+each slot level above 3rd". And the pattern is anchored to the word "damage",
+which is the whole of its safety: Cure Wounds "regains a number of hit points
+equal to 1d8", False Life gives "1d4 + 4 temporary hit points", Control
+Weather takes "1d4 x 10 minutes". Offering a player healing dice to hurt
+somebody with is worse than offering nothing, and those four are asserted to
+return nothing.
+
+**Twenty-four declarations were using a CSS variable that does not exist.**
+`--line` for `--rule`, `--accent` for `--gold`, `--sunk` for `--ground` —
+names invented from memory while writing a new component. CSS fails silently
+and it fails WHOLE: `border: 1px solid var(--line)` with no `--line` is not a
+border in the wrong colour, it is no border at all, because the entire
+shorthand is invalid at computed-value time. Nothing warns, the build
+succeeds, the page renders.
+
+They had clustered in the newest sections, which is most of why recent work
+looked flatter than old work. Three of the seven controls on a creature's row
+had never had a border and so did not read as pressable. `check-css` now
+refuses a `var()` naming a property that is never defined; a written fallback
+— `var(--hp, 1)` — is a deliberate default and still passes. Proved by
+injecting one and watching it go red, after the first attempt to prove it
+failed to fail: the pattern was lowercase-only and never saw the typo.
+
+**A creature's row was four ragged bands.** It is a grid, and the grid had
+been sized for the five children that existed when it was written; the action
+economy, the condition +, and the hurt menu were added afterwards and fell
+onto implicit rows. At 390px the initiative number sat thirty-six pixels
+BELOW the name it belongs to and the left column alternated between two x
+positions. 173px per creature, against 48px for a player.
+
+Now three columns and two declared bands: the name line is exactly the
+player's — initiative, name, health, aligned down the list — and everything a
+DM presses is one strip beneath it. 121px. A control added tomorrow joins the
+strip; it cannot quietly invent a band. `verify-combat` counts the bands
+(clustered on element centres, because bucketing tops splits one line into
+two and the count then means nothing), and it was confirmed to fail at three.
+
+**A, B and R say ACT, BON and REA.** The words they stand for had lived only
+in the `aria-label`, so the screen reader heard "Goblin 1 bonus action" and
+the person holding the phone got a letter. The first thing anyone asked about
+this feature was what the letters meant.
+
+**Every screen is ordered by the questions it raises.** The fight screen was
+rebuilt that way; the rest of the app still carried the order its features had
+been built in, which is invisible to whoever wrote it and obvious to everyone
+else. It is what "tacked on" means, and it happens because a new card has to go
+*somewhere* and the bottom is always free.
+
+The sheet had conditions, exhaustion and concentration LAST, under fourteen
+hundred pixels of equipment — so the way to find out you were poisoned was to
+scroll past your boots. They now sit beside the hit points, the only other
+block that changes during a session, and what is worn moved down beside the
+attacks it explains. Prep led with Places, the tallest card on the screen and
+the one that does the least; it now leads with the encounter.
+
+Written down as VISION law 7, because a reordering nobody can state is one
+that drifts straight back. Two suites pin the orders — the sheet's in
+`verify-panel`, prep's in `verify-tabs` — so a seventh card cannot be appended
+without someone looking at the list and saying where it belongs. Both were
+confirmed to fail against the old order.
+
+Still hand-placed and left alone: Gear leads with what the equipment gets you
+before what you are carrying, which is summary-before-detail and defensible;
+and the Party screen shows the party before the roll it asks for, which is
+look-then-act. Neither is the disease.
+
+**The Spells step ticked before it was answered.** A brand-new warlock with a
+class and a race showed a green tick against Spells, having seen nothing. Its
+condition was `klass !== undefined` — which asks whether the QUESTION exists,
+not whether it has been ANSWERED. Skills and Gear made that mistake and were
+fixed; this was the same one, one step further removed, sitting directly under
+a comment warning about it.
+
+Underneath was a smaller thing: `book` was the only loader here initialised to
+`[]` rather than `null`, so "the spell list has not arrived" and "this device
+has no spell list" were the same value and no honest condition could be written
+over it. Its four siblings are nullable for exactly that reason.
+
+The step now uses the criterion its own card header prints: so many of so many
+cantrips, so many of so many spells. It does not gate creating a character —
+`gaps` never included spells and still does not, so "take what you like now or
+leave it" remains true. What changed is only that the rail stops claiming a
+step is finished when it is not.
+
+**A type scale and a spacing scale.** The mockups kept looking more finished
+than the app, and it was not the ideas in them — it was that a mockup is
+written in one sitting against one scale, and the app was written over weeks,
+one hand-picked number at a time. It had 43 distinct font sizes, including
+0.94, 0.95, 0.96 and 0.98rem; one screen showed 15.36px, 15.2px and 15.04px
+text within a third of a pixel of each other, which reads as blur rather than
+as hierarchy. Margins were the same story: 90 inline `marginTop`s across seven
+values two pixels apart.
+
+Both are now scales. Type: 43 sizes down to 19, snapped down wherever a
+cluster sat within a pixel of itself. Space: the stylesheet's own margins ran
+every integer from 2 to 14 — 169 declarations across 15 values — and are now
+eight steps, and the inline margins are five classes. The 262 inline styles are 72, and
+none of the survivors is a literal size or margin; they are computed widths and
+flex bases that a class genuinely cannot express. `check-inline` refuses a new
+one, so the next person to reach for `style={{ marginTop: 11 }}` is told where
+the scale is instead.
+
+Nothing moved more than a pixel, and every snap went DOWN — the sheet sits four
+pixels under a height guard, and a scale that makes a screen taller is not an
+improvement.
 
 **The combat screen follows the turn.** It was the order, then the statblock,
 then whatever each feature needed when it was built. It now answers the
@@ -300,13 +715,14 @@ switch, the monster piles, and the DM's spell lookup.
 
 ## Known and unfixed
 
-- **44px is a rule the code keeps forgetting.** Four separate controls have
-  shipped too small to press — background chips at 30, feat rows at 39, the
-  skills table's tick at 18 (the only way to train a skill), and a creature's
-  rename button, which was written with `min-height: 0` in the same commit
-  that added it. Each one looked like text rather than a control.
-  `verify-guidance` measures three screens and `verify-group` measures the
-  fight, but nothing stops a new one being added at 33 somewhere else.
+- **The sweep checked one of three servers.** Fixed today. Six suites drive a
+  built preview on port 4319 or 4173 rather than the worker on 8787, and the
+  precondition check knew only about the worker — so a sweep with no preview
+  running started happily and reported those six as *empty* at the end, which
+  reads as a suite problem rather than the missing server it actually was. It
+  now names all three before it starts. The same lesson as the empty-suite
+  rule, one layer up: state the precondition where the message can still name
+  the cause.
 
 - **The dev server dies under repeated full-suite runs.** Removed from this
   list once on the evidence of a clean 55-suite run; that was wrong. It dies
@@ -320,38 +736,28 @@ switch, the monster piles, and the DM's spell lookup.
   an error, re-checks the server at the end, and exits non-zero. Silence is not
   success.
 
-- **The sheet sits two pixels under the height verify-panel guards.** It was
-  2579 and is 2598 against a 2600 ceiling, because it gained a label the boxes
-  needed. That is not comfortable: the next addition to the sheet will trip the
-  guard, which is exactly what the guard is for, but it means the next person
-  to add anything there has to buy the space rather than find it.
+- **The sheet sits twelve pixels under the height verify-panel guards.** 2588
+  against a 2600 ceiling — it was 2598 before the spacing scale took a few
+  back. Still not comfortable: the next addition to the sheet trips the guard,
+  which is exactly what the guard is for, but it means the next person to add
+  anything there has to buy the space rather than find it. Deliberately not
+  bought in advance — shaving padding to bank headroom is gaming the guard,
+  and the trade is only judgeable against the thing being added.
 
-- **The builder rail still settles.** With a class and a race chosen, Gear
-  reads as done until you visit it, and Race reads as not-done until you leave
-  it — both flip once you navigate. The false ticks on a BRAND-NEW build are
-  fixed and guarded; this remaining flicker is in how the gear choices and the
-  race's own questions are derived, and it needs the derivation read rather
-  than the symptom chased.
+- **26 browser-suite selectors match more than one component.** Was 43, and
+  seventeen of those were the CHECK being wrong rather than a suite: it read
+  `.sub-book .menu-hd` as scoped — which it is — and `card.locator(".menu-hd")`
+  as bare, which is the same scoping written with a dot instead of a space.
+  Two wrong findings in every five is why a baseline "meant to shrink" sat
+  still: nobody works through a list that is mostly noise. It now follows the
+  chain, and a locator held in a variable counts as the scope it is.
 
-- **Nothing checks that the page says only what it means to say.** A block
-  comment at JSX child position is literal text, and fourteen lines about how
-  the combat screen is arranged shipped onto the combat screen mid-fight. The
-  suites measure positions, roles and counts; not one of them read the page
-  for prose that should not be there. Three suites do now, but only three —
-  and the general lesson is that "I looked at it" is not a check, and I had
-  not looked.
-
-- **43 browser-suite selectors match more than one component.** `.v` is worn
-  by seven, `.swing-ask` by six. Nothing is broken today — the right thing
-  happens to render first — but it is why changing one dropdown to a readable
-  list cost thirty suite edits, and it is how a suite silently began measuring
-  the wrong component after SubclassPick borrowed the feat picker's classes.
-
-  `scripts/check-selectors.mjs` records the 43 and fails on the 44th. The
-  baseline is meant to shrink: driving a suite by role and name instead takes
-  its line out of the file, and it can never come back unnoticed. This is the
-  first thing to attack alongside any UI revision, because a redesign will
-  thrash exactly these.
+  The 26 that are left are real: `.saved` is worn by five components,
+  `.swing-ask` by six, and each of these selects one from the page. Nothing is
+  broken today — the right thing happens to render first — but it is how a
+  suite silently began measuring the wrong component after SubclassPick
+  borrowed the feat picker's classes. Still the first thing to attack
+  alongside any UI revision, because a redesign will thrash exactly these.
 
 - **`verify-turns`'s race is arranged, not raced for.** The player goes
   offline before pressing, which is what "at the same instant" means in a

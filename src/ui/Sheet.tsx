@@ -76,7 +76,7 @@ function RestPanel({
   if (!p) return null;
   return (
     <div className="preview">
-      <div className="label" style={{ marginBottom: 8 }}>
+      <div className="label mb-2">
         {kind === "long" ? "Long rest" : "Short rest"} — what will change
       </div>
       {p.noop ? (
@@ -111,7 +111,7 @@ function RestPanel({
           ))}
         </>
       )}
-      <div className="row" style={{ marginTop: 12 }}>
+      <div className="row mt-3">
         <button onClick={onCommit}>Take the rest</button>
         <button onClick={onCancel}>Cancel</button>
       </div>
@@ -214,7 +214,7 @@ export function Sheet({
                   ? ` · ${state.concentrationChecks.length - 1} more after this`
                   : ""}
               </p>
-              <div className="row" style={{ marginTop: 10 }}>
+              <div className="row mt-2">
                 <button
                   onClick={() =>
                     setPad({
@@ -311,7 +311,7 @@ export function Sheet({
             >
               Spend d{die} {formatModifier(conMod)}
             </button>
-            <span className="faint" style={{ fontSize: ".82rem" }}>{hitDiceLeft} left</span>
+            <span className="faint aside">{hitDiceLeft} left</span>
           </div>
 
           <div className="controls">
@@ -335,21 +335,21 @@ export function Sheet({
         </div>
       </section>
 
-      <section className="card">
-        <div className="card-hd">
-          <span className="label">Worn &amp; wielded</span>
-          <span className="label q">Tap a slot</span>
-        </div>
-        <div className="card-body">
-          <Doll
-            homebrew={campaign.homebrewItems}
-            who={who}
-            inventory={state.inventory}
-            equipped={state.equipped}
-            append={append}
-          />
-        </div>
-      </section>
+      {/*
+       * What is TRUE of you right now, next to the other number that is.
+       *
+       * Conditions, exhaustion and concentration sat last, under fourteen
+       * hundred pixels of reference — so the way to find out you were poisoned
+       * was to scroll past everything you are wearing. Hit points and this are
+       * the two blocks that change during a session; the rest is what you
+       * looked up once when you made the character.
+       *
+       * That is the order the fight screen was rearranged into and the rule
+       * for anything added here later: what is happening to you, then what you
+       * can do about it, then what you are.
+       */}
+      <StateCard build={build} state={state} append={append} />
+
 
       {build.resources.length > 0 && (
         <section className="card">
@@ -451,6 +451,32 @@ export function Sheet({
         </section>
       )}
 
+      {/*
+        * After the things it makes possible, not before them.
+        *
+        * It led the sheet's second half, so a player looking for their attacks
+        * scrolled through every slot on the doll to reach them. What is worn
+        * changes a handful of times a session; what it lets you DO is the
+        * reason the sheet is open. It sits here because it is the answer to
+        * "why does my attack say that", which is a question you ask after
+        * reading the attack.
+        */}
+      <section className="card">
+        <div className="card-hd">
+          <span className="label">Worn &amp; wielded</span>
+          <span className="label q">Tap a slot</span>
+        </div>
+        <div className="card-body">
+          <Doll
+            homebrew={campaign.homebrewItems}
+            who={who}
+            inventory={state.inventory}
+            equipped={state.equipped}
+            append={append}
+          />
+        </div>
+      </section>
+
       {/* Who they are. Nothing here is mechanical, and it is the only part of
           the sheet the player wrote themselves. */}
       {(build.identity.alignment || build.identity.personality || build.identity.ideals
@@ -512,7 +538,6 @@ export function Sheet({
       )}
 
 
-      <StateCard build={build} state={state} append={append} />
 
       <Drawer
         build={build}

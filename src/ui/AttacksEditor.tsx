@@ -37,7 +37,7 @@ export function AttacksEditor({
 
   return (
     <div className="field">
-      <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+      <div className="row spread mb-2">
         <span className="label">Attacks</span>
         <button type="button" onClick={() => onChange([...attacks, { ...BLANK_ATTACK }])}>
           Add attack
@@ -45,7 +45,7 @@ export function AttacksEditor({
       </div>
 
       {attacks.length === 0 && (
-        <p className="faint" style={{ fontSize: ".85rem", margin: 0 }}>
+        <p className="faint note">
           None yet. The bonus is worked out from the ability and your proficiency.
         </p>
       )}
@@ -76,7 +76,7 @@ export function AttacksEditor({
             </button>
           </div>
 
-          <div className="row" style={{ gap: 8, marginTop: 8 }}>
+          <div className="row tight mt-2">
             <input
               type="number" min={1} max={20} value={a.damage.count}
               aria-label={`Attack ${i + 1} dice count`}
@@ -110,7 +110,7 @@ export function AttacksEditor({
             />
           </div>
 
-          <div className="chips" style={{ marginTop: 8 }}>
+          <div className="chips mt-2">
             <button type="button" className={`chip${a.proficient ? " on" : ""}`}
               aria-pressed={a.proficient}
               onClick={() => patch(i, { proficient: !a.proficient })}>

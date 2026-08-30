@@ -101,11 +101,84 @@ export function spellSaveDc(proficiencyBonus: number, abilityMod: number): numbe
  * SLOT it went into, so the same lookup with a different key. Both take the
  * highest entry at or below the level in hand, which is how the tables read.
  */
+/**
+ * Which of the two a turn should lead with.
+ *
+ * The turn always led with the weapon, so a wizard's turn opened with "Attack
+ * with Quarterstaff" — a thing a wizard does roughly never — and the cantrip
+ * sat a tap further behind a question.
+ *
+ * Ranked on the numbers rather than on a guess about the class, because the
+ * numbers are something this app can stand behind and "what a Bladesinger
+ * prefers" is not. A wizard swings at +1 and throws a Fire Bolt at +5, so the
+ * spell leads; a ranger shoots at +7 and casts at +5, so the bow does. Ties go
+ * to the weapon: no reason to move a screen somebody has already learnt.
+ */
+export function leadsWithSpell(
+  spellAttack: number | null,
+  bestSwing: number | null,
+): boolean {
+  if (spellAttack === null) return false;
+  return bestSwing === null || spellAttack > bestSwing;
+}
+
+/**
+ * The dice a spell's own TEXT states, for when the data carries none.
+ *
+ * `rolls` is a Fight Club extension. The compendium a real table imports has
+ * 317 spells and not one <roll> element, and 76 of the bundled spells state
+ * dice in their prose and carry none either. Where that happened the caster
+ * was asked for an attack roll, never asked for damage, and the DM got a
+ * claim reading "0 damage" — with the word "damage" rather than "fire",
+ * which is the tell: the type is only generic when there was no roll to name
+ * it.
+ *
+ * Deliberately narrow. It reads the base line — "takes 1d10 fire damage" —
+ * and a cantrip's own upgrade table — "1d10 when you reach 5th level (2d10),
+ * 11th level (3d10)". It does NOT try to work out slot scaling from prose
+ * like "one extra d6 for each slot level above 3rd"; a wrong number offered
+ * with confidence is worse than the player reading their own spell, and this
+ * app's whole posture is that the person rolls.
+ */
+export function rollsFromText(text: string, level: number): CastableSpell["rolls"][number][] {
+  const prose = text ?? "";
+  /*
+   * "1d10 fire damage", "3d8 radiant damage", "10d6 + 40 force damage", and
+   * bare "3d8 damage" where the book leaves the type to the caster.
+   *
+   * The word "damage" is required and that is the whole safety of this: the
+   * prose is full of dice that are NOT damage — Cure Wounds "regains a number
+   * of hit points equal to 1d8", False Life gives "1d4 + 4 temporary hit
+   * points", Control Weather takes "1d4 x 10 minutes". Matching those would
+   * offer a player healing dice as damage, which is worse than offering
+   * nothing, so the pattern stays anchored to the word.
+   */
+  const base = /(\d+d\d+)(?:\s*\+\s*\d+)?\s+(?:(\w+)\s+)?damage/i.exec(prose);
+  if (!base) return [];
+  const type = base[2];
+  const description = type
+    ? `${type[0]!.toUpperCase()}${type.slice(1)} Damage`
+    : "Damage";
+
+  if (level !== 0) return [{ description, dice: base[1]! }];
+
+  /* A cantrip states its own table, and it is the one rule people get wrong
+     by hand: it scales with the CASTER's level, not with a slot. */
+  const steps: CastableSpell["rolls"][number][] = [{ description, level: 0, dice: base[1]! }];
+  for (const m of prose.matchAll(/(\d+)(?:st|nd|rd|th)\s+level\s*\((\d+d\d+)\)/gi)) {
+    steps.push({ description, level: Number(m[1]), dice: m[2]! });
+  }
+  return steps;
+}
+
 export function damageFor(
   spell: CastableSpell,
   { slotLevel, characterLevel }: { slotLevel: number; characterLevel: number },
 ): { dice: string; description: string } | null {
-  const rolls = spell.rolls ?? [];
+  /* The file first, its own prose second. See rollsFromText: a compendium
+     without <roll> elements is the common case, not the exotic one. */
+  const stated = spell.rolls ?? [];
+  const rolls = stated.length > 0 ? stated : rollsFromText(spell.text ?? "", spell.level);
   const scaling = rolls.filter((r) => r.level !== undefined);
   const flat = rolls.find((r) => r.level === undefined);
 

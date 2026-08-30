@@ -81,7 +81,7 @@ export function Scenes({
 
       <div className="card-body">
         {scenes.length === 0 && !draft && (
-          <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
+          <p className="faint note">
             A place is a room, whatever is waiting in it, and what you mean to
             say when the door opens. Prepare them now; open one in a press.
           </p>
@@ -123,8 +123,8 @@ export function Scenes({
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
 
-            <span className="label" style={{ display: "block", marginTop: 14 }}>Light</span>
-            <div className="seg" style={{ marginTop: 6 }}>
+            <span className="label standalone">Light</span>
+            <div className="seg mt-1">
               {LIGHTS.map((l) => (
                 <button
                   key={l.id}
@@ -140,7 +140,7 @@ export function Scenes({
               ))}
             </div>
 
-            <span className="label" style={{ display: "block", marginTop: 14 }}>
+            <span className="label standalone">
               And the ground
             </span>
             <div className="scene-rows">
@@ -172,7 +172,7 @@ export function Scenes({
             </div>
 
             {Object.keys(state.encounters).length > 0 && (
-              <div className="row" style={{ marginTop: 14 }}>
+              <div className="row mt-3">
                 <span className="label">Waiting in it</span>
                 <select
                   aria-label="Encounter waiting"
@@ -208,7 +208,7 @@ export function Scenes({
               />
             </div>
 
-            <div className="row" style={{ marginTop: 12 }}>
+            <div className="row mt-3">
               <button
                 disabled={!isNamed(draft)}
                 onClick={() => {
@@ -236,7 +236,7 @@ export function Scenes({
               </button>
             </div>
             {isOpenGround(draft.room) && (
-              <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
+              <p className="faint note">
                 Nothing said about the room. Opening this will clear whatever
                 the last place set.
               </p>

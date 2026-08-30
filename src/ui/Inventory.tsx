@@ -173,7 +173,7 @@ export function Inventory({
       )}
       {inventory.length === 0 && (
         <div className="card-body">
-          <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+          <p className="faint note">
             Nothing yet. Add what you started with, or wait for the DM to hand
             something over.
           </p>
@@ -206,7 +206,7 @@ export function Inventory({
               }}
             />
           </div>
-          <div className="chips" style={{ marginTop: 10 }}>
+          <div className="chips mt-2">
             {CATEGORIES.map((c) => (
               <button
                 key={c.id}
@@ -241,7 +241,7 @@ export function Inventory({
               </button>
             ))}
             {results.length === 0 && (
-              <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
+              <p className="faint note">
                 Nothing matches.
               </p>
             )}

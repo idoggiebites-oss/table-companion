@@ -62,17 +62,40 @@ const SHARED = new Set([
 const worn = wornClasses();
 const problems = [];
 
+/*
+ * What a suite chained its selector ONTO.
+ *
+ * `.sub-book .menu-hd` is scoped by its first part, and this check always
+ * knew that. `card.locator(".menu-hd")` is the same scoping written with a
+ * dot instead of a space, and it did not — so seventeen of the forty-three it
+ * recorded were suites that had already done the thing it was asking for.
+ * A check that is wrong two times in five is one nobody works through, which
+ * is exactly what a baseline "meant to shrink" then does not do.
+ *
+ * Scoped means: chained onto a call — `page.getByRole(…).locator(".v")` — or
+ * onto a variable holding a locator. Everything else is the page itself,
+ * where `.v` really can match any of the seven things wearing it.
+ */
+const LOCATORY = /\.locator\(|getBy(?:Role|Text|Label|TestId)\(|\.filter\(|\.first\(\)|\.last\(\)|\.nth\(/;
+
+function locatorVars(src) {
+  const held = new Set();
+  for (const m of src.matchAll(/(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*([^;\n]*)/g)) {
+    if (LOCATORY.test(m[2])) held.add(m[1]);
+  }
+  return held;
+}
+
 for (const file of readdirSync(SCRIPTS).filter((f) => /^verify.*\.mjs$/.test(f))) {
   const src = readFileSync(join(SCRIPTS, file), "utf8");
   const seen = new Set();
-  /*
-   * Only class selectors that STAND ALONE. `.sub-book .menu-hd` is already
-   * scoped by its first part, and a suite that has scoped its selector has
-   * done the thing this check is asking for.
-   */
-  for (const m of src.matchAll(/locator\(\s*["'`]\.([a-z][\w-]*)["'`]/g)) {
-    const cls = m[1];
+  const held = locatorVars(src);
+  for (const m of src.matchAll(/([A-Za-z_$][\w$.]*|\))\s*\.locator\(\s*["'`]\.([a-z][\w-]*)["'`]/g)) {
+    const [recv, cls] = [m[1], m[2]];
     if (SHARED.has(cls) || seen.has(cls)) continue;
+    // `foo.bar.locator(…)`: either end of the path may be the locator.
+    const parts = recv.split(".");
+    if (recv === ")" || held.has(parts[0]) || held.has(parts[parts.length - 1])) continue;
     seen.add(cls);
     const files = worn.get(cls);
     if (files && files.size > 1) {

@@ -55,7 +55,7 @@ export function SceneSet({
       {open && (
         <div className="scene-body">
           <span className="label">Light</span>
-          <div className="seg" style={{ marginTop: 6 }}>
+          <div className="seg mt-1">
             {LIGHTS.map((l) => (
               <button
                 key={l.id}
@@ -69,7 +69,7 @@ export function SceneSet({
             ))}
           </div>
 
-          <span className="label" style={{ display: "block", marginTop: 14 }}>
+          <span className="label standalone">
             And the ground
           </span>
           <div className="scene-rows">
@@ -92,7 +92,7 @@ export function SceneSet({
 
           {!isOpenGround(scene) && (
             <button
-              style={{ marginTop: 10 }}
+              className="mt-2"
               aria-label="Clear the room"
               onClick={() => set(OPEN_GROUND)}
             >

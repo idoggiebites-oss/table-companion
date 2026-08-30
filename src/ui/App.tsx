@@ -21,8 +21,10 @@ import { LevelUp } from "./LevelUp.js";
 import { Npcs } from "./Npcs.js";
 import { Progression } from "./Progression.js";
 import { ReactionAsk } from "./ReactionAsk.js";
+import { TurnBar } from "./TurnBar.js";
 import { Reference } from "./Reference.js";
-import { RoomBar } from "./RoomBar.js";
+import { RoomBar, RoomMenu } from "./RoomBar.js";
+import type { ConnectionStatus } from "../sync/client.js";
 import { Sheet } from "./Sheet.js";
 import { AnswerCheck } from "./AnswerCheck.js";
 import { AskCheck } from "./AskCheck.js";
@@ -35,6 +37,22 @@ import { Boundary } from "./Boundary.js";
 import { Tabs, type TabDef } from "./Tabs.js";
 import { Gear } from "./Gear.js";
 import { Recap } from "./Recap.js";
+import { Popover } from "./Popover.js";
+import { WhatNext } from "./WhatNext.js";
+import type { PromptTab } from "../domain/prompts.js";
+
+/**
+ * The connection, in the words the room sheet uses. On the dot itself,
+ * because a colour is not a state anybody can name.
+ */
+const STATUS_SAID: Record<ConnectionStatus, string> = {
+  offline: "Solo — nothing is syncing",
+  connecting: "Connecting",
+  online: "Live",
+};
+
+/** Every screen a prompt can name. Filtered per device by `reachable`. */
+const PROMPT_TABS: readonly PromptTab[] = ["sheet", "spells", "party", "prep", "combat"];
 import { Notes } from "./Notes.js";
 import { Buzz } from "./Buzz.js";
 import { loadSpells } from "../store/srd.js";
@@ -68,6 +86,9 @@ export function App() {
    * because it is what tells `create` which of the two things it is doing.
    */
   const [rebuilding, setRebuilding] = useState<CharacterId | null>(null);
+  /** The two sheets behind the header: the room's controls, and this device's. */
+  const [roomOpen, setRoomOpen] = useState(false);
+  const [deviceOpen, setDeviceOpen] = useState(false);
 
   // Events are signed by the seat, which is what makes one person editing
   // another's sheet acceptable rather than merely convenient.
@@ -198,6 +219,13 @@ export function App() {
    */
   const twoUp = wide && state.combat !== null && !needsCharacter && !needsClaim;
   const tabs = (dmView ? dmTabs : playerTabs).filter((t) => !(twoUp && t.id === "combat"));
+  /*
+   * Where a prompt is allowed to send someone. A player has no Prep tab and a
+   * wide screen has no Combat one — the fight is already beside you — so a
+   * prompt pointing at either is dropped rather than rendered as a button
+   * that lands on the home screen instead.
+   */
+  const reachable = PROMPT_TABS.filter((t) => tabs.some((x) => x.id === t));
   /**
    * Where you land before choosing. Never "Combat" when there is no fight —
    * that is a dead screen with "No fight yet" on it. A player's home is their
@@ -251,8 +279,21 @@ export function App() {
   const home: TabId =
     state.combat !== null && !twoUp ? "combat" : dmView ? "party" : "sheet";
   const myTags = (mySeatId && state.combat?.tags[mySeatId]) || [];
+
   // A seat change can also leave you on a tab the other side does not have.
   const current = tab !== null && tabs.some((t) => t.id === tab) ? tab : home;
+  /* Said once, because the bar and the padding that makes room for it must
+     never disagree — a bar with no gap under it covers the last control on
+     the page, and a gap with no bar is a hole. */
+  const showTurnBar =
+    seat.kind === "player" &&
+    myTurn &&
+    /* Not on the fight: the whole turn is already on screen there, and a
+       second copy is a door into a room you are standing in. */
+    current !== "combat" &&
+    !needsCharacter &&
+    !needsClaim &&
+    mine !== undefined;
 
   // A fresh device defaults to the DM's seat, which is right when it is alone
   // and wrong the instant it joins someone else's room. Move it off rather
@@ -406,42 +447,35 @@ export function App() {
      * laptop or a propped-up tablet, so the room is there — it was just being
      * spent on the wrong side.
      */
-    <div className={`app${twoUp ? " two" : ""}${twoUp && dmView ? " dm" : ""}`}>
+    <div
+      className={`app${twoUp ? " two" : ""}${twoUp && dmView ? " dm" : ""}${
+        showTurnBar ? " has-turnbar" : ""
+      }`}
+    >
       <UpdateBar />
-      <RoomBar
-        room={room}
-        status={status}
-        members={members}
-        dmRole={dmRole}
-        dmKey={dmKey}
-        onJoin={joinRoom}
-        onLeave={leaveRoom}
-        onClaim={claimDm}
-      />
+      {/* Said once, for a screen reader: see the h1 rule in app.css. */}
+      <h1>Table Companion</h1>
+      <RoomBar room={room} onJoin={joinRoom} />
 
-      <div className="topbar">
-        <h1>Table Companion</h1>
-        <div className="row">
-          {(builds.length > 0 || dmView) && !adding && (
-            <button onClick={() => setAdding(true)}>Add character</button>
-          )}
-          {builds.length > 0 && (
-            <button
-              onClick={() => {
-                if (confirm("Discard everything on this device?")) reset();
-              }}
-            >
-              Start over
-            </button>
-          )}
-        </div>
-      </div>
-
-      {builds.length > 0 && (
+      {/*
+        * One row of chrome, not three.
+        *
+        * The room bar, the app's own name with two buttons beside it, and the
+        * seat picker were three stacked bars — three hundred and thirty
+        * pixels before the tabs, on a phone, on every screen. The fight
+        * started below the fold on the device it is most often read from, and
+        * everything in those bars except the seat and the code is pressed
+        * about twice a session.
+        *
+        * So: who you are, the code that is read aloud, and a dot for the
+        * connection. The room's own controls and this device's are two
+        * sheets, split by what they act on rather than by what fits.
+        */}
+      {(room || builds.length > 0) && (
         <div className="seatbar">
           {needsClaim ? (
             <span className="label">Joining the table</span>
-          ) : (
+          ) : builds.length > 0 ? (
             <>
               {/* Associated, not merely adjacent — a label beside a control
                   is a label only to somebody who can see them together. */}
@@ -462,10 +496,81 @@ export function App() {
                 ))}
               </select>
             </>
-          )}
+          ) : null}
           {adding && <button onClick={() => setAdding(false)}>Cancel</button>}
+
+          <span className="sb-end">
+            {room && (
+              <>
+                {/* Read aloud, never pressed. It stays on screen because a
+                    table that cannot find the code cannot start. */}
+                <span className="rb-code num" title="Read this out to join">{room.code}</span>
+                {/* The connection, as a dot with the words on it: three
+                    states, and only one of them is worth a sentence. */}
+                <span
+                  className={`rb-dot s-${status}`}
+                  title={STATUS_SAID[status]}
+                  aria-label={STATUS_SAID[status]}
+                  role="img"
+                />
+                {/* "The table", not "the room": the room is where the fight
+                    is happening, it is named that on this very screen, and two
+                    controls answering to one name is an ambiguity for anything
+                    driving by name — a browser suite or a screen reader. */}
+                <button className="sb-i" aria-label="The table" onClick={() => setRoomOpen(true)}>
+                  <span aria-hidden="true">{"\u2699"}</span>
+                </button>
+              </>
+            )}
+            <button className="sb-i" aria-label="This device" onClick={() => setDeviceOpen(true)}>
+              <span aria-hidden="true">{"\u22EF"}</span>
+            </button>
+          </span>
         </div>
       )}
+
+      {room && (
+        <Popover open={roomOpen} title="The table" onClose={() => setRoomOpen(false)}>
+          <RoomMenu
+            room={room}
+            status={status}
+            members={members}
+            dmRole={dmRole}
+            dmKey={dmKey}
+            onLeave={leaveRoom}
+            onClaim={claimDm}
+          />
+        </Popover>
+      )}
+
+      <Popover open={deviceOpen} title="This device" onClose={() => setDeviceOpen(false)}>
+        <div className="rm">
+          <p className="rm-said faint note">
+            Characters, content and seats live on this device. The log lives in
+            the room.
+          </p>
+          {(builds.length > 0 || dmView) && !adding && (
+            <button
+              onClick={() => {
+                setAdding(true);
+                setDeviceOpen(false);
+              }}
+            >
+              Add character
+            </button>
+          )}
+          {builds.length > 0 && (
+            <button
+              onClick={() => {
+                if (confirm("Discard everything on this device?")) reset();
+                setDeviceOpen(false);
+              }}
+            >
+              Start over
+            </button>
+          )}
+        </div>
+      </Popover>
 
       {twoUp && (
         <div className="pane-pin">
@@ -483,7 +588,11 @@ export function App() {
         </div>
       )}
 
-      <div className="pane-main" data-pane={current}>
+      {/* The landmark. Five hundred and seventy-two divs and not one <main>:
+          a screen reader arriving here had no way to skip the room code, the
+          seat selector and the tab bar to reach the thing the page is about.
+          Styled by class, so the tag is free. */}
+      <main className="pane-main" data-pane={current}>
       {!needsCharacter && !needsClaim && (
         <Tabs tabs={tabs} active={current} onPick={setTab} />
       )}
@@ -532,7 +641,7 @@ export function App() {
               ))}
             </div>
             <div className="card-body">
-              <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+              <p className="faint note">
                 Pick your character and this device remembers it. Nobody else&rsquo;s
                 sheet will be offered again.
               </p>
@@ -545,7 +654,7 @@ export function App() {
               <button onClick={() => setBuilding(true)}>Build a character</button>
             </div>
             <div className="card-body">
-              <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+              <p className="faint note">
                 Turning up mid-campaign is normal. Build one at whatever level
                 the party is, or bring one in below.
               </p>
@@ -581,7 +690,7 @@ export function App() {
                 <button onClick={() => setBuilding(true)}>Build a character</button>
               </div>
               <div className="card-body">
-                <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
+                <p className="faint note">
                   Make one here, or bring one in below. Either way it ends up
                   the same character.
                 </p>
@@ -637,7 +746,7 @@ export function App() {
                           <button onClick={() => setBuilding(true)}>Build a character</button>
                         </div>
                         <div className="card-body">
-                          <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
+                          <p className="faint note">
                             Nobody yet. Make one here or bring one in — or leave
                             it and prep the session under Prep.
                           </p>
@@ -657,10 +766,21 @@ export function App() {
 
               {current === "prep" && (
                 <>
-                  <Scenes state={state} append={append} onOpened={setLiveScene} />
+                  {/*
+                    * Ordered by what a DM comes here to DO, which is the same
+                    * rule the fight screen now follows.
+                    *
+                    * Places led it — the tallest card on the screen and the
+                    * one that does the least, a description with nothing on
+                    * the other end of it. Prep between sessions is: build the
+                    * fight, decide who is in it, invent what the books do not
+                    * have. Somewhere to put it is the last of those, so it is
+                    * last.
+                    */}
                   <EncounterBuilder state={state} append={append} />
                   <Npcs state={state} append={append} />
                   <Homebrew state={state} append={append} />
+                  <Scenes state={state} append={append} onOpened={setLiveScene} />
                 </>
               )}
 
@@ -760,7 +880,7 @@ export function App() {
             current !== "log" && (
               <section className="card">
                 <div className="card-body">
-                  <p className="faint" style={{ margin: 0 }}>
+                  <p className="faint note">
                     That seat has no character on this device yet.
                   </p>
                 </div>
@@ -768,6 +888,18 @@ export function App() {
             )
           )}
         </>
+      )}
+
+      {/* What is waiting on you, before what happened — VISION law 7. */}
+      {current === "log" && !needsCharacter && (
+        <WhatNext
+          log={log}
+          state={state}
+          reverted={reverted}
+          seat={seat}
+          reachable={reachable}
+          onGo={setTab}
+        />
       )}
 
       {current === "log" && !needsCharacter && (
@@ -792,7 +924,23 @@ export function App() {
         </section>
       )}
       </Boundary>
-      </div>
+      </main>
+
+      {/*
+        * Your turn, reachable from wherever you are looking. Only off the
+        * fight — on it the whole turn is already on screen, and a second copy
+        * would be a door into a room you are standing in.
+        */}
+      {showTurnBar && mine && (
+        <TurnBar
+          who={mine.id}
+          selfId={mySeatId}
+          actionSpent={Boolean(state.characters[mine.id]?.economy.action)}
+          dodging={myTags.includes("dodging")}
+          onGo={(t) => setTab(t)}
+          append={append}
+        />
+      )}
     </div>
   );
 }

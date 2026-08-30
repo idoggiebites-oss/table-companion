@@ -93,12 +93,12 @@ function Working({
           </div>
         </>
       ) : (
-        <p className="faint" style={{ fontSize: ".82rem", margin: "10px 0 0" }}>
+        <p className="faint note">
           Import a character and the difficulty band appears.
         </p>
       )}
 
-      <div className="row" style={{ marginTop: 12 }}>
+      <div className="row mt-3">
         {state.progression === "xp" && (
           <button
             disabled={t.rawXp <= 0 || levels.length === 0}
@@ -113,7 +113,7 @@ function Working({
             Award {t.rawXp.toLocaleString()} XP
           </button>
         )}
-        <span className="faint" style={{ fontSize: ".8rem" }}>
+        <span className="faint aside">
           The raw total, never the adjusted one.
           {levels.length > 0 && ` ${t.perCharacter.toLocaleString()} each.`}
         </span>
@@ -250,7 +250,7 @@ export function EncounterBuilder({
 
       {open && (
         <div className="card-body">
-          {!catalogue && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
+          {!catalogue && <p className="faint note">Loading…</p>}
 
           {catalogue && (
             <>
@@ -261,7 +261,7 @@ export function EncounterBuilder({
                 onChange={(e) => setText(e.target.value)}
               />
               {/* Kind, then difficulty — the order a DM asks them in. */}
-              <div className="roles" style={{ marginTop: 10 }}>
+              <div className="roles mt-2">
                 {CREATURE_KINDS.filter((k) => (counts.kinds.get(k) ?? 0) > 0).map((k) => (
                   <button
                     key={k}
@@ -274,7 +274,7 @@ export function EncounterBuilder({
                   </button>
                 ))}
               </div>
-              <div className="roles" style={{ marginTop: 6 }}>
+              <div className="roles mt-1">
                 {CR_BANDS.filter((b) => (counts.bands.get(b) ?? 0) > 0).map((b) => (
                   <button
                     key={b}
@@ -361,7 +361,7 @@ export function EncounterBuilder({
 
                   <Working state={state} encounter={encounter} append={append} />
 
-                  <div className="row" style={{ marginTop: 14 }}>
+                  <div className="row mt-3">
                     <input
                       value={encounter.name}
                       aria-label="Encounter name"

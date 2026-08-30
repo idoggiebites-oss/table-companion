@@ -68,7 +68,7 @@ export function ImportPanel({
         {!result && (
           <>
             <input ref={fileRef} type="file" accept=".xml,text/xml,application/xml" onChange={onFile} />
-            <p className="faint" style={{ fontSize: ".85rem", marginTop: 10, marginBottom: 0 }}>
+            <p className="faint note">
               Or paste the XML below.
             </p>
             <textarea
@@ -107,7 +107,7 @@ export function ImportPanel({
 
             {result.issues.length > 0 && (
               <div className="issues">
-                <div className="label" style={{ marginBottom: 8 }}>
+                <div className="label mb-2">
                   {result.issues.length} thing{result.issues.length === 1 ? "" : "s"} to check
                 </div>
                 {result.issues.map((i, n) => (
@@ -121,7 +121,7 @@ export function ImportPanel({
               </div>
             )}
 
-            <div className="row" style={{ marginTop: 14 }}>
+            <div className="row mt-3">
               <button onClick={() => onPrefill(result.base)}>Fill the form with this</button>
               <button onClick={() => onUse(result.base)}>Use as is</button>
             </div>

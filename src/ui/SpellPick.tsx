@@ -82,7 +82,7 @@ export function SpellPick({
       )}
 
       {shown.length === 0 && (
-        <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
+        <p className="faint note">
           Nothing matches.
         </p>
       )}

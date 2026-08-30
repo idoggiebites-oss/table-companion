@@ -40,7 +40,7 @@ export function Shop({
 
       {npc.notes && (
         <div className="card-body" style={{ paddingBottom: 0 }}>
-          <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>{npc.notes}</p>
+          <p className="faint note">{npc.notes}</p>
         </div>
       )}
 
@@ -72,7 +72,7 @@ export function Shop({
           );
         })}
         {shelf.length === 0 && (
-          <p className="faint" style={{ margin: "4px 0", fontSize: ".84rem" }}>
+          <p className="faint note">
             Nothing for sale right now.
           </p>
         )}

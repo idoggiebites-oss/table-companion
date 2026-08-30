@@ -90,6 +90,25 @@ for (const s of ["Arcana", "History"]) {
 await atStep(page, "Race");
 await page.selectOption('select[aria-label="Race"]', "human");
 await page.waitForTimeout(600);
+/* --- the rail does not tick a step nobody has answered ------------------
+
+   With a class and a race chosen, the Spells step drew a green tick before
+   the player had seen the list. Its condition was `klass !== undefined` —
+   which asks whether the QUESTION exists, not whether it has been answered,
+   the same mistake Skills and Gear made and one step further removed.
+
+   Both halves are checked, because a `done` that is simply always false
+   would pass the first on its own and be just as wrong. */
+/* From another step: the one you are standing on shows its number rather than
+   its state, so reading the Spells dot from Spells always says "6". */
+const spellDot = async () => {
+  await atStep(page, "Story");
+  await page.waitForTimeout(300);
+  return page.locator(".cr-rail button", { hasText: /SPELLS/i }).innerText();
+};
+ok("a caster with no spells chosen is not finished with Spells",
+  /\u2713/.test(await spellDot()), false);
+
 await atStep(page, "Scores");
 await page.getByRole("button", { name: "Recommend" }).click();
 await atStep(page, "Story");
@@ -153,6 +172,7 @@ for (const [which, label] of [["Cantrips", /^Cantrips,/], ["Spells", /^Spells,/]
   await hd.click();
   await page.waitForTimeout(200);
 }
+
 
 await page.waitForTimeout(400);
 await atStep(page, "Review");
@@ -324,6 +344,39 @@ await page.waitForTimeout(700);
    tile saying "opens your spells". The tile and the strip below it were two
    doors into the same room; the strip is the one you can see through. */
 await go(page, "combat");
+
+/* --- a caster's turn leads with what a caster does ------------------------
+
+   It always led with the weapon. A wizard's turn opened with "Attack with
+   Quarterstaff" — a thing a wizard does roughly never — and the cantrip was a
+   tap further, behind a question; the small print beside it said "or something
+   else", which sounds like every option on the turn and means another WEAPON.
+   That wording is what sent ME to the weapon picker while looking for the
+   spell, twice, which is enough evidence about the wording.
+
+   Ranked on the numbers rather than on a guess about the class: this wizard
+   swings at +1 and throws a Fire Bolt at +5. The ranger in verify-turns shoots
+   at +7 and casts at +5 and must still lead with the bow — the control, and
+   the half that makes this assertion mean anything. */
+const primaries = await page.locator(".pt-atk").allInnerTexts();
+ok("a wizard's turn leads with the spell, not the quarterstaff",
+  /cast fire bolt/i.test(primaries[0] ?? ""), true);
+ok("and the weapon is still offered, second",
+  primaries.some((t) => /attack with/i.test(t)), true);
+/* The small print names what it opens. */
+ok("the weapon's small print says weapon",
+  /another weapon/i.test(primaries.join(" ")), true);
+ok("and nothing says the vague thing that misled two readings",
+  /something else/i.test(primaries.join(" ")), false);
+
+/* And it does what it says: one tap from the turn to aiming that spell. */
+await page.locator(".pt-atk").first().click();
+await page.waitForTimeout(700);
+ok("pressing it aims that spell rather than opening a menu",
+  await page.locator(".tgt-row").count() > 0, true);
+await page.getByRole("button", { name: /Never mind|Back|Cancel/ }).first().click();
+await page.waitForTimeout(500);
+
 await page.getByRole("button", { name: "What else can I do?" }).click();
 await page.waitForSelector(".hotbar");
 ok("the turn does not offer a door to a room it is already in",

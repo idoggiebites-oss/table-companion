@@ -128,8 +128,10 @@ await go(dm.page, "book");
 ok("and the monster reference, with nobody in the party yet",
   await dm.page.getByRole("button", { name: "Monsters" }).count(), 1);
 await go(dm.page, "party");
+await dm.page.getByRole("button", { name: "This device" }).click();
 ok("making one is offered, not required",
   await dm.page.getByRole("button", { name: "Add character" }).count(), 1);
+await dm.page.getByRole("button", { name: "Close This device" }).click();
 await dm.page.screenshot({ path: `${OUT}/46-dm-table.png`, fullPage: true });
 
 // --- an NPC who never rolls anything --------------------------------------

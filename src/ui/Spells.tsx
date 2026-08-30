@@ -177,7 +177,7 @@ export function Spells({
             </div>
           ))}
           {slots.length === 0 && (
-            <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+            <p className="faint note">
               No spell slots. Cantrips still work.
             </p>
           )}
@@ -203,9 +203,9 @@ export function Spells({
             </button>
           </div>
           <div className="card-body">
-            {book === null && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
+            {book === null && <p className="faint note">Loading…</p>}
             {book?.length === 0 && (
-              <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+              <p className="faint note">
                 No spells on this device. The SRD data this app ships has no
                 spell list — import a compendium under Gear to get one.
               </p>
@@ -222,7 +222,7 @@ export function Spells({
                     spells. Hidden rather than dropped — somebody tracks them,
                     just not from here. */}
                 {book && (
-                  <div className="row" style={{ marginTop: 10 }}>
+                  <div className="row mt-2">
                     <HomebrewToggle
                       on={homebrew}
                       hidden={book.filter((sp) => !isCore(sp.name)).length}
@@ -232,9 +232,8 @@ export function Spells({
                 )}
                 {hiddenFeatures > 0 && (
                   <button
-                    className={`chip${showFeatures ? " on" : ""}`}
+                    className={`chip mt-2${showFeatures ? " on" : ""}`}
                     aria-pressed={showFeatures}
-                    style={{ marginTop: 10 }}
                     onClick={() => setShowFeatures((v) => !v)}
                   >
                     {hiddenFeatures} class features filed as spells
@@ -360,7 +359,7 @@ export function Spells({
       {known.length === 0 && !browsing && (
         <section className="card">
           <div className="card-body">
-            <p className="faint" style={{ margin: 0, fontSize: ".88rem" }}>
+            <p className="faint note">
               No spells yet. Add some — they come from an imported compendium,
               since the SRD data this app ships has no spell list.
             </p>

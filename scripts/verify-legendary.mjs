@@ -43,7 +43,7 @@ await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 const code = await page.locator(".rb-code").innerText();
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector(".seatbar");
+await page.waitForSelector('select[aria-label="Seat"], .join-row');
 await page.selectOption('select[aria-label="Seat"]', "dm");
 await page.waitForTimeout(600);
 
@@ -196,7 +196,7 @@ ok("with the order still below", onTheirs.track < onTheirs.next, true);
 const player = await device("player");
 await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector(".seatbar", { timeout: 20000 });
+await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const joinRow = player.locator(".join-row", { hasText: "Kira Vance" });
 if (await joinRow.count()) await joinRow.first().click();
 await player.waitForTimeout(1500);

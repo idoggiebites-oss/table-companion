@@ -31,7 +31,7 @@ await dm.goto(URL, { waitUntil: "networkidle" });
 await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector(".seatbar");
+await dm.waitForSelector('select[aria-label="Seat"], .join-row');
 await dm.selectOption('select[aria-label="Seat"]', "dm");
 await dm.waitForTimeout(700);
 const go = async (tab) => {

@@ -41,6 +41,62 @@ const tall = await page.evaluate(() => document.body.scrollHeight);
 ok("the sheet is no longer a document to scroll past", tall < 2600, true);
 console.log(`      ${tall}px tall, was 3131`);
 
+/* --- the order, pinned ---------------------------------------------------
+
+   VISION law 7: a screen is ordered by the questions it raises, not by the
+   order its features were built. Nothing enforces that on its own — a new
+   card has to go somewhere and the bottom is always free, which is exactly
+   how conditions and concentration ended up below fourteen hundred pixels of
+   equipment.
+
+   So the order is written down here. This assertion is not defending these
+   six cards; it is defending the decision. A seventh card fails it, and the
+   only way past is to look at the list and say where the new one belongs. */
+const order = await page.evaluate(() =>
+  [...document.querySelectorAll(".card")]
+    .filter((c) => !c.parentElement.closest(".card"))
+    .map((c) => (c.querySelector(".card-hd .label, .label")?.textContent ?? "?").trim()));
+ok("the sheet asks its questions in order: what is true of you, what you can do, what you are",
+  order.join(" > "),
+  "ranger 8 > Hit points > State > Pools > Attacks > Worn & wielded");
+
+/* --- a press is acknowledged ---------------------------------------------
+
+   A hundred and forty buttons and not one of them moved when pressed. On a
+   phone the finger covers the target, so the only confirmation a tap
+   registered was whatever changed afterwards — and in this app "afterwards"
+   is often a round trip to another device. It is a good part of what reads as
+   clunky.
+
+   Measured on the live element rather than by reading the stylesheet, because
+   a rule that exists and a rule that WINS are different claims. A pixel, not
+   a scale: these sit in lists of 44px rows and anything that changes a
+   button's size reflows the row under a thumb still resting on it. */
+/* The tab already showing, so the press is a no-op — pressing any OTHER
+   button here navigates, and the two assertions further down then measure a
+   screen that is not the sheet. */
+const tab = page.locator('.tabs [data-tab="sheet"]').first();
+const atRest = await tab.evaluate((e) => getComputedStyle(e).transform);
+const seat = await tab.boundingBox();
+await page.mouse.move(seat.x + seat.width / 2, seat.y + seat.height / 2);
+await page.mouse.down();
+await page.waitForTimeout(200);
+const held = await tab.evaluate((e) => ({
+  transform: getComputedStyle(e).transform,
+  background: getComputedStyle(e).backgroundColor,
+}));
+await page.mouse.up();
+await page.waitForTimeout(250);
+ok("a button at rest is not translated", atRest, "none");
+ok("and moves one pixel down while held", held.transform, "matrix(1, 0, 0, 1, 0, 1)");
+ok("and darkens, so the press reads even under a finger",
+  held.background, "rgb(22, 26, 24)");
+ok("returning when released", await tab.evaluate((e) => getComputedStyle(e).transform), "none");
+
+/* One landmark, so a screen reader can skip the room code, the seat selector
+   and the tab bar to reach what the page is actually about. */
+ok("the content region is a landmark", await page.locator("main").count(), 1);
+
 ok("skills are not on it", await page.locator(".dw-list").count(), 0);
 ok("nor forty rows of features", await page.locator(".feat-row").count(), 0);
 /* They are three buttons that answer the question without being opened. */

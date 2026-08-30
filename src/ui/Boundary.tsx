@@ -85,7 +85,7 @@ export class Boundary extends Component<Props, State> {
               {copied ? "Copied" : "Copy details"}
             </button>
           </div>
-          <p className="faint" style={{ fontSize: ".78rem", margin: "8px 0 0" }}>
+          <p className="faint note">
             Copying the details and sending them on is what makes this fixable.
           </p>
         </div>

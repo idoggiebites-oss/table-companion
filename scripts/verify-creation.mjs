@@ -170,6 +170,23 @@ ok("the class states its own facts", note.includes("d10 hit die"), true);
 ok("and its saves", note.includes("STR and DEX"), true);
 ok("ranger does not claim to cast at level 1", note.includes("casts from level 1"), false);
 
+/* --- and the rail does not change when you walk past it -------------------
+
+   The step you are STANDING on used to hide its own tick, and that one
+   condition is the whole of what was written down as "the rail settles":
+   Gear is finished before you reach it, so it ticked and then lost the tick
+   when you arrived; Class becomes finished while you stand there choosing,
+   so it stayed a number until you left. Where you are is the gold dot;
+   what is answered is the tick. Two marks, not one deciding between them. */
+const dots = async () =>
+  (await player.page.locator(".cr-rail .cr-dot").allInnerTexts()).map((t) => t.trim());
+const railHere = await dots();
+ok("the step you are on ticks where it is answered", railHere[0], "✓");
+ok("and a step with its question still open keeps its number", railHere[4], "5");
+await atStep(player.page, "Skills");
+ok("and nothing moves by walking away from it", (await dots()).join(""), railHere.join(""));
+await atStep(player.page, "Class");
+
 // class skills: three from a list of eight
 await atStep(player.page, "Skills");
 await player.page.getByRole("button", { name: "Train stealth" }).click();
@@ -373,6 +390,77 @@ const noSourceOnScreen = async (pg, where) => {
 };
 
 await noSourceOnScreen(player.page, "the builder");
+
+/* --- and the Spells step ticks when it HAS been answered -----------------
+
+   The other half of the check in verify-spells, which asserts a fresh caster
+   is NOT finished with Spells. On its own that would also pass if `done` were
+   simply always false, so this builds the smallest caster there is — a warlock
+   at one, two cantrips and two spells — and fills the allowance.
+
+   Its own device: the wizard over in verify-spells is deliberately created
+   with no spells at all, because the Spells tab has to explain where they
+   come from, and taking any here would remove the thing that suite measures. */
+const caster = await device("caster");
+await caster.page.locator('input[aria-label="Room code"]').fill(code);
+await caster.page.getByRole("button", { name: "Join", exact: true }).click();
+await caster.page.waitForTimeout(1200);
+await caster.page.getByRole("button", { name: "Build a character" }).click();
+await atStep(caster.page, "Class");
+await caster.page.waitForSelector(".klass-cards", { timeout: 20000 });
+await caster.page.getByRole("button", { name: "Warlock", exact: true }).click();
+await caster.page.waitForTimeout(600);
+await atStep(caster.page, "Race");
+await caster.page.selectOption('select[aria-label="Race"]', "human");
+await caster.page.waitForTimeout(800);
+
+/* Read from somewhere else on the rail. The step you are STANDING on shows
+   its number rather than its state, so asking the Spells dot while sitting on
+   Spells always answers "6" — which reads exactly like "not done" and would
+   have made this pass for the wrong reason. */
+const spellDot = async () => {
+  await atStep(caster.page, "Story");
+  await caster.page.waitForTimeout(300);
+  return caster.page.locator(".cr-rail button", { hasText: /SPELLS/i }).innerText();
+};
+ok("a fresh warlock is not finished with Spells either",
+  /\u2713/.test(await spellDot()), false);
+
+/* Fill both allowances. Bounded rather than counted, because the number is
+   the class table's business and this is checking the rail, not the table. */
+for (let i = 0; i < 12; i++) {
+  if (/\u2713/.test(await spellDot())) break;
+  await atStep(caster.page, "Spells");
+  const heads = caster.page.getByRole("button", { name: /^(Cantrips|Spells), / });
+  let opened = false;
+  for (let h = 0; h < (await heads.count()); h++) {
+    const one = heads.nth(h);
+    /* The aria-label, not innerText: these headers are uppercased in CSS, so
+       innerText reads "0 OF 2" and a lowercase "of" never matches. The
+       accessible name keeps the case the source wrote. */
+    const m = /(\d+) of (\d+)/.exec((await one.getAttribute("aria-label")) ?? "");
+    if (!m || m[1] === m[2]) continue;
+    if ((await one.getAttribute("aria-expanded")) !== "true") {
+      await one.scrollIntoViewIfNeeded();
+      await one.click();
+      await caster.page.waitForTimeout(600);
+    }
+    opened = true;
+    break;
+  }
+  if (!opened) break;
+  /* A name alone is not a choice here: the row opens to its description and
+     the take sits inside it, which is the point of this picker. */
+  const row = caster.page.locator('.chooser-list .menu-hd[aria-expanded="false"]').first();
+  if (!(await row.count())) break;
+  await row.click();
+  await caster.page.waitForTimeout(300);
+  const take = caster.page.locator(".chooser-list").getByRole("button", { name: "Take it" }).first();
+  if (!(await take.count())) break;
+  await take.click();
+  await caster.page.waitForTimeout(400);
+}
+ok("and is finished once the allowance is filled", /\u2713/.test(await spellDot()), true);
 
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;

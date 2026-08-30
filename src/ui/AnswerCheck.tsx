@@ -35,7 +35,7 @@ export function AnswerCheck({
       <section className="card ask-mine done">
         <div className="card-body">
           <span className="label">Sent · {check.answers[build.id]}</span>
-          <p className="faint" style={{ margin: "4px 0 0", fontSize: ".84rem" }}>
+          <p className="faint note">
             The DM has it.
           </p>
         </div>
@@ -76,7 +76,7 @@ export function AnswerCheck({
             rule while it is being used; "advantage" alone teaches nothing. */}
         {why && <p className="stance-why">{why}</p>}
         {check.dc !== undefined && (
-          <p className="faint" style={{ margin: "0 0 8px", fontSize: ".84rem" }}>
+          <p className="faint note">
             Beat {check.dc}.
           </p>
         )}

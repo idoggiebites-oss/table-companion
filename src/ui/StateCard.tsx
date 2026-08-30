@@ -57,7 +57,7 @@ export function StateCard({
       <div className="card-hd"><span className="label">State</span></div>
 
       <div className="card-body">
-        <span className="label" style={{ display: "block", marginBottom: 8 }}>
+        <span className="label standalone under">
           Concentration
         </span>
         {state.concentratingOn ? (
@@ -88,7 +88,7 @@ export function StateCard({
       </div>
 
       <div className="card-body" style={{ borderTop: "1px solid var(--rule)" }}>
-        <span className="label" style={{ display: "block", marginBottom: 8 }}>Conditions</span>
+        <span className="label standalone under">Conditions</span>
 
         {/* What the condition DOES, for the one you have. "What does
             frightened mean again" is the most asked question at a table, and

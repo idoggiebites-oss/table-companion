@@ -70,7 +70,7 @@ export function Recap({
         {/* Only when there is one. A back button that goes nowhere is worse
             than none — it says there is more to see. */}
         {all.length > 1 && (
-          <div className="row" style={{ marginTop: 12 }}>
+          <div className="row mt-3">
             <button
               disabled={at >= all.length - 1}
               aria-label="An earlier session"
@@ -83,7 +83,7 @@ export function Recap({
                 Since
               </button>
             )}
-            <span className="faint" style={{ fontSize: ".78rem" }}>
+            <span className="faint aside">
               {all.length - at} of {all.length}
             </span>
           </div>

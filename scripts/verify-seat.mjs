@@ -145,7 +145,7 @@ await dm.page.locator('input[aria-label="Character name"]').fill("Kira Vance");
 await answerGear(dm.page);
 await atStep(dm.page, "Review");
 await dm.page.getByRole("button", { name: "Create character" }).click();
-await dm.page.waitForSelector(".seatbar", { timeout: 20000 });
+await dm.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 
 ok("the DM may sit anywhere — including in a character",
   await seats(dm.page), ["the DM", "Kira Vance"]);
@@ -158,7 +158,7 @@ await go(dm.page, "party");
 const player = await device("player");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
-await player.page.waitForSelector(".seatbar", { timeout: 20000 });
+await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await player.page.waitForTimeout(1200);
 
 // A joining device holds no character, so it is asked which one it is rather
@@ -182,41 +182,49 @@ ok("so the monster reference is not theirs to open",
 // Reload: the answer has to survive, on both sides, or a DM refreshing the
 // page loses their own campaign.
 await dm.page.reload({ waitUntil: "networkidle" });
-await dm.page.waitForSelector(".seatbar", { timeout: 20000 });
+await dm.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await dm.page.waitForTimeout(1500);
 ok("the DM is still the DM after a reload", await seats(dm.page), ["the DM", "Kira Vance"]);
 ok("and still in the DM's seat",
   await dm.page.locator('select[aria-label="Seat"]').inputValue(), "dm");
 
 await player.page.reload({ waitUntil: "networkidle" });
-await player.page.waitForSelector(".seatbar", { timeout: 20000 });
+await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await player.page.waitForTimeout(1500);
 ok("the player is still not, after a reload", await seats(player.page), ["Kira Vance"]);
 
 // ---- the DM key: a second device, and recovery after losing one ----------
 
-ok("the key is not on screen by default — the room bar is what people lean over to read",
-  await dm.page.locator(".rb-second .rb-code").count(), 0);
+/* The room's controls are behind the header's gear now. Opened first, so
+   "not on screen" means what it says: the key is not there even once you are
+   looking at the place it lives. */
+await dm.page.getByRole("button", { name: "The table" }).click();
+await player.page.getByRole("button", { name: "The table" }).click();
+ok("the key is not on screen by default — it is a secret in a room everybody reads",
+  await dm.page.locator(".rm-key").count(), 0);
 ok("a player is never even offered it", await player.page.getByRole("button", { name: "DM key" }).count(), 0);
+await player.page.getByRole("button", { name: "Close The table" }).click();
 
 await dm.page.getByRole("button", { name: "DM key" }).click();
-await dm.page.waitForSelector(".rb-second .rb-code");
-const key = await dm.page.locator(".rb-second .rb-code").innerText();
+await dm.page.waitForSelector(".rm-key");
+const key = await dm.page.locator(".rm-key").innerText();
 await dm.page.screenshot({ path: "/tmp/tc-shots/43-dm-key.png", clip: { x: 0, y: 0, width: 430, height: 240 } });
 ok("it is grouped for typing, not shouting", /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key), true);
 ok("and is not the join code", key.replace("-", "") === code, false);
+await dm.page.getByRole("button", { name: "Close The table" }).click();
 
 // The tablet: the same DM, a second device. It joins like anyone else first.
 const tablet = await device("tablet");
 await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
-await tablet.page.waitForSelector(".seatbar", { timeout: 20000 });
+await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1200);
 ok("arrives holding nothing, like anyone else",
   await tablet.page.locator('select[aria-label="Seat"]').count(), 0);
 
+await tablet.page.getByRole("button", { name: "The table" }).click();
 await tablet.page.getByRole("button", { name: /I.m the DM/ }).click();
-await tablet.page.screenshot({ path: "/tmp/tc-shots/44-claim.png", clip: { x: 0, y: 0, width: 430, height: 240 } });
+await tablet.page.screenshot({ path: "/tmp/tc-shots/44-claim.png" });
 await tablet.page.locator('input[aria-label="DM key"]').fill("QQQQQQQQ");
 await tablet.page.getByRole("button", { name: "Claim DM" }).click();
 await tablet.page.waitForTimeout(900);
@@ -226,6 +234,7 @@ ok("and changes nothing", await tablet.page.locator('select[aria-label="Seat"]')
 await tablet.page.locator('input[aria-label="DM key"]').fill(key);
 await tablet.page.getByRole("button", { name: "Claim DM" }).click();
 await tablet.page.waitForTimeout(1200);
+await tablet.page.getByRole("button", { name: "Close The table" }).click();
 ok("the right key seats the tablet as a DM too", await seats(tablet.page), ["the DM", "Kira Vance"]);
 await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
 await tablet.page.waitForTimeout(400);
@@ -235,11 +244,12 @@ ok("with the DM's tools", await tablet.page.getByRole("button", { name: "Monster
 // Additive, not a transfer: the laptop is still the DM. A DM with two devices
 // is one person, not a handover.
 await dm.page.reload({ waitUntil: "networkidle" });
-await dm.page.waitForSelector(".seatbar", { timeout: 20000 });
+await dm.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await dm.page.waitForTimeout(1500);
 ok("and the first device did not lose the seat", await seats(dm.page), ["the DM", "Kira Vance"]);
 
 // Leaving the room returns a device to being its own table.
+await player.page.getByRole("button", { name: "The table" }).click();
 await player.page.getByRole("button", { name: "Leave" }).click();
 await player.page.waitForTimeout(800);
 ok("a device on its own is its own DM again", await seats(player.page), ["the DM", "Kira Vance"]);

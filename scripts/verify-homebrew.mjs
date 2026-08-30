@@ -43,7 +43,7 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector(".seatbar");
+await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
 await dm.page.selectOption('select[aria-label="Seat"]', "dm");
 await dm.page.waitForSelector(".pm-name");
 
@@ -123,15 +123,22 @@ await dm.page.screenshot({ path: `${OUT}/31-homebrew-fight.png` });
 const tablet = await device("tablet");
 await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
-await tablet.page.waitForSelector(".seatbar", { timeout: 20000 });
+await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1000);
 // The DM's second device is still the DM, but it has to prove it — joining
 // with the room code makes you a player, whoever you are.
+/* The table's own controls live in a sheet now — the header keeps the code
+   and a dot, and everything pressed is behind the gear. "The room" is a
+   different thing on this screen: the place the fight is in. */
+await dm.page.getByRole("button", { name: "The table" }).click();
 await dm.page.getByRole("button", { name: "DM key" }).click();
-const dmKey = await dm.page.locator(".rb-second .rb-code").innerText();
+const dmKey = await dm.page.locator(".rm-key").innerText();
+await dm.page.getByRole("button", { name: "Close The table" }).click();
+await tablet.page.getByRole("button", { name: "The table" }).click();
 await tablet.page.getByRole("button", { name: /I.m the DM/ }).click();
 await tablet.page.locator('input[aria-label="DM key"]').fill(dmKey);
 await tablet.page.getByRole("button", { name: "Claim DM" }).click();
+await tablet.page.getByRole("button", { name: "Close The table" }).click();
 await tablet.page.waitForTimeout(1200);
 await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
 await go(tablet.page, "prep");

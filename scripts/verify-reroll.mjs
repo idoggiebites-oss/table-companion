@@ -44,14 +44,14 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector(".seatbar");
+await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
 await dm.page.selectOption('select[aria-label="Seat"]', "dm");
 await dm.page.waitForTimeout(600);
 
 const player = await device("player");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
-await player.page.waitForSelector(".seatbar", { timeout: 20000 });
+await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.page.locator(".join-row", { hasText: "Kira Vance" });
 if (await join.count()) await join.first().click();
 await player.page.waitForSelector(".hp-big", { timeout: 20000 });

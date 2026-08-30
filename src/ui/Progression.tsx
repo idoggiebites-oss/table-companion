@@ -137,7 +137,7 @@ export function Progression({
             ))}
           </div>
         )}
-        <p className="faint" style={{ fontSize: ".82rem", margin: "10px 0 0" }}>
+        <p className="faint note">
           {xpMode
             ? "Award the raw total from an encounter, never the adjusted one."
             : "No totals in a milestone campaign — you decide when."}

@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { describeAttack, type ResolvedAttack } from "../domain/attack.js";
+import { castingAbility, leadsWithSpell, spellAttackBonus } from "../domain/spellcast.js";
 import { formatModifier } from "../domain/abilities.js";
 import type { EffectiveBuild } from "../domain/build.js";
 import { levelLabel, type KnownSpell } from "../domain/spells.js";
@@ -256,6 +257,32 @@ export function PlayerTurn({
     (s) => cast.ready(s) && cast.canAfford(s),
   );
 
+  /*
+   * Which of the two a turn should lead with.
+   *
+   * It always led with the weapon: a wizard's turn opened with "Attack with
+   * Quarterstaff" — the thing a wizard does roughly never — and their cantrip
+   * was a tap further, behind a question. The small print beside it read "or
+   * something else", which sounds like every other option and means another
+   * WEAPON, so the one route a caster wants is the one route that button does
+   * not go to.
+   *
+   * Ranked on the numbers rather than on a guess about the class, because the
+   * numbers are a thing this app can stand behind: Merlin swings a quarterstaff
+   * at +1 and throws a Fire Bolt at +5, so the spell leads; a ranger shoots at
+   * +7 and casts at +5, so the bow does. A multiclass sorts itself out without
+   * anybody writing down what a Bladesinger is supposed to prefer.
+   */
+  const spellAttack =
+    build && castable.length > 0
+      ? spellAttackBonus(
+          build.proficiencyBonus,
+          build.abilityMods[castingAbility(build.classes.map((c) => c.classId))],
+        )
+      : null;
+  const bestSwing = attacks.length > 0 ? Math.max(...attacks.map((a) => a.toHit)) : null;
+  const leadWithSpell = leadsWithSpell(spellAttack, bestSwing);
+
   /** Everyone else in the fight you could put a hand on the shoulder of. */
   const allies = combat.order.filter(
     (c) => c.source.kind === "character" && c.id !== self?.id,
@@ -488,7 +515,7 @@ export function PlayerTurn({
                   </button>
                 ))}
                 {allies.length === 0 && (
-                  <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+                  <p className="faint note">
                     Nobody else is in this fight.
                   </p>
                 )}
@@ -529,7 +556,7 @@ export function PlayerTurn({
                   </button>
                   <button onClick={() => setPicking("menu")}>Back</button>
                 </div>
-                <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
+                <p className="faint note">
                   It costs your reaction when it fires, not now.
                 </p>
               </div>
@@ -637,7 +664,7 @@ export function PlayerTurn({
                       <span className="faint num"> · {sl.left} left</span>
                     </button>
                   ))}
-                  <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
+                  <p className="faint note">
                     A higher slot makes it stronger. Nothing is spent yet.
                   </p>
                   <button onClick={() => setCasting(null)}>Back</button>
@@ -666,7 +693,7 @@ export function PlayerTurn({
                     </button>
                   ))}
                   {castable.length === 0 && (
-                    <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+                    <p className="faint note">
                       {cast.book === null
                         ? "Looking up your spells…"
                         : "Nothing you can cast right now — no slot left, or nothing prepared."}
@@ -695,14 +722,51 @@ export function PlayerTurn({
               />
             ) : (
               <>
-                <button
-                  className="pt-atk"
-                  disabled={character.economy.action || attacks.length === 0}
-                  onClick={() => setPicking("attack")}
-                >
-                  {attacks.length > 0 ? `Attack with ${attacks[0]!.name}` : "Attack"}
-                  {attacks.length > 1 && <small> or something else</small>}
-                </button>
+                {/*
+                  * Two primaries, the character's own first — see
+                  * leadWithSpell. And the small print names what it opens: "or
+                  * something else" beside a weapon reads like every other
+                  * option on the turn and means another WEAPON, which is the
+                  * one thing a caster is not looking for.
+                  */}
+                {(leadWithSpell
+                  ? ["cast" as const, "swing" as const]
+                  : ["swing" as const, "cast" as const]
+                ).map((which) =>
+                  which === "swing" ? (
+                    <button
+                      key="swing"
+                      className="pt-atk"
+                      disabled={character.economy.action || attacks.length === 0}
+                      onClick={() => setPicking("attack")}
+                    >
+                      {attacks.length > 0 ? `Attack with ${attacks[0]!.name}` : "Attack"}
+                      {attacks.length > 1 && <small> or another weapon</small>}
+                    </button>
+                  ) : castable.length > 0 ? (
+                    <button
+                      key="cast"
+                      className="pt-atk"
+                      disabled={character.economy.action}
+                      /* It says Cast Fire Bolt, so it casts Fire Bolt — the
+                         same route the tile in the menu takes, rather than
+                         opening a menu and asking again. */
+                      onClick={() => {
+                        const sp = castable[0]!;
+                        setPicking("cast");
+                        if (sp.level === 0) return setAiming({ spell: sp, atLevel: 0 });
+                        const options = cast.optionsFor(sp);
+                        if (options.length === 1) {
+                          return setAiming({ spell: sp, atLevel: options[0]!.level });
+                        }
+                        setCasting(sp);
+                      }}
+                    >
+                      Cast {castable[0]!.name}
+                      {castable.length > 1 && <small> or another spell</small>}
+                    </button>
+                  ) : null,
+                )}
                 <button className="pt-more" onClick={() => setPicking("menu")}>
                   What else can I do?
                 </button>

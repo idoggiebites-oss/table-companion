@@ -163,7 +163,7 @@ export function EditAsks({
             </div>
           </div>
         ))}
-        <p className="faint" style={{ fontSize: ".8rem", margin: "6px 0 0" }}>
+        <p className="faint note">
           Yes opens the builder for them once. Everything that has happened to
           the character stays — this changes who they are on paper, not that
           they are standing there.

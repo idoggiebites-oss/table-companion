@@ -141,7 +141,7 @@ export function NewCharacter({
         </div>
         <div className="card-body" hidden={!byHand && !imported}>
           {imported && (
-            <p className="faint" style={{ fontSize: ".85rem", marginTop: 0 }}>
+            <p className="faint note">
               Filled in from {imported.source === "fightclub" ? "a Fight Club export" : "an import"} —
               armour class, speed and spell slots are the ones it could not carry.
               {importedClasses && (
@@ -196,7 +196,7 @@ export function NewCharacter({
 
           <div className="field">
             <span className="label">Ability scores</span>
-            <div className="six" style={{ marginTop: 6 }}>
+            <div className="six mt-1">
               {ABILITIES.map((a) => (
                 <div key={a}>
                   <label className="label" htmlFor={`ab-${a}`}>{a}</label>
@@ -209,7 +209,7 @@ export function NewCharacter({
 
           <div className="field">
             <span className="label">Saving throw proficiencies</span>
-            <div className="chips" style={{ marginTop: 8 }}>
+            <div className="chips mt-2">
               {ABILITIES.map((a) => (
                 <button key={a} type="button"
                   className={`chip${saves.includes(a) ? " on" : ""}`}
@@ -223,7 +223,7 @@ export function NewCharacter({
 
           <div className="field">
             <span className="label">Skill proficiencies</span>
-            <div className="chips" style={{ marginTop: 8 }}>
+            <div className="chips mt-2">
               {SKILL_IDS.map((s) => (
                 <button key={s} type="button"
                   className={`chip${skills.includes(s) ? " on" : ""}`}
@@ -239,7 +239,7 @@ export function NewCharacter({
 
           <div className="field">
             <span className="label">Spell slots by level — leave at zero for a non-caster</span>
-            <div className="six" style={{ marginTop: 6 }}>
+            <div className="six mt-1">
               {slots.map((n, i) => (
                 <div key={i}>
                   <label className="label" htmlFor={`sl-${i}`}>{i + 1}</label>
@@ -254,9 +254,9 @@ export function NewCharacter({
             </div>
           </div>
 
-          <div className="row" style={{ marginTop: 8 }}>
+          <div className="row mt-2">
             <button type="submit">Create character</button>
-            <span className="faint" style={{ fontSize: ".85rem" }}>
+            <span className="faint aside">
               Hit die is set from class ({HIT_DIE[classId]}), and {SKILLS.perception ? "passive perception" : ""} is derived.
             </span>
           </div>

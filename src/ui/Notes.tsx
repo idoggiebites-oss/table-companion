@@ -76,7 +76,7 @@ export function Notes({
           }}
           onBlur={save}
         />
-        <div className="row" style={{ marginTop: 10 }}>
+        <div className="row mt-2">
           <button disabled={!dirty} onClick={save}>Save</button>
           {dirty && (
             <button aria-label="Throw away the changes" onClick={() => setDraft(text)}>

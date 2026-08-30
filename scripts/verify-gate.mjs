@@ -77,7 +77,7 @@ await page.waitForSelector(".rb-code", { timeout: 20000 });
 ok("and so does the room API", (await page.locator(".rb-code").innerText()).length, 6);
 await page.waitForTimeout(1200);
 ok("including the socket, which carries the cookie too",
-  (await page.locator(".rb-status").innerText()).toLowerCase().includes("live"), true);
+  await page.locator(".rb-dot").getAttribute("aria-label"), "Live");
 
 // A fresh device is challenged again — the cookie is per-browser.
 const other = await browser.newContext({ viewport: { width: 430, height: 900 } });

@@ -36,7 +36,7 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector(".seatbar");
+await dm.waitForSelector('select[aria-label="Seat"], .join-row');
 await dm.selectOption('select[aria-label="Seat"]', "dm");
 await dm.waitForSelector(".pm-name");
 
@@ -79,7 +79,7 @@ ok("without spilling the note itself", row.includes("stair gives"), false);
 const player = await device("player");
 await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector(".seatbar", { timeout: 20000 });
+await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.locator(".join-row", { hasText: "Kira Vance" });
 if (await join.count()) await join.first().click();
 await player.waitForSelector(".hp-big", { timeout: 20000 });
@@ -163,12 +163,19 @@ ok("the player's log says the room changed", /dark/i.test(after), true);
 const second = await device("second");
 await second.locator('input[aria-label="Room code"]').fill(code);
 await second.getByRole("button", { name: "Join", exact: true }).click();
-await second.waitForSelector(".seatbar", { timeout: 20000 });
+await second.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+/* The table's own controls live in a sheet now — the header keeps the code
+   and a dot, and everything pressed is behind the gear. "The room" is a
+   different thing on this screen: the place the fight is in. */
+await dm.getByRole("button", { name: "The table" }).click();
 await dm.getByRole("button", { name: "DM key" }).click();
-const dmKey = await dm.locator(".rb-second .rb-code").innerText();
+const dmKey = await dm.locator(".rm-key").innerText();
+await dm.getByRole("button", { name: "Close The table" }).click();
+await second.getByRole("button", { name: "The table" }).click();
 await second.getByRole("button", { name: /I.m the DM/ }).click();
 await second.locator('input[aria-label="DM key"]').fill(dmKey);
 await second.getByRole("button", { name: "Claim DM" }).click();
+await second.getByRole("button", { name: "Close The table" }).click();
 await second.waitForTimeout(1200);
 await second.selectOption('select[aria-label="Seat"]', "dm");
 await second.waitForTimeout(600);

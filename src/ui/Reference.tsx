@@ -84,7 +84,7 @@ export function Reference({ homebrew }: { homebrew: Readonly<Record<string, Stat
       {shown && (
         <div className="card-body">
           {error && <p className="err">Could not load the monster data.</p>}
-          {!catalogue && !error && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
+          {!catalogue && !error && <p className="faint note">Loading…</p>}
 
           {catalogue && (
             <>
@@ -106,7 +106,7 @@ export function Reference({ homebrew }: { homebrew: Readonly<Record<string, Stat
                 />
               </div>
               {/* Kind, then difficulty — the order a DM asks them in. */}
-              <div className="roles" style={{ marginTop: 10 }}>
+              <div className="roles mt-2">
                 {CREATURE_KINDS.filter((k) => (counts.kinds.get(k) ?? 0) > 0).map((k) => (
                   <button
                     key={k}
@@ -119,7 +119,7 @@ export function Reference({ homebrew }: { homebrew: Readonly<Record<string, Stat
                   </button>
                 ))}
               </div>
-              <div className="roles" style={{ marginTop: 6 }}>
+              <div className="roles mt-1">
                 {CR_BANDS.filter((b) => (counts.bands.get(b) ?? 0) > 0).map((b) => (
                   <button
                     key={b}
@@ -132,7 +132,7 @@ export function Reference({ homebrew }: { homebrew: Readonly<Record<string, Stat
                   </button>
                 ))}
               </div>
-              <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
+              <p className="faint note">
                 {results.length} of {catalogue?.length ?? 0}
               </p>
 

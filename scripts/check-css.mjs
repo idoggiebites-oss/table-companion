@@ -227,3 +227,42 @@ if (undersized.length > 0) {
 } else {
   console.log(`check-css: no min-height under ${TAP}px without a stated reason`);
 }
+
+/*
+ * A custom property that was never defined.
+ *
+ * CSS fails silently and it fails WHOLE: `border: 1px solid var(--line)` with
+ * no --line is not a border in the wrong colour, it is no border at all — the
+ * entire shorthand is invalid at computed-value time and falls back to its
+ * initial value. Nothing warns. The build succeeds. The page renders.
+ *
+ * Twenty-four declarations across this stylesheet were doing that, and they
+ * had clustered in the newest sections, because a variable invented from
+ * memory while writing a new component is exactly how it happens: --line for
+ * --rule, --accent for --gold, --sunk for --ground. Three of the seven
+ * controls on a creature's row had never had a border, which is a good part
+ * of why recent work looked flatter than old work.
+ *
+ * A fallback — var(--hp, 1) — is a deliberate default and always fine.
+ */
+function deadVariables(css) {
+  const defined = new Set([...css.matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((m) => m[1]));
+  const bad = [];
+  for (const m of css.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)) {
+    if (!defined.has(m[1])) {
+      const line = css.slice(0, m.index).split("\n").length;
+      bad.push(`${line}: var(${m[1]}) is never defined — the whole declaration is dropped`);
+    }
+  }
+  return [...new Set(bad)];
+}
+
+const dead = deadVariables(readFileSync("src/app.css", "utf8"));
+if (dead.length > 0) {
+  console.error(`check-css: ${dead.length} declaration(s) using a variable that does not exist\n`);
+  for (const d of dead) console.error(`  \u2717 ${d}`);
+  console.error("\n  Define it, fix the name, or give it a fallback: var(--x, <value>).");
+  process.exitCode = 1;
+} else {
+  console.log("check-css: every custom property used is defined");
+}

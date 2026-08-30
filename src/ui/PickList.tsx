@@ -54,7 +54,7 @@ export function PickList({
 
       {open && (
         <div className="pl-body">
-          {note && <p className="cr-note" style={{ marginTop: 0 }}>{note}</p>}
+          {note && <p className="cr-note mt-0">{note}</p>}
           {options.length > 12 && (
             <input
               value={q}
@@ -83,7 +83,7 @@ export function PickList({
               );
             })}
             {shown.length === 0 && (
-              <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
+              <p className="faint note">
                 Nothing matches.
               </p>
             )}

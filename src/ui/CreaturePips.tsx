@@ -14,10 +14,18 @@
 import { ECONOMY, type Economy, type EconomyKind } from "../domain/combat.js";
 import type { EventBody } from "../domain/events.js";
 
+/*
+ * Read on the row, not only by a screen reader.
+ *
+ * These were "A", "B" and "R", with the words they stand for living in the
+ * aria-label — so the assistive reader heard "Goblin 1 bonus action" and the
+ * person holding the phone got a letter. The first thing anyone asked about
+ * this feature was what the letters meant.
+ */
 const SHORT: Readonly<Record<EconomyKind, string>> = {
-  action: "A",
-  bonus: "B",
-  reaction: "R",
+  action: "ACT",
+  bonus: "BON",
+  reaction: "REA",
 };
 const LONG: Readonly<Record<EconomyKind, string>> = {
   action: "action",

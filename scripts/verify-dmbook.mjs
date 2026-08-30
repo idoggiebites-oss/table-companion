@@ -29,7 +29,7 @@ await page.goto(URL, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector(".seatbar");
+await page.waitForSelector('select[aria-label="Seat"], .join-row');
 await page.selectOption('select[aria-label="Seat"]', "dm");
 await page.waitForTimeout(600);
 await go(page, "book");

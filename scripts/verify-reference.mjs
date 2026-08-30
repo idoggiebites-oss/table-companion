@@ -36,7 +36,7 @@ const go = async (page, tab) => {
 
 await page.goto(URL, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector(".seatbar");
+await page.waitForSelector('select[aria-label="Seat"], .join-row');
 
 // A player must not be able to look monsters up — that is the disclosure
 // ladder. With tabs the claim gets stronger: the section does not exist for
@@ -98,7 +98,7 @@ ok("every result is within the band", crs.every((c) => {
 // and it survives losing the network, which is the whole point at a table
 await ctx.setOffline(true);
 await page.reload({ waitUntil: "domcontentloaded" });
-await page.waitForSelector(".seatbar", { timeout: 20000 });
+await page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await go(page, "book");
 await page.getByRole("button", { name: "Monsters" }).click();
 await page.waitForSelector(".mrow", { timeout: 20000 });

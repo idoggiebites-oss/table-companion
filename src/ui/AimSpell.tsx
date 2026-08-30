@@ -98,7 +98,7 @@ export function AimSpell({
     return (
       <div className="swing-step">
         <span className="label">{spell.name}</span>
-        <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+        <p className="faint note">
           Looking up what it does…
         </p>
         <button onClick={onCancel}>Never mind</button>
@@ -111,7 +111,7 @@ export function AimSpell({
     return (
       <div className="swing-step">
         <span className="label">{spell.name} is cast</span>
-        <p className="faint" style={{ margin: 0, fontSize: ".86rem" }}>
+        <p className="faint note">
           Nothing to roll. Tell the table what it does.
         </p>
         <div className="row">
@@ -143,7 +143,7 @@ export function AimSpell({
           </button>
         ))}
         {targets.length === 0 && (
-          <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+          <p className="faint note">
             Nothing you can see.
           </p>
         )}
@@ -196,7 +196,7 @@ export function AimSpell({
                 </button>
               ))}
           </div>
-          <p className="faint" style={{ fontSize: ".8rem", margin: "6px 0 0" }}>
+          <p className="faint note">
             One roll of damage, and each of them saves for themselves.
           </p>
         </>
@@ -283,7 +283,7 @@ export function AimSpell({
         </button>
         <button onClick={() => setTarget(null)}>Back</button>
       </div>
-      <p className="faint" style={{ fontSize: ".8rem", margin: 0 }}>
+      <p className="faint note">
         Nothing is spent until you send this. The DM says whether it lands.
       </p>
     </div>

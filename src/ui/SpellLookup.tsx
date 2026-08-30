@@ -69,7 +69,7 @@ export function SpellLookup() {
       {shown && (
         <div className="card-body">
           {error && <p className="err">Could not load the spell data.</p>}
-          {!all && !error && <p className="faint" style={{ margin: 0 }}>Loading…</p>}
+          {!all && !error && <p className="faint note">Loading…</p>}
 
           {all && (
             <>
@@ -88,7 +88,7 @@ export function SpellLookup() {
                 />
               </div>
 
-              <div className="roles" style={{ marginTop: 10 }}>
+              <div className="roles mt-2">
                 {ROLE_ORDER.filter((r) => (counts.get(r) ?? 0) > 0).map((r) => (
                   <button
                     key={r}
@@ -102,7 +102,7 @@ export function SpellLookup() {
                 ))}
               </div>
 
-              <p className="faint" style={{ fontSize: ".8rem", margin: "10px 0 0" }}>
+              <p className="faint note">
                 {results.length} of {allowed.length}
               </p>
 
@@ -146,7 +146,7 @@ export function SpellLookup() {
                   );
                 })}
                 {results.length === 0 && (
-                  <p className="faint" style={{ margin: 0, fontSize: ".84rem" }}>
+                  <p className="faint note">
                     Nothing matches.
                   </p>
                 )}

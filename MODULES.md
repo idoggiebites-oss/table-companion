@@ -162,10 +162,11 @@ rules behind both.
 `spells.ts` `spellcast.ts` `useCasting.ts` `Spells.tsx` `SpellPick.tsx`
 · suites: `spells` `conc`
 
-**Weakest point:** a save spell aimed at more than one creature is still one
-claim against one target. Burning Hands catching three goblins is resolved
-once and applied by hand, or through Area damage, which asks who saved — two
-paths to the same fight.
+**Weakest point:** a spell whose data carries no dice. `rolls` is a Fight Club
+extension, not something a compendium must have — the one a real table imports
+has 317 spells and not one of them — and the damage is read back out of the
+spell's own prose where it is missing. That recovers 84% of the spells whose
+text mentions dice; the rest reach the DM as a claim with no damage on it.
 
 ---
 
@@ -185,13 +186,18 @@ where you fought, how many fights, who hit the floor, what it earned — built
 from whatever events the reader is allowed to see, so a player's recap comes
 from a player's log.
 
-`guidance.ts` `stance.ts` `actions.ts` `feats.ts` `marks.ts` `recap.ts`
-· suites: `guidance` `guide` `stance` `feats` `recap`
+And beside it, prompts: what to DO about it. Nine rules, four on a player's
+screen and five on the DM's, each a fact out of the same log with the screen
+that settles it — a level nobody took, the half of a sheet never opened, the
+fight nobody ended, the prep a level just made trivial.
 
-**Weakest point:** the recap reports and does not prompt. Nothing says "here
-is what changed on your sheet" or points a player at the half of it they have
-never used — and nothing at all is offered to the DM about what to prepare
-next, which is the same question from the other side of the screen.
+`guidance.ts` `stance.ts` `actions.ts` `feats.ts` `marks.ts` `recap.ts`
+`prompts.ts` · suites: `guidance` `guide` `stance` `feats` `recap`
+
+**Weakest point:** both of them are read on the Log tab, and nothing brings
+anybody back to the app between sessions. The three moments that buzz a phone
+are all mid-session by design, so a recap written for the week after a game is
+found by whoever happens to open the log.
 
 ## 12. Prep — *DM* · **Solid**
 
@@ -213,14 +219,14 @@ party go somewhere else is the normal case, not the failure case.
 
 # Reading it
 
-Nine of twelve are solid. Every gap in the app right now sits in one of four:
+Nine of twelve are solid. Every gap in the app right now sits in one of six:
 
 | Module | Gap |
 |---|---|
 | Creation & Progression | export — parked, decision open |
 | Content | provenance is a trap for the next list drawn from a compendium |
-| Spellcasting | one blast, several creatures, one claim |
-| Guidance | the recap reports; nothing prompts |
+| Spellcasting | a spell whose data carries no dice, and whose prose hides them |
+| Guidance | nothing brings anyone back to the app between sessions |
 | The Turn | Help untested against a real ally |
 | Disclosure | a creature's conditions are shown to everyone |
 

@@ -54,12 +54,12 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector(".seatbar");
+await dm.waitForSelector('select[aria-label="Seat"], .join-row');
 
 const join = async (page) => {
   await page.locator('input[aria-label="Room code"]').fill(code);
   await page.getByRole("button", { name: "Join", exact: true }).click();
-  await page.waitForSelector(".seatbar", { timeout: 20000 });
+  await page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
   const row = page.locator(".join-row", { hasText: "Kira Vance" });
   if (await row.count()) await row.first().click();
   await page.waitForSelector(".hp-big", { timeout: 20000 });

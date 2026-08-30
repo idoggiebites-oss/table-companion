@@ -53,13 +53,16 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 ok("code is six characters", code.length, 6);
-await dm.page.waitForFunction(() => document.querySelector(".rb-status")?.textContent?.includes("Live"), null, { timeout: 15000 });
-ok("dm is live", (await dm.page.locator(".rb-status").innerText()).startsWith("LIVE"), true);
+/* The header keeps the two things that are READ — the code and a dot — and
+   the dot carries its meaning in words, because a colour is not a state
+   anybody can name. Everything pressed is behind the gear. */
+await dm.page.waitForSelector(".rb-dot.s-online", { timeout: 15000 });
+ok("dm is live", await dm.page.locator(".rb-dot").getAttribute("aria-label"), "Live");
 
 await dm.page.getByRole("button", { name: "Load sample" }).click();
 // A room's DM is not moved into a character they create — they make them for
 // other people — so playing this one is a deliberate choice.
-await dm.page.waitForSelector(".seatbar");
+await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
 await sitAs(dm.page, "Kira Vance");
 await dm.page.waitForSelector(".hp-big");
 await damage(dm, 12);
@@ -70,15 +73,17 @@ ok("dm applied damage", await hp(dm), "40 / 52");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 // A joining device starts in the DM seat; taking a character is the real flow.
-await player.page.waitForSelector(".seatbar", { timeout: 15000 });
+await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 15000 });
 await sitAs(player.page, "Kira Vance");
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 ok("player received the character", await hp(player), "40 / 52");
 ok("player sees the same code", await player.page.locator(".rb-code").innerText(), code);
 // The count has to reach the people already in the room, not just the arrival.
 await dm.page.waitForTimeout(700);
+await dm.page.getByRole("button", { name: "The table" }).click();
 ok("dm's member count updated when someone joined",
   (await dm.page.locator(".rb-status").innerText()).includes("2 JOINED"), true);
+await dm.page.getByRole("button", { name: "Close The table" }).click();
 await player.page.screenshot({ path: `${OUT}/18-joined.png` });
 
 // --- changes flow both ways ----------------------------------------------

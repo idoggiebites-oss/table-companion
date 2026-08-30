@@ -38,7 +38,7 @@ const hold = async (locator) => {
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector(".seatbar");
+await page.waitForSelector('select[aria-label="Seat"], .join-row');
 /* The device that starts a room is the DM, and gear is a player's screen. */
 await page.selectOption('select[aria-label="Seat"]', { label: "Kira Vance" });
 await page.waitForTimeout(800);

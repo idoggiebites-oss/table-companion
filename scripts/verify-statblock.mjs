@@ -38,7 +38,7 @@ async function fightWith(page, monster) {
   await page.waitForSelector(".rb-code");
   const code = await page.locator(".rb-code").innerText();
   await page.getByRole("button", { name: "Load sample" }).click();
-  await page.waitForSelector(".seatbar");
+  await page.waitForSelector('select[aria-label="Seat"], .join-row');
   await page.selectOption('select[aria-label="Seat"]', "dm");
   await page.waitForTimeout(700);
 
@@ -136,7 +136,7 @@ const code = await troll.locator(".rb-code").innerText();
 const player = await device(430, 900);
 await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector(".seatbar", { timeout: 20000 });
+await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.locator(".join-row", { hasText: "Kira Vance" });
 if (await join.count()) await join.first().click();
 await player.waitForTimeout(1500);

@@ -139,11 +139,11 @@ function StartCombat({
           </button>
         ))}
         {characters.length === 0 && (
-          <span className="faint" style={{ fontSize: ".84rem" }}>Nobody yet.</span>
+          <span className="faint aside">Nobody yet.</span>
         )}
       </div>
 
-      <span className="label cr-sub" style={{ marginTop: 12 }}>Who is surprised</span>
+      <span className="label cr-sub mt-3">Who is surprised</span>
       <div className="seg">
         {(["none", "monsters", "players"] as const).map((k) => (
           <button
@@ -157,7 +157,7 @@ function StartCombat({
         ))}
       </div>
 
-      <span className="label cr-sub" style={{ marginTop: 12 }}>
+      <span className="label cr-sub mt-3">
         Against {creatures.length > 0 ? `· ${creatures.length}` : ""}
       </span>
       {/*
@@ -218,7 +218,7 @@ function StartCombat({
         </div>
       ))}
 
-      <div className="row" style={{ marginTop: 12 }}>
+      <div className="row mt-3">
         <button onClick={() => setCreatures([...creatures, { name: "", maxHp: 7 }])}>
           Add creature
         </button>
@@ -302,7 +302,7 @@ function Arrival({
       <span className="label">What arrives</span>
       {/* Named, because a placeholder is gone the moment you type: "Ghoul,
           10, d20" is legible and "Ghoul, 10, 16" is three numbers. */}
-      <div className="row" style={{ marginTop: 8 }}>
+      <div className="row mt-2">
         <Field label="Name" htmlFor="arr-name">
           <input
             id="arr-name"
@@ -329,7 +329,7 @@ function Arrival({
           />
         </Field>
       </div>
-      <div className="row" style={{ marginTop: 10 }}>
+      <div className="row mt-2">
         <button
           disabled={!ready}
           onClick={() =>
@@ -349,7 +349,7 @@ function Arrival({
         </button>
         <button onClick={onCancel}>Never mind</button>
       </div>
-      <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
+      <p className="faint note">
         It drops into the order at that initiative. Nobody's turn is skipped.
       </p>
     </div>
@@ -433,7 +433,7 @@ function Rolling({
       )}
 
       {mine.length === 0 && (
-        <p className="faint" style={{ margin: "8px 0", fontSize: ".86rem" }}>
+        <p className="faint note">
           {waiting.length === 0 ? "Everyone has rolled." : "Waiting on the others."}
         </p>
       )}
@@ -450,7 +450,7 @@ function Rolling({
       </div>
 
       {seat.kind === "dm" && (
-        <div className="row" style={{ marginTop: 12 }}>
+        <div className="row mt-3">
           <button
             onClick={() => append({ type: "combatBegan" })}
             disabled={combat.order.every((c) => c.initiative === null)}
@@ -686,7 +686,7 @@ export function Combat({
             {buzz && <div className="card-body" style={{ paddingTop: 0 }}>{buzz}</div>}
           </>
         ) : (
-          <div className="card-body"><p className="faint" style={{ margin: 0 }}>No fight yet.</p></div>
+          <div className="card-body"><p className="faint note">No fight yet.</p></div>
         )}
       </section>
     );
@@ -727,6 +727,10 @@ export function Combat({
   const canEnd = mayEndTurn(seat, combat);
   const mine = seat.kind === "player" ? turnsUntil(combat, seat.characterId) : null;
   const visible = combat.order.filter((c) => visibleTo(seat, c));
+  /* How many advances reach the top of the next round — see the End round
+     control. One of them is the turn showing, so the number it SKIPS is one
+     fewer than the number of presses it stands in for. */
+  const toSkip = combat.order.length - combat.turn;
 
   return (
     <section className="card">
@@ -745,6 +749,36 @@ export function Combat({
             {mine === 0 ? "Your turn" : `${mine} turn${mine === 1 ? "" : "s"} away`}
           </span>
         )}
+        {/*
+          * End the round from here.
+          *
+          * The honest reading of the control: it advances past everyone left
+          * to the top of the next round, which means those creatures do not
+          * act. A DM who has already resolved the rest of the round out loud
+          * wants that; a DM who mis-taps does not, so it SAYS how many turns
+          * it is about to skip rather than making that a thing you discover.
+          *
+          * Absent on the last turn of a round, where Next turn already does
+          * this and a second control for it would be a door into a room you
+          * are standing in.
+          */}
+        {seat.kind === "dm" && toSkip > 1 && (
+          <button
+            className="end-round"
+            aria-label={`End round ${combat.round}, skipping ${toSkip - 1} turns`}
+            onClick={() => {
+              for (let i = 0; i < toSkip; i += 1) {
+                append({
+                  type: "turnAdvanced",
+                  from: (combat.turn + i) % combat.order.length,
+                });
+              }
+            }}
+          >
+            End round
+            <small>skips {toSkip - 1}</small>
+          </button>
+        )}
       </div>
 
       {/*
@@ -761,6 +795,39 @@ export function Combat({
           <span className="k">Up now</span>
           <span className="n">{active?.name ?? "nobody"}</span>
         </span>
+        {/*
+          * Step the turn from where the turn is NAMED.
+          *
+          * Next turn stays the primary — it is the control a DM presses forty
+          * times an evening and it remains the biggest thing on the screen.
+          * This is the other half: going BACK was a button at the foot of the
+          * card, a long way from the name that is wrong, and stepping forward
+          * to check who is coming meant losing your place.
+          *
+          * Both are undo, not a rewind: the log keeps the advance and adds a
+          * marker saying to skip it, which is the same thing "Back a turn"
+          * has always done.
+          */}
+        {seat.kind === "dm" && (
+          <span className="up-step">
+            <button
+              className="us"
+              aria-label="Back a turn"
+              disabled={!lastAdvance || !revert}
+              onClick={() => lastAdvance && revert && revert(lastAdvance)}
+            >
+              {"\u2039"}
+            </button>
+            <button
+              className="us"
+              aria-label="Forward a turn"
+              disabled={!canEnd}
+              onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
+            >
+              {"\u203A"}
+            </button>
+          </span>
+        )}
         {upNext && (
           <span className="up-next">
             <span className="k">Then</span>
@@ -882,6 +949,7 @@ export function Combat({
                     aria-label={`Apply ${c.damage} to ${c.targetName}`}
                     onClick={() => append({ type: "attackResolved", claimId: c.id, applied: true })}
                   >
+                    <span className="vg" aria-hidden="true">{"\u2694"}</span>
                     {c.save ? `Failed — ${c.damage}` : verdict === "misses" ? "Hits anyway" : "It hits"}
                   </button>
                   {/* The one place the app made the DM do arithmetic: a save
@@ -907,6 +975,7 @@ export function Combat({
                     aria-label={`Reject ${c.whoName}'s attack`}
                     onClick={() => append({ type: "attackResolved", claimId: c.id, applied: false })}
                   >
+                    <span className="vg" aria-hidden="true">{"\u26E8"}</span>
                     {c.save ? "Saved — none" : "Missed"}
                   </button>
                 </span>
@@ -1146,9 +1215,56 @@ export function Combat({
                   max: state.builds[c.source.characterId]?.maxHp ?? 1,
                 };
           const showExact = seat.kind === "dm" || c.disclosure === "exact";
+          /*
+           * The conditions, built once and placed twice.
+           *
+           * On a DM's creature row it belongs INSIDE the control strip, so
+           * its "+" sits with the other things a DM presses instead of
+           * holding a forty-four pixel band of its own — which, with six
+           * goblins on screen, was three hundred pixels of nothing but
+           * plus signs. Everywhere else it is a band, because a player's
+           * conditions are information rather than a control.
+           */
+          const dmCreature = seat.kind === "dm" && c.source.kind === "creature";
+          const conds = (
+            <ConditionStrip
+              who={c.name}
+              on={
+                c.source.kind === "creature"
+                  ? (combat.creatureConditions[c.id] ?? [])
+                  : (state.characters[c.source.characterId]?.conditions ?? [])
+              }
+              editable={dmCreature}
+              onAdd={(cond) =>
+                append({ type: "creatureConditionAdded", combatantId: c.id, condition: cond })
+              }
+              onRemove={(cond) =>
+                append({ type: "creatureConditionRemoved", combatantId: c.id, condition: cond })
+              }
+            />
+          );
           return (
             <div className={`cbt${isActive ? " on" : ""}`} key={c.id}>
-              <span className="i num">{c.initiative}</span>
+              {/*
+                * Which of these is a person.
+                *
+                * Six rows deep, a DM scanning the order had nothing telling
+                * them apart: a goblin and a player character are the same
+                * shape of row with the same kind of number. The disclosure
+                * chip only appears on creatures, which is a tell you have to
+                * know to read. This says it directly, on the side the eye
+                * starts.
+                *
+                * A glyph from the set the hotbar already uses — no icon
+                * library and no webfont, which is the same reason this app
+                * ships neither.
+                */}
+              <span className="i num">
+                {c.source.kind === "character" && (
+                  <span className="pc" aria-hidden="true">{"\u2726"}</span>
+                )}
+                {c.initiative}
+              </span>
               <span className="who">
                 {/*
                   * Six goblins arrive as Goblin 1 through 6, which is enough
@@ -1168,9 +1284,41 @@ export function Combat({
                 ) : (
                   <span className="nm">{c.name}</span>
                 )}
-                {seat.kind === "dm" && c.source.kind === "creature" && (
+              </span>
+              <span className="hp num">
+                {showExact
+                  ? `${hp.current}/${hp.max}`
+                  : c.disclosure === "vague"
+                    ? VAGUE_LABEL[healthStep(hp.current, hp.max)]
+                    : "—"}
+              </span>
+              {/*
+                * One strip, on a line of its own.
+                *
+                * These were five separate children of a grid with five
+                * columns — and the grid had been sized for the five that
+                * existed when it was written. Every control added since
+                * (the economy, the condition +, the hurt menu) fell onto an
+                * implicit row of its own, so a creature stood four ragged
+                * bands tall with the initiative number floating thirty-six
+                * pixels below the name it belongs to.
+                *
+                * Grouping them means the row above is exactly what a
+                * player's row is — initiative, name, health — and the two
+                * line up down the list. A control added tomorrow joins this
+                * strip instead of inventing a sixth band.
+                */}
+              {seat.kind === "dm" && c.source.kind === "creature" && (
+                <div className="cbt-do">
+                  <CreaturePips
+                    id={c.id}
+                    name={c.name}
+                    spent={combat.spent[c.id]}
+                    append={append}
+                  />
                   <button
                     className="disc"
+                    aria-label={`${c.name} is ${c.disclosure} — show more`}
                     onClick={() =>
                       append({
                         type: "disclosureSet",
@@ -1181,27 +1329,6 @@ export function Combat({
                   >
                     {c.disclosure}
                   </button>
-                )}
-              </span>
-              <span className="hp num">
-                {showExact
-                  ? `${hp.current}/${hp.max}`
-                  : c.disclosure === "vague"
-                    ? VAGUE_LABEL[healthStep(hp.current, hp.max)]
-                    : "—"}
-              </span>
-              {/* What it has left this turn. A DM running six goblins was
-                  holding this in their head, six times, every round. */}
-              {seat.kind === "dm" && c.source.kind === "creature" && (
-                <CreaturePips
-                  id={c.id}
-                  name={c.name}
-                  spent={combat.spent[c.id]}
-                  append={append}
-                />
-              )}
-              {seat.kind === "dm" && c.source.kind === "creature" && (
-                <>
                   <button
                     className="hitbtn"
                     aria-label={`Hurt ${c.name} by ${hit}`}
@@ -1223,10 +1350,11 @@ export function Combat({
                   >
                     {hurting === c.id ? "−" : "…"}
                   </button>
-                </>
+                  {conds}
+                </div>
               )}
               {naming === c.id && (
-                <div className="hurt-row">
+                <div className="hurt-row cbt-band">
                   <input
                     aria-label={`New name for ${c.name}`}
                     value={newName}
@@ -1254,7 +1382,7 @@ export function Combat({
                 </div>
               )}
               {hurting === c.id && seat.kind === "dm" && c.source.kind === "creature" && (
-                <div className="hurt-row">
+                <div className="hurt-row cbt-band">
                   <Num min={0} value={amount}
                     aria-label={`Amount for ${c.name}`}
                     style={{ width: 74 }}
@@ -1285,21 +1413,9 @@ export function Combat({
               {/* What is wrong with them, where both sides can read it. This
                   is what turns "roll a d20" into "roll two and take the
                   higher" one screen over. */}
-              <ConditionStrip
-                who={c.name}
-                on={
-                  c.source.kind === "creature"
-                    ? (combat.creatureConditions[c.id] ?? [])
-                    : (state.characters[c.source.characterId]?.conditions ?? [])
-                }
-                editable={seat.kind === "dm" && c.source.kind === "creature"}
-                onAdd={(cond) =>
-                  append({ type: "creatureConditionAdded", combatantId: c.id, condition: cond })
-                }
-                onRemove={(cond) =>
-                  append({ type: "creatureConditionRemoved", combatantId: c.id, condition: cond })
-                }
-              />
+              {/* Wrapped, so this section names its own band rather than
+                  reaching for a class the initiative screen already scopes. */}
+              {!dmCreature && <div className="cbt-band">{conds}</div>}
             </div>
           );
         })}
@@ -1317,22 +1433,19 @@ export function Combat({
             Next turn
             <small>{upNext ? `${upNext.name} is up` : "round ends"}</small>
           </button>
-          {/* One press, where the mis-tap happens. Undo, not a rewind: the
-              log keeps the advance and adds a marker saying to skip it. */}
-          {lastAdvance && revert && (
-            <button
-              className="turn-back"
-              aria-label="Back a turn"
-              onClick={() => revert(lastAdvance)}
-            >
-              Back a turn
-            </button>
-          )}
+          {/*
+            * Back a turn used to live here, at the foot of the card and a
+            * long way from the name that is wrong. It moved up beside that
+            * name — see .up-step — and this is deliberately not a second copy
+            * of it: two controls answering to "Back a turn" is an ambiguity
+            * for anyone driving by name, which is how the browser suites and
+            * a screen reader both find things.
+            */}
         </div>
       )}
 
       <div className="card-body">
-        <div className="controls" style={{ marginTop: 0 }}>
+        <div className="controls mt-0">
           {seat.kind === "dm" && (
             <>
               {/*
@@ -1427,7 +1540,7 @@ export function Combat({
                 </button>
               ))}
               {able.length === 0 && (
-                <p className="faint" style={{ margin: "6px 0", fontSize: ".84rem" }}>
+                <p className="faint note">
                   Nothing of yours has a reaction left. They come back on their
                   own turns.
                 </p>
@@ -1479,7 +1592,7 @@ export function Combat({
           />
         )}
         {seat.kind === "dm" && !canEnd && (
-          <p className="faint" style={{ fontSize: ".84rem", margin: "10px 0 0" }}>
+          <p className="faint note">
             {active ? `${active.name} is up.` : "Nobody is up."}
           </p>
         )}

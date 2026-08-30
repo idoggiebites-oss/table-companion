@@ -86,8 +86,13 @@ const WORDS = [
   "no", "one", "two", "three", "four", "five",
   "six", "seven", "eight", "nine", "ten",
 ];
-const count = (n: number, one: string, many = `${one}s`) =>
-  `${WORDS[n] ?? n} ${n === 1 ? one : many}`;
+
+/** The number alone: "three", and "11" once words stop helping. */
+export const inWords = (n: number): string => WORDS[n] ?? String(n);
+
+/** The number and what there are that many of. Shared with prompts.ts. */
+export const spelled = (n: number, one: string, many = `${one}s`) =>
+  `${inWords(n)} ${n === 1 ? one : many}`;
 
 /** A list that reads aloud: "Kira", "Kira and Bel", "Kira, Bel and Sam". */
 export function andList(names: readonly string[]): string {
@@ -130,7 +135,7 @@ export function recapOf(
   // --- fights --------------------------------------------------------------
   const fights = of("combatBegan").length;
   if (fights > 0) {
-    lines.push(`${capital(count(fights, "fight"))}.`);
+    lines.push(`${capital(spelled(fights, "fight"))}.`);
     counts.push({ label: "Fights", value: String(fights) });
   }
 
@@ -215,14 +220,14 @@ export function recapOf(
   if (nat20.length > 0) {
     const who = seen(nat20.map((e) => e.who)).map(nameOf);
     lines.push(
-      `${count(nat20.length, "natural twenty")}, thrown by ${andList(who)}.`,
+      `${spelled(nat20.length, "natural twenty")}, thrown by ${andList(who)}.`,
     );
   }
 
   return { startedAt: session.startedAt, endedAt: session.endedAt, lines, counts };
 }
 
-function capital(s: string): string {
+export function capital(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 

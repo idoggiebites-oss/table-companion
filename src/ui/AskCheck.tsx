@@ -116,7 +116,7 @@ export function AskCheck({
             </button>
           </div>
 
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="row mt-2">
             <select
               aria-label="What to roll"
               value={what}
@@ -141,12 +141,12 @@ export function AskCheck({
               one adjudicating, and finding out afterwards is finding out from
               the players. */}
           {roomWill && <p className="stance-why">{roomWill}</p>}
-          <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
+          <p className="faint note">
             Leave the DC blank to keep it to yourself — they will roll and you
             decide.
           </p>
 
-          <span className="label cr-sub" style={{ marginTop: 12 }}>Who</span>
+          <span className="label cr-sub mt-3">Who</span>
           <div className="chips">
             {builds.map((b) => (
               <button
@@ -160,11 +160,11 @@ export function AskCheck({
               </button>
             ))}
           </div>
-          <p className="faint" style={{ fontSize: ".8rem", margin: "8px 0 0" }}>
+          <p className="faint note">
             {only.length === 0 ? "Nobody picked means everyone." : `${only.length} of them.`}
           </p>
 
-          <div className="row" style={{ marginTop: 12 }}>
+          <div className="row mt-3">
             <button disabled={builds.length === 0} onClick={ask}>Ask the table</button>
           </div>
         </div>

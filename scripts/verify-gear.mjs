@@ -188,6 +188,7 @@ ok("the kit arrived as one line", (await page.locator(".feed").innerText()).toLo
   .includes("was given"), true);
 
 // --- buying your own instead --------------------------------------------
+await page.getByRole("button", { name: "This device" }).click();
 await page.getByRole("button", { name: "Add character" }).click();
 await page.getByRole("button", { name: "Build a character" }).click();
 await atStep(page, "Class");

@@ -110,7 +110,7 @@ export function AreaDamage({
         </Field>
       </div>
 
-      <div className="chips" style={{ marginTop: 10 }}>
+      <div className="chips mt-2">
         <button
           type="button"
           className={`chip${halfOnSave ? " on" : ""}`}
@@ -143,7 +143,7 @@ export function AreaDamage({
                 {r.saved ? "Saved" : "Failed"}
               </button>
             ) : (
-              <span className="faint" style={{ fontSize: ".72rem" }}>out of it</span>
+              <span className="faint aside">out of it</span>
             )}
             <span className="amt num">
               {r.hit ? (r.saved ? (halfOnSave ? half : 0) : amount) : "—"}
@@ -152,7 +152,7 @@ export function AreaDamage({
         ))}
       </div>
 
-      <div className="row" style={{ marginTop: 12 }}>
+      <div className="row mt-3">
         <button
           disabled={hit.length === 0 || amount <= 0}
           onClick={() => {
@@ -170,7 +170,7 @@ export function AreaDamage({
           Apply to {hit.length}
         </button>
         <button onClick={onClose}>Cancel</button>
-        <span className="faint" style={{ fontSize: ".82rem" }}>
+        <span className="faint aside">
           {total} total · one event, one undo
         </span>
       </div>
