@@ -35,6 +35,7 @@ async function device(name, width, height) {
 const dm = await device("dm", 1440, 900);
 const player = await device("player", 1024, 768);
 
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
@@ -44,6 +45,7 @@ await dm.page.selectOption('select[aria-label="Seat"]', "dm");
 await dm.page.waitForTimeout(600);
 
 await player.page.locator('input[aria-label="Room code"]').fill(code);
+await player.page.getByRole("button", { name: "The table", exact: true }).click();
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.page.locator(".join-row", { hasText: "Kira Vance" });
@@ -151,6 +153,7 @@ ok("but the log does not — it is a sequence, and reading order matters",
 // The phone is what this app is for. It must be untouched.
 const phone = await device("phone", 390, 844);
 await phone.page.locator('input[aria-label="Room code"]').fill(code);
+await phone.page.getByRole("button", { name: "The table", exact: true }).click();
 await phone.page.getByRole("button", { name: "Join", exact: true }).click();
 await phone.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const phoneJoin = phone.page.locator(".join-row", { hasText: "Kira Vance" });

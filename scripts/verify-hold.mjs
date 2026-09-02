@@ -35,6 +35,7 @@ const hold = async (locator) => {
   await page.waitForTimeout(400);
 };
 
+await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();

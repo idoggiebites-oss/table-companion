@@ -208,7 +208,11 @@ await page.waitForTimeout(300);
    tap target, made this step three and a half screens tall. Eighty-six chips
    is not a choice, it is a search with no search box. */
 const shape = await page.evaluate(() => ({
-  screens: document.documentElement.scrollHeight / window.innerHeight,
+  /* The shell's middle is the only thing that scrolls, and a screen is what
+     that middle can show — not the height of the phone, which now includes
+     a header and two pinned bars. */
+  screens: (() => { const e = document.querySelector(".sh-scroll");
+    return e === null ? 99 : e.scrollHeight / e.clientHeight; })(),
   chips: document.querySelectorAll(".chips .chip").length,
   pickers: document.querySelectorAll(".pl").length,
 }));
@@ -225,7 +229,11 @@ await pickBackground("Guild Artisan");
 await openPick(page, "Languages");
 await page.waitForTimeout(300);
 const opened = await page.evaluate(() => ({
-  screens: document.documentElement.scrollHeight / window.innerHeight,
+  /* The shell's middle is the only thing that scrolls, and a screen is what
+     that middle can show — not the height of the phone, which now includes
+     a header and two pinned bars. */
+  screens: (() => { const e = document.querySelector(".sh-scroll");
+    return e === null ? 99 : e.scrollHeight / e.clientHeight; })(),
   rows: document.querySelectorAll(".pl-row").length,
   boxed: (() => { const e = document.querySelector(".pl-rows"); return !!e && e.scrollHeight > e.clientHeight; })(),
 }));

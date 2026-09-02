@@ -19,6 +19,7 @@
  */
 
 import type { EventBody } from "../domain/events.js";
+import { Icon } from "./Icon.js";
 
 export type TurnBarGo = "combat" | "gear" | "notes";
 
@@ -41,7 +42,7 @@ export function TurnBar({
         aria-label="Attack — opens the fight"
         onClick={() => onGo("combat")}
       >
-        <span className="g" aria-hidden="true">{"⚔"}</span>
+        <span className="g"><Icon name="sword" size={22} /></span>
         <span className="l">Attack</span>
       </button>
       <button
@@ -57,7 +58,7 @@ export function TurnBar({
           }
         }}
       >
-        <span className="g" aria-hidden="true">{"⛨"}</span>
+        <span className="g"><Icon name="guard" size={22} /></span>
         <span className="l">{dodging ? "Dodging" : "Dodge"}</span>
       </button>
       <button
@@ -65,7 +66,7 @@ export function TurnBar({
         aria-label="Use item — opens your gear"
         onClick={() => onGo("gear")}
       >
-        <span className="g" aria-hidden="true">{"⚒"}</span>
+        <span className="g"><Icon name="hammer" size={22} /></span>
         <span className="l">Use item</span>
       </button>
       <button
@@ -73,7 +74,7 @@ export function TurnBar({
         aria-label="Notes"
         onClick={() => onGo("notes")}
       >
-        <span className="g" aria-hidden="true">{"✎"}</span>
+        <span className="g"><Icon name="pencil" size={22} /></span>
         <span className="l">Notes</span>
       </button>
       <button
@@ -81,7 +82,7 @@ export function TurnBar({
         aria-label="Roll — opens the fight, where a roll is asked for"
         onClick={() => onGo("combat")}
       >
-        <span className="g" aria-hidden="true">{"⚄"}</span>
+        <span className="g"><Icon name="die" size={22} /></span>
         <span className="l">Roll</span>
       </button>
     </nav>

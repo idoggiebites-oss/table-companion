@@ -112,6 +112,273 @@ spread across the other modules, and MODULES.md's table is the whole of it.
 
 ## Done since this list was written
 
+**The crest row's controls, and V2's equipment.** The seat is a PILL now, and
+when there is nothing to choose between it is a pill that says who you are
+rather than a dropdown with one entry in it — V2's rule. The table and this
+device are two ROUND 44px buttons beside the crest rather than flat glyphs in
+the header's slots, which is where the concept puts them and where they read
+as controls. Same hairline and surface as the pill, so the row is one set of
+objects instead of three treatments.
+
+**The portrait's affordance is a pencil on the rim.** A circle you can press
+is not obviously a circle you can press — it looks like a picture. The badge
+is `pointer-events: none` and `aria-hidden`, because the button underneath is
+the whole 72px target and already says what pressing does.
+
+**Ported from V2's inventory:** `carryLimit` (Strength x 15, the rule as
+written and NOT enforced — a player who drags the chest anyway is making a
+ruling, and an app that refuses it has taken that ruling from the person whose
+it is), `weightOf`, and `bucketOf`/`inBucket`, the four headings a pack sorts
+under. The gear screen's summary is V2's carry band: weight against limit with
+a bar, the armour class in its own crest, the sum in words, and what the
+armour COST — a sheet that says 18 and not "disadvantage on Stealth" has told
+half the story.
+
+**Tabs became headings, and two suites are why.** The four buckets shipped as
+tabs, as the concept draws them — and the concept can, because its inventory
+is the whole screen. Here it is one card among three on the Gear tab, and a
+pack is usually under a dozen things, so tabs hid three quarters of it
+including whatever had just been added, which is the one thing somebody opens
+the list to see. `verify-gear` and `verify-panel` both read the whole pack and
+both failed inside a minute. "What am I carrying" is one question and it gets
+one answer.
+
+Three more positional reads moved with the band and were repointed by name:
+`.gear-sum b` (the armour class, now in its own crest), `.gear-sum .faint`
+(the derivation, which a class-based read had started taking off the first
+attack instead), and the strip's armour cell in `verify-items`. That is the
+fourth time in this port a positional selector has come back holding a
+different number and reported it as a wrong value rather than a broken read.
+
+**The sheet, against the concept, and a portrait.** The sheet now carries what
+the mockup draws: the character's name in the header (it is the one screen
+whose title is a person rather than a place), a hero card with a portrait, XP
+under the level crest, a row of four pills, and the stat strip labelled as the
+concept labels it — HP, AC, INITIATIVE, SPEED, PROF BONUS.
+
+**The portrait is the new thing, and it is device-local on purpose.** The app
+ships no art, so the only picture that can be on a sheet is one the player
+supplies. It does NOT become an event: the log replays on every phone at the
+table and every event can be taken back, so a 200KB image in it is 200KB on
+every device forever, whether or not that device ever shows the character —
+and undo would have to carry it too. The cost is real and worth saying: the
+player who sets it sees it, the DM does not. Making it travel needs somewhere
+to put bytes that is not the log, which is the same missing answer as the map.
+
+What arrives from a phone camera is three to eight megabytes and this device
+has about five for everything it owns, so nothing is stored as it arrived:
+drawn to a canvas at 256px, centre-cropped rather than squashed (a face
+stretched to a square is worse than one with trimmed edges), JPEG at 0.82.
+Measured in `verify-portrait.mjs`: 27KB in, 2KB stored, 256x256 out of a
+1400x900 original. Twelve assertions, including that nothing about it reaches
+the log.
+
+**The pill row goes to a control rather than repeating it.** A second Damage
+button beside the first is a door into a room you are standing in. What the
+row is worth is the distance — the hit die sits eleven hundred pixels down,
+and "d10 · 8/8" both says the answer and takes you to where it changes.
+
+**Ability scores are the seventh card, and `verify-panel` refused them until
+somebody said where they go.** That guard exists for exactly this: a new card
+has to go somewhere and the bottom is always free. They go LAST, with who they
+are — a score is the most static thing on a sheet, which is the bottom of law
+7's order. The concept puts them first because it has an Overview TAB to put
+them at the top of; this screen has none, so second would have pushed
+conditions and concentration down a card, which is the failure law 7 was
+written after.
+
+Not ported, and deliberately: **the concept's Overview / Combat / Inventory /
+Notes segmented row.** V2's bottom bar is Sheet / Characters / Log, so the
+sheet's internals have to be segments. V1's bottom bar already IS
+Combat / Sheet / Spells / Gear / Notes — the same split, expressed one level
+up. Adding the segments would put two navigations on one screen, which is the
+thing V2 deleted from its own hub. Doing it properly means restructuring V1's
+bottom bar to V2's three, and that is a decision about the DM's screens, not a
+styling one.
+
+**V2's interface, ported: the shell.** The structural half, and the part the
+first two landings had not touched. This app was a scrolling document with its
+chrome riding at the top and a bar fixed over the bottom; it is now a fixed
+`100dvh` grid of five declared bands with exactly one scroller in the middle.
+`document.body.scrollHeight` is the height of the phone.
+
+Five children are ALWAYS rendered, empty or not: a grid sized for the children
+it happens to have gives the scroller an `auto` row instead of `1fr` the moment
+one goes missing, and then the middle stops scrolling and the page grows
+instead. The action bar is always in the DOM too and collapses with `:empty`.
+
+**The pinned bar is a portal, not a prop.** The control that ends a turn
+belongs to the screen that knows when it is allowed — whether a DM may
+advance, whether a rest is offered, whether the last question is answered.
+Lifting that into `App` would give every one of those rules a second home and
+let the two drift, so a screen renders its controls DOWN into the bar with
+`<Actions>`. Three do: the fight's Next turn, the sheet's two rests, and
+creation's Back/Continue — which were the last thing in the scroll, five
+screens below the question on Ancestry, so the way forward was something you
+went looking for having already answered it.
+
+**The rail became a run of dots**, because the header now says which step you
+are on. It was fourteen labelled pills in a row that scrolled sideways, which
+means the step you are standing on could be off screen. One line behind, dots
+on top, the current one larger and gold — it reads as a path. The step's name
+reaches the header through one callback: the flow still owns which step it is
+on, `App` only draws the word.
+
+**The sheet is the concept's sheet.** A hero card with the class mark, the
+name in the display face and the level as a crest — it was a lowercase line of
+class ids, and the level is the one number on that card a table says out loud.
+Hit points joined the stat strip as its first cell, having been a card of
+their own below it: the number asked for most, one scroll past the four asked
+for least. A sixth cell was tried and clipped its own label at 390px, so
+passive perception went to the skills drawer, beside the skill it derives
+from.
+
+**`.hp-big` moved and kept its name.** Thirty-eight suites reach for it, both
+to wait for the sheet and to read "38 / 52" off it. The name is still true —
+it IS the big hit-point number — and renaming it would have been thirty-eight
+edits to say the same thing. What did have to change: `verify-import` read the
+strip BY INDEX, so adding a cell at the front returned "52 / 52" for armour
+class. It reads by name now.
+
+**Four more suites read the interface by POSITION or by visible text**, and
+the port moved both out from under them. `verify-panel`'s armour-class reader
+took `.strip .num` first, which is now hit points — and `replace(/\D/g,"")`
+turned "52 / 52" into 5252, so a broken selector reported itself as a wrong
+armour class rather than as a broken selector. Its screen-order check read the
+identity card's `.label`, and the hero card has none. And two suites found a
+creation step by the rail's visible text, which the dots no longer have: the
+step's name is its ACCESSIBLE name now (`Step 6, Spells`), which is what an
+accessible name is for. All four read by name.
+
+Three suites were pointed at the scroller rather than the page: `verify-panel`
+(the sheet is a panel, not a document — the claim is unchanged, the thing to
+measure is `.sh-scroll`), `verify-tongues` (a "screen" is what the middle can
+show, not the height of the phone, which now includes a header and two pinned
+bars) and `verify-creation` (the window does not move at all any more).
+
+**On a laptop the whole app sat against the left edge.** A grid item with a
+definite `max-width` aligns to start under `justify-self: stretch`, and its own
+auto margins did not win. `justify-items: center`, explicitly.
+
+**V2's interface, ported: the chrome, the icons and the controls.** The second
+and third landings, and the app now reads as the rebuild rather than as the
+rebuild's palette.
+
+**The icons were the find.** Of the 25 codepoints this UI shipped across three
+tables — twelve standard actions, thirteen class marks, six worn slots — eight
+are `Extended_Pictographic`, and THREE have `Emoji_Presentation=Yes`, where
+colour is the default and the text selector is a hint a platform may ignore.
+U+2728 SPARKLES is the wizard: a wizard's card has been rendering a colour
+sparkle on iOS with nothing in CSS able to stop it. U+1F5E1 is the off hand and
+U+26D1 the head, so the worn figure drew three of its six slots as pictures.
+The other five were correct on this machine and a lottery elsewhere. The set is
+SVG now — 36 marks, one viewBox, `stroke: currentColor` so an icon can never
+arrive in a colour that means something else — and `check-glyphs.mjs` refuses
+the next one at lint time. Chevrons, middots and the ✦/◇/− family are text and
+stay text.
+
+**There is no colour per class any more, deliberately.** Twelve marks were
+tinted from the four semantic tokens — a barbarian in `--damage`, a ranger in
+`--heal`, a cleric in `--steel`. What the hue stood in for was telling twelve
+cards apart, and thirteen different SHAPES do that without spending a colour
+that means something else on the same screen. The note lives where `CLASS_HUE`
+used to be, because "give each class a colour" will be suggested again.
+
+**One header, one bar, and the page between them.** The chrome had grown back
+to three stacked bands — a four-control room card, the offline notice, and the
+seat — 460 of an 844px phone before the first card, on every screen. Two of
+the three were pressed about twice a session. The header is now one sticky row
+with a fixed shape: who you are, the crest, and the two ways in. Starting or
+joining a room went behind the table button, where BEING in a room already
+lived — only getting in was a page-level card, which was the asymmetry. A solo
+device now spends nothing on a room it does not have.
+
+The tab bar moved to the foot of the screen with an icon and a word on each
+entry. At six entries the old top row needed 416px on a phone that has 354 and
+scrolled sideways; the icon is what makes six fit where six words did not. It
+is the lowest of the four things that pin to the bottom here — the turn bar
+stands ON it, since a player mid-turn is the one who wants their own sheet,
+while the roll pad and any sheet cover both.
+
+**The accent finally does its job.** Whose turn it is was a luminance step,
+which was right on near-black and is a two-percent step on parchment — six
+rows deep, nothing said which one was live. The active row is gold-washed with
+a gold edge, and Next turn is a filled gold button rather than the same
+outlined box as Back a turn beside it. Those are the two things the accent
+exists for and there are no others.
+
+**Fourteen literal colours were theme bugs.** Six `#fff` — the active
+combatant's name among them — meant "the brightest ink", which is invisible on
+parchment. Five `rgba()` borders were semantic colours frozen at one theme's
+value and are `color-mix()` now. And two five-step ramps, difficulty and item
+rarity, had to INVERT: "more" is more contrast against the ground, so a ramp
+climbs toward light on near-black and toward dark on parchment. On light the
+difficulty gauge read backwards, with the easy end the loudest thing in it.
+
+**A comment is not a reason a thumb can read.** The offline notice's buttons
+were shrunk to 32px to buy the strip back, with a `tap-ok:` reason written
+beside them — and `verify-guidance` failed on all three screens anyway,
+because it measures what is on the page rather than reading the stylesheet. It
+was right to. The 44px floor has been broken four separate times in this app
+and every one was found by measuring. The height came out of the bar's padding
+instead.
+
+Suites: 37 were updated to open the table sheet before starting or joining a
+room, and two failed for the right reasons and were rewritten — one asserted
+`"0 OF 3"` where `innerText` now returns `"0 of 3"` (the case was a stylesheet
+decision, not a fact about the app), and one asserted that a class mark
+carries its own colour, which is now the opposite of the rule. 520 assertions
+pass across the 25 suites that need no Worker; the other 37 need
+`wrangler dev`, which does not boot from this shell.
+
+**V2's interface, ported: the skin.** The first of three landings. V1 had one
+accent, seven colour tokens and no theme system at all — `color-scheme: dark`,
+zero `prefers-color-scheme`, and `data-theme="dark"` hardcoded on the `<html>`
+element, which is what made the first attempt at a light ground render dark
+and look like a broken stylesheet. It now runs V2's token layer: parchment
+canvas, white cards lifted by shadow, both themes real, light the default, and
+three states rather than two — "system" is the absence of an attribute.
+
+The gold had to be split into four. `#c8a04d` measures **2.29:1 as text** on a
+light ground, so a single `--gold` cannot fill, outline and write; 58 rules in
+this stylesheet were reaching for one token to do all three, and each was
+converted by the property it sat on. There is deliberately no `--gold` left,
+because the point of splitting it is that the wrong one cannot be reached for
+by habit.
+
+**Five of V2's light values did not survive the port, and the check is the
+part worth keeping.** V2 uses `--surface-2` sparingly; this app puts every
+button and every input on it. `--ink-dim`, `--gold-ink`, `--gold-edge`,
+`--heal` and `--bloodied` all passed on canvas and on white and failed on the
+one ground V2's own pair table never named. `check-contrast.mjs` now measures
+72 pairs across both themes on every lint, and asserts the two copies of the
+dark block are identical — CSS has no way to write that block once, and a
+toggle that works while system-dark does not is the classic way a themed
+stylesheet rots. Proven by changing one hex digit and watching it fail.
+
+Buttons stopped shouting. All 140 were 0.78rem tracked uppercase — the
+treatment a section LABEL gets — so every control in the app was set in the
+same voice as the words naming the boxes they sat in, and none read as the
+thing to do next. They are sentences at `--t-sm` now. Tracked caps survive
+where they belong, on `.label`.
+
+Two checks were wrong and were fixed rather than worked around: `check-css`
+read one custom-property declaration per line, so a scale written four steps to
+a line reported the second, third and fourth as undefined; and it had no
+contrast check at all, which is what let a shipped damage red sit at 4.42:1 on
+its own surface.
+
+`verify-theme.mjs` is 14 assertions in both system schemes. The one that
+matters is on a phone set to dark: the control must know the screen is dark and
+offer light. V2 shipped the opposite — a hardcoded initial state while the
+stylesheet followed the system — and the symptom is a button that visibly does
+nothing.
+
+Still to come in this port: the chrome (this app spends 580 of 844 pixels on
+an offline banner, a room bar, a seat select and a tab row before any content
+appears, where V2 spends 88 on a header and 90 on a bottom bar), then the
+screens.
+
 **The motion, reviewed against somebody else's bar.** An animation review
 skill was pointed at the app — twenty-odd motion declarations, no animation
 library, all of it hand-written CSS. Eight findings, all applied.

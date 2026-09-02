@@ -69,7 +69,7 @@ import {
   byBookOrder, castableBy, isClassFeature, toKnown, type KnownSpell,
 } from "../domain/spells.js";
 import {
-  ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, CLASS_HUE, describePriority,
+  ABILITY_BLURB, abilityName, blurbFor, CLASS_BLURB, describePriority,
   featureOf, mechanicalTraits, shapeOf,
 } from "../domain/guidance.js";
 import { FeatPick } from "./FeatPick.js";
@@ -87,6 +87,8 @@ import {
 } from "../domain/items.js";
 import { formatCoins } from "../domain/money.js";
 import { describeWealthFor, wealthFor } from "../domain/non-srd.js";
+import { Icon } from "./Icon.js";
+import { Actions } from "./Shell.js";
 import {
   parseChoice, parseFixed, toStack, type GearOption,
 } from "../domain/starting-gear.js";
@@ -133,7 +135,7 @@ function labelFor(kinds: readonly ToolKind[]): string {
 }
 
 export function CreateCharacter({
-  onCreate, onCancel, startLevel = 1, rebuilding = false,
+  onCreate, onCancel, onStep, startLevel = 1, rebuilding = false,
 }: {
   /*
    * The level to open at.
@@ -156,6 +158,8 @@ export function CreateCharacter({
     },
   ) => void;
   onCancel: () => void;
+  /** The step's own name, for the shell's header. See App. */
+  onStep?: (label: string) => void;
 }) {
   const [races, setRaces] = useState<RaceEntry[] | null>(null);
   const [classes, setClasses] = useState<ClassEntry[] | null>(null);
@@ -1021,6 +1025,16 @@ export function CreateCharacter({
 
   const stepIndex = Math.min(step, steps.length - 1);
   const here = steps[stepIndex]!.id;
+  /*
+   * The step's own name, told upward so the shell's header can say it.
+   *
+   * V2 names the step where every screen already reserves the room for a
+   * name, and that is what let the rail drop fourteen labels and become a run
+   * of dots. One callback rather than lifting the whole step machine: the
+   * flow keeps deciding what step it is on, and App only draws the word.
+   */
+  const stepLabel = steps[stepIndex]!.label;
+  useEffect(() => { onStep?.(stepLabel); }, [onStep, stepLabel]);
   const at = (id: string) => here === id;
   /*
    * Which way the flow just moved, so the next card comes in from the side
@@ -1106,7 +1120,6 @@ export function CreateCharacter({
                   * person is looking when they finish it.
                   */}
                 <span className="cr-dot">{st.done ? "✓" : i + 1}</span>
-                <span className="cr-lb">{st.label}</span>
               </button>
             ))}
           </nav>
@@ -1155,11 +1168,8 @@ export function CreateCharacter({
                     aria-label={c.name}
                     onClick={() => { setClassId(c.id); setClassSkills([]); }}
                   >
-                    <span
-                      className="kg"
-                      style={shape ? { color: CLASS_HUE[c.id] ?? "inherit" } : undefined}
-                    >
-                      {shape?.glyph ?? "\u25C7"}
+                    <span className="kg">
+                      <Icon name={shape?.icon ?? "diamond"} size={26} />
                     </span>
                     <span className="kbody">
                       <span className="nm">{c.name}</span>
@@ -2620,7 +2630,9 @@ export function CreateCharacter({
             />
 
             <div className="rv-who">
-              <span className="rv-crest">{shapeOf(klass.id)?.glyph ?? "\u25C7"}</span>
+              <span className="rv-crest">
+                <Icon name={shapeOf(klass.id)?.icon ?? "diamond"} size={26} />
+              </span>
               <span>
                 <span className="rv-nm">{name.trim() || "Unnamed"}</span>
                 <span className="rv-sub">
@@ -2716,23 +2728,32 @@ export function CreateCharacter({
         </p>
       )}
 
+      {/*
+        * Back and Continue, pinned by the shell.
+        *
+        * They were the last thing in the scroll, which on Ancestry meant five
+        * screens below the question — so the way forward was something you
+        * had to go looking for, on every step, having already answered it.
+        * The rule is that you may scroll to reach the sixth ancestry and
+        * never to discover that a Continue exists.
+        */}
       {races && classes && (
-        <div className="cr-nav">
+        <Actions>
           <button disabled={stepIndex === 0} onClick={() => go(stepIndex - 1)}>Back</button>
           {stepIndex === steps.length - 1 ? (
             <button
-              className="cr-on"
+              className="cr-on filled"
               disabled={gaps.length > 0 || !choices}
               onClick={() => finish()}
             >
               {rebuilding ? "Replace my character" : "Create character"}
             </button>
           ) : (
-            <button className="cr-on" onClick={() => go(stepIndex + 1)}>
+            <button className="cr-on filled" onClick={() => go(stepIndex + 1)}>
               Continue
             </button>
           )}
-        </div>
+        </Actions>
       )}
     </>
   );

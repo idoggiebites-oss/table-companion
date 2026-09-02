@@ -34,6 +34,7 @@ async function device(w, h) {
 
 /** A room, an encounter with a real monster in it, and a fight under way. */
 async function fightWith(page, monster) {
+  await page.getByRole("button", { name: "The table", exact: true }).click();
   await page.getByRole("button", { name: "Start a room" }).click();
   await page.waitForSelector(".rb-code");
   const code = await page.locator(".rb-code").innerText();
@@ -135,6 +136,7 @@ ok("an action's rules text is not uppercased with the button",
 const code = await troll.locator(".rb-code").innerText();
 const player = await device(430, 900);
 await player.locator('input[aria-label="Room code"]').fill(code);
+await player.getByRole("button", { name: "The table", exact: true }).click();
 await player.getByRole("button", { name: "Join", exact: true }).click();
 await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.locator(".join-row", { hasText: "Kira Vance" });

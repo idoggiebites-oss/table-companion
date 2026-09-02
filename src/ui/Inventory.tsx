@@ -18,6 +18,8 @@ import { Popover } from "./Popover.js";
 import type { EventBody } from "../domain/events.js";
 import {
   countOf, isArmour, isShield, isWeapon, itemFacts, searchItems, type Catalogue, type Item, type Stack,
+  type Bucket,
+  inBucket,
 } from "../domain/items.js";
 import { formatCoins, formatPrice, parseCoins } from "../domain/money.js";
 import { displacedBy } from "../domain/equipment.js";
@@ -60,6 +62,13 @@ function ItemName({
     </span>
   );
 }
+
+const BUCKETS: readonly { readonly id: Bucket; readonly label: string }[] = [
+  { id: "weapons", label: "Weapons" },
+  { id: "armor", label: "Armour" },
+  { id: "gear", label: "Gear" },
+  { id: "consumables", label: "Consumables" },
+];
 
 export function Inventory({
   who, inventory, equipped, coins, catalogue, items, editable, append,
@@ -159,18 +168,44 @@ export function Inventory({
         </span>
       </div>
 
+      {/*
+        * The pack, under the four headings V2 sorts by.
+        *
+        * It was two: worn, and everything else — the right split for a figure
+        * and the wrong one for a bag, where everything else is one list with a
+        * rope, a rapier and a potion in whatever order they were picked up.
+        *
+        * HEADINGS, not tabs. V2 can afford four tabs because its inventory IS
+        * the screen; here it is one card among three on the Gear tab, and a
+        * pack is usually under a dozen things. Tabs hid three quarters of it
+        * — including whatever you had just added, which is the one thing you
+        * were looking at the list to see. Two suites caught it immediately and
+        * they were right to: "what am I carrying" became four questions.
+        *
+        * Worn and wielded keeps its own band above these: what is IN HAND is a
+        * different question from what is in the bag. `bucketOf` is the rule,
+        * in domain/items.ts.
+        */}
       {worn.length > 0 && (
         <div className="inv">
           <span className="label cr-sub">Worn and wielded</span>
           {worn.map(row)}
         </div>
       )}
-      {packed.length > 0 && (
-        <div className="inv">
-          <span className="label cr-sub">In your pack</span>
-          {packed.map(row)}
-        </div>
-      )}
+      {packed.length > 0 && BUCKETS.map((b) => {
+        const rows = inBucket(packed, (id) => catalogue[id], b.id);
+        if (rows.length === 0) return null;
+        return (
+          <div className="inv" key={b.id}>
+            <span className="label cr-sub pk-hd">
+              {b.label}
+              <i className="pk-n num">{rows.length}</i>
+            </span>
+            {rows.map(row)}
+          </div>
+        );
+      })}
+
       {inventory.length === 0 && (
         <div className="card-body">
           <p className="faint note">

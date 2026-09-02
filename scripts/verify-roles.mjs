@@ -29,12 +29,26 @@ await page.goto(URL, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Build a character" }).click();
 await page.waitForSelector(".klass-cards", { timeout: 20000 });
 
-// The mark carries the class's colour; nothing else does.
-const hue = await page.locator(".klass", { has: page.locator(".nm", { hasText: /^Wizard$/ }) })
-  .locator(".kg").evaluate((el) => getComputedStyle(el).color);
-const hue2 = await page.locator(".klass", { has: page.locator(".nm", { hasText: /^Fighter$/ }) })
-  .locator(".kg").evaluate((el) => getComputedStyle(el).color);
-ok("a class mark carries its own colour", hue !== hue2, true);
+/* The mark carries the class's SHAPE, and deliberately not its own colour.
+
+   It used to be a hue per class, borrowed from the tokens the app already
+   owned — a barbarian in --damage, a ranger in --heal. Every colour here
+   means one thing, so that was a lie the table reads at speed, and it cost
+   those tokens their meaning on the same screen. What the colour stood in for
+   was telling twelve cards apart, and thirteen different icons do that
+   without spending a semantic. So: different drawings, same ink. */
+const mark = (name) =>
+  page.locator(".klass", { has: page.locator(".nm", { hasText: new RegExp(`^${name}$`) }) })
+    .locator(".kg");
+const inkOf = (name) => mark(name).evaluate((el) => getComputedStyle(el).color);
+const shapeOfMark = (name) =>
+  mark(name).locator("svg path").evaluate((el) => el.getAttribute("d"));
+
+ok("a class mark is a drawing, not a character",
+  await mark("Wizard").locator("svg").count(), 1);
+ok("and every class has its own", (await shapeOfMark("Wizard")) !== (await shapeOfMark("Fighter")), true);
+ok("while the ink is the same, because colour is not decoration here",
+  (await inkOf("Wizard")) === (await inkOf("Fighter")), true);
 const nameColour = await page.locator(".klass .nm").first()
   .evaluate((el) => getComputedStyle(el).color);
 const nameColour2 = await page.locator(".klass .nm").nth(3)

@@ -1,3 +1,4 @@
+import type { IconName } from "../ui/Icon.js";
 /**
  * Plain words for the two questions a builder cannot answer with numbers.
  *
@@ -31,45 +32,54 @@ export interface ClassShape {
   readonly tags: readonly string[];
   /** 1 easiest, 5 hardest. Bookkeeping and decisions, not power. */
   readonly complexity: number;
-  /** A mark, not a picture: the app ships no images. */
-  readonly glyph: string;
+  /**
+   * A mark, not a picture — and SVG, not a character.
+   *
+   * It was one Unicode codepoint per class and three of the thirteen were
+   * pictographic. U+2728 SPARKLES, the wizard, has `Emoji_Presentation=Yes`:
+   * colour is the DEFAULT and the U+FE0E text selector is a hint a platform
+   * may ignore, so a wizard's card was rendering a colour sparkle on iOS with
+   * nothing able to stop it. U+2699 (artificer), U+2694 (barbarian, fighter),
+   * U+271D (cleric) and U+262F (monk) were the platform's choice.
+   */
+  readonly icon: IconName;
 }
 
-/**
- * A hue per class, for the glyph only.
+/*
+ * There is no hue per class, and there deliberately is not.
  *
- * Twelve identical cards are twelve things to read; twelve marks in twelve
- * colours are something you learn the shape of and then recognise. It tints
- * the mark and nothing else — the text stays in the ink colours it shares
- * with every other screen, because a name in a class colour would be a
- * different kind of thing from a name anywhere else in the app.
+ * There was: twelve marks in four colours, borrowed from the tokens the app
+ * already owned — a barbarian in --damage, a ranger in --heal, a cleric in
+ * --steel. The reasoning was that twelve identical cards are twelve things to
+ * read while twelve coloured marks are something you learn the shape of.
  *
- * Drawn from the four the app already owns rather than a new palette, and
- * grouped so the colour says something: martial classes warm, casters cool,
- * the half-and-half ones in between.
+ * The first half of that is right and the second half was solved the wrong
+ * way. Every colour in this app means ONE thing: red is damage, green is
+ * healing, steel is what a player may know. A barbarian rendered in the
+ * damage red is a lie the table reads at speed, and it costs the four tokens
+ * their meaning everywhere else on the same screen.
+ *
+ * What the colour was standing in for was distinguishability, and the icons
+ * do that now — thirteen different SHAPES rather than thirteen tinted copies
+ * of one. They inherit the ink like everything else. This is the note, rather
+ * than an empty map, because "add a colour per class" is a suggestion that
+ * will be made again.
  */
-export const CLASS_HUE: Readonly<Record<string, string>> = {
-  barbarian: "var(--damage)", fighter: "var(--damage)", monk: "var(--bloodied)",
-  rogue: "var(--bloodied)", ranger: "var(--unharmed)", druid: "var(--unharmed)",
-  paladin: "var(--steel)", cleric: "var(--steel)", artificer: "var(--steel)",
-  bard: "var(--conc)", sorcerer: "var(--conc)", warlock: "var(--conc)",
-  wizard: "var(--conc)",
-};
 
 export const CLASS_SHAPE: Readonly<Record<string, ClassShape>> = {
-  barbarian: { tags: ["Martial", "Tank"], complexity: 1, glyph: "\u2694" },
-  bard: { tags: ["Spellcaster", "Support"], complexity: 4, glyph: "\u266A" },
-  cleric: { tags: ["Spellcaster", "Support"], complexity: 3, glyph: "\u271D" },
-  druid: { tags: ["Spellcaster", "Control"], complexity: 5, glyph: "\u2766" },
-  fighter: { tags: ["Martial", "Tank"], complexity: 1, glyph: "\u2694" },
-  monk: { tags: ["Martial", "Mobile"], complexity: 3, glyph: "\u262F" },
-  paladin: { tags: ["Martial", "Support"], complexity: 3, glyph: "\u2720" },
-  ranger: { tags: ["Martial", "Skirmisher"], complexity: 3, glyph: "\u27B3" },
-  rogue: { tags: ["Martial", "Stealth"], complexity: 2, glyph: "\u25D1" },
-  sorcerer: { tags: ["Spellcaster", "Damage"], complexity: 4, glyph: "\u2726" },
-  warlock: { tags: ["Spellcaster", "Damage"], complexity: 3, glyph: "\u26E7" },
-  wizard: { tags: ["Spellcaster", "Control"], complexity: 5, glyph: "\u2728" },
-  artificer: { tags: ["Spellcaster", "Support"], complexity: 4, glyph: "\u2699" },
+  barbarian: { tags: ["Martial", "Tank"], complexity: 1, icon: "fist" },
+  bard: { tags: ["Spellcaster", "Support"], complexity: 4, icon: "note" },
+  cleric: { tags: ["Spellcaster", "Support"], complexity: 3, icon: "sun" },
+  druid: { tags: ["Spellcaster", "Control"], complexity: 5, icon: "leaf" },
+  fighter: { tags: ["Martial", "Tank"], complexity: 1, icon: "sword" },
+  monk: { tags: ["Martial", "Mobile"], complexity: 3, icon: "moon" },
+  paladin: { tags: ["Martial", "Support"], complexity: 3, icon: "shield" },
+  ranger: { tags: ["Martial", "Skirmisher"], complexity: 3, icon: "bow" },
+  rogue: { tags: ["Martial", "Stealth"], complexity: 2, icon: "dagger" },
+  sorcerer: { tags: ["Spellcaster", "Damage"], complexity: 4, icon: "spark" },
+  warlock: { tags: ["Spellcaster", "Damage"], complexity: 3, icon: "pact" },
+  wizard: { tags: ["Spellcaster", "Control"], complexity: 5, icon: "staff" },
+  artificer: { tags: ["Spellcaster", "Support"], complexity: 4, icon: "flask" },
 };
 
 /** What the app knows about a class it has never heard of: nothing useful. */

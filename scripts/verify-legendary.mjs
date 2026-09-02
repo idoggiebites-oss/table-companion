@@ -39,6 +39,7 @@ const go = async (tab) => {
   if (await t.count()) { await t.first().click(); await page.waitForTimeout(400); }
 };
 
+await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 const code = await page.locator(".rb-code").innerText();
@@ -195,6 +196,7 @@ ok("with the order still below", onTheirs.track < onTheirs.next, true);
    being on another page. */
 const player = await device("player");
 await player.locator('input[aria-label="Room code"]').fill(code);
+await player.getByRole("button", { name: "The table", exact: true }).click();
 await player.getByRole("button", { name: "Join", exact: true }).click();
 await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const joinRow = player.locator(".join-row", { hasText: "Kira Vance" });

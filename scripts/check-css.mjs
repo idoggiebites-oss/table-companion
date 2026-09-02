@@ -246,7 +246,13 @@ if (undersized.length > 0) {
  * A fallback — var(--hp, 1) — is a deliberate default and always fine.
  */
 function deadVariables(css) {
-  const defined = new Set([...css.matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((m) => m[1]));
+  /* Anchored at a line start OR a `;`, because a scale reads better as
+     four steps to a line — and with `^` alone the second, third and
+     fourth of those were reported as undefined while being in the file.
+     `{` too, for the one-liner `:root { --bar: … }`. */
+  const defined = new Set(
+    [...css.matchAll(/(?:^|[;{])\s*(--[\w-]+)\s*:/gm)].map((m) => m[1]),
+  );
   const bad = [];
   for (const m of css.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)) {
     if (!defined.has(m[1])) {

@@ -40,6 +40,7 @@ async function device(name) {
 
 // --- the night before, on a laptop --------------------------------------
 const laptop = await device("laptop");
+await laptop.page.getByRole("button", { name: "The table", exact: true }).click();
 await laptop.page.getByRole("button", { name: "Start a room" }).click();
 await laptop.page.waitForSelector(".rb-code");
 const code = await laptop.page.locator(".rb-code").innerText();
@@ -91,6 +92,7 @@ ok("saved for later", await laptop.page.locator(".sv-row .nm").innerText(), "Roa
 // --- at the table, on a different device ---------------------------------
 const tablet = await device("tablet");
 await tablet.page.locator('input[aria-label="Room code"]').fill(code);
+await tablet.page.getByRole("button", { name: "The table", exact: true }).click();
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
 await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1000);
@@ -136,6 +138,7 @@ await tablet.page.screenshot({ path: `${OUT}/29-dropped.png` });
 await laptop.page.waitForTimeout(900);
 const playerView = await device("player");
 await playerView.page.locator('input[aria-label="Room code"]').fill(code);
+await playerView.page.getByRole("button", { name: "The table", exact: true }).click();
 await playerView.page.getByRole("button", { name: "Join", exact: true }).click();
 await playerView.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await sitAs(playerView.page, "Kira Vance");

@@ -20,6 +20,8 @@ import { armourClass, attacksFromEquipment } from "../domain/equipment.js";
 import type { EventBody } from "../domain/events.js";
 import {
   equippedItems, indexItems, mergeItems, type Item,
+  carryLimit,
+  weightOf,
 } from "../domain/items.js";
 import type { CharacterState } from "../domain/project.js";
 import { loadEquipment } from "../store/srd.js";
@@ -49,6 +51,9 @@ export function Gear({
     [state.inventory, state.equipped, catalogue],
   );
   const ac = armourClass(worn, build.abilityMods.dex, build.armourClass, build.abilities.str);
+  /* What it all weighs, against what this character can carry. */
+  const carried = weightOf(state.inventory, (id) => catalogue[id]);
+  const limit = carryLimit(build.abilities.str);
   const attacks = attacksFromEquipment(worn).map((a) =>
     resolveAttack(a, build.abilityMods, build.proficiencyBonus),
   );
@@ -60,19 +65,47 @@ export function Gear({
           <span className="label">What this gets you</span>
         </div>
         <div className="gear-sum">
-          <div>
-            <b className="num">{ac.value}</b>
-            <span className="label">Armour class</span>
-            <span className="faint">{ac.from}</span>
+          {/*
+            * What you are carrying against what you can, and what your armour
+            * bought — ported from V2's carry band.
+            *
+            * The limit is Strength x 15, the rule as written, and it is NOT
+            * enforced: it is a number the table reads. A player who decides to
+            * drag the chest anyway is making a ruling, and an app that refuses
+            * it has taken that ruling from the person whose it is.
+            */}
+          <div className="carry">
+            <span className="carry-hd">
+              <span className="label">Carry weight</span>
+              <span className="label">Armour class</span>
+            </span>
+            <span className="carry-b">
+              <span className="carry-w num">
+                {carried.toFixed(1)}<i> / {limit} lb</i>
+              </span>
+              <span className="carry-ac num">{ac.value}</span>
+            </span>
+            <span className="carry-tr">
+              <i
+                className={`carry-fl${carried > limit ? " over" : ""}`}
+                style={{ width: `${Math.min(100, Math.round((carried / Math.max(1, limit)) * 100))}%` }}
+              />
+            </span>
+            <span className="carry-from">{ac.from}</span>
+            {/* What the armour costs, beside the number it bought: a sheet
+                that says 18 and not "disadvantage on Stealth" has told half
+                the story. */}
+            {(ac.stealthDisadvantage || ac.speedPenalty > 0) && (
+              <span className="carry-cost">
+                {[
+                  ac.stealthDisadvantage ? "Disadvantage on Stealth" : null,
+                  ac.speedPenalty > 0
+                    ? `Speed ${build.speed - ac.speedPenalty} ft. — you are not strong enough for this armour`
+                    : null,
+                ].filter(Boolean).join(" · ")}
+              </span>
+            )}
           </div>
-          {ac.speedPenalty > 0 && (
-            <p className="err">
-              Too heavy for your Strength — 10 feet slower.
-            </p>
-          )}
-          {ac.stealthDisadvantage && (
-            <p className="faint">Disadvantage on Stealth while you wear this.</p>
-          )}
           {attacks.map((a) => (
             <div className="gear-atk" key={a.name}>
               <span className="n">{a.name}</span>

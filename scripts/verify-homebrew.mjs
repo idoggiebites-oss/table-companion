@@ -39,6 +39,7 @@ async function device(name) {
 }
 
 const dm = await device("dm");
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
@@ -122,6 +123,7 @@ await dm.page.screenshot({ path: `${OUT}/31-homebrew-fight.png` });
 // and it syncs, because prep on a laptop is used on a tablet
 const tablet = await device("tablet");
 await tablet.page.locator('input[aria-label="Room code"]').fill(code);
+await tablet.page.getByRole("button", { name: "The table", exact: true }).click();
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
 await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1000);

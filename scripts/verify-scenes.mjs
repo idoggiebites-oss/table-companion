@@ -32,6 +32,7 @@ async function device(name) {
 }
 
 const dm = await device("dm");
+await dm.getByRole("button", { name: "The table", exact: true }).click();
 await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
@@ -78,6 +79,7 @@ ok("without spilling the note itself", row.includes("stair gives"), false);
 // --- a player arrives, knowing none of it --------------------------------
 const player = await device("player");
 await player.locator('input[aria-label="Room code"]').fill(code);
+await player.getByRole("button", { name: "The table", exact: true }).click();
 await player.getByRole("button", { name: "Join", exact: true }).click();
 await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.locator(".join-row", { hasText: "Kira Vance" });
@@ -162,6 +164,7 @@ ok("the player's log says the room changed", /dark/i.test(after), true);
 // --- and it is still there tomorrow --------------------------------------
 const second = await device("second");
 await second.locator('input[aria-label="Room code"]').fill(code);
+await second.getByRole("button", { name: "The table", exact: true }).click();
 await second.getByRole("button", { name: "Join", exact: true }).click();
 await second.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 /* The table's own controls live in a sheet now — the header keeps the code

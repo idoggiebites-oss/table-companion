@@ -91,7 +91,11 @@ await page.goto(URL, { waitUntil: "networkidle" });
 
 // Gear is its own tab now, and it carries the consequences of equipping —
 // armour class and what you would roll — so the loop stays on one screen.
-const strip = () => page.locator(".gear-sum b").first();
+/* The armour class on the gear screen. It used to be the first `b` in the
+   summary; the summary is now V2's carry band, where the number sits in its
+   own crest beside the weight. Named, not positional — the last three times
+   this moved, a positional read came back holding a different number. */
+const strip = () => page.locator(".carry-ac");
 const attacks = () => page.locator(".gear-atk").allInnerTexts();
 const addItem = async (name) => {
   await page.locator('input[aria-label="Search items"]').fill(name);
@@ -177,7 +181,11 @@ await addItem("Half Plate Armor");
 await page.getByRole("button", { name: "Equip Half Plate Armor" }).click();
 await page.waitForTimeout(500);
 ok("medium armour caps dexterity at +2", Number(await strip().innerText()), 15 + 2 + 2);
-ok("and says why", (await page.locator(".gear-sum .faint").first().innerText()),
+/* The derivation, in the carry band's own line. It was `.gear-sum .faint`,
+   which is now the first attack's detail — the sum moved into `.carry-from`
+   when the band was ported, and a class-based read landed on whatever
+   happened to be faint next. */
+ok("and says why", (await page.locator(".carry-from").innerText()),
   "Half Plate Armor 15 + dex +2 + Shield 2");
 
 // --- weapons --------------------------------------------------------------
@@ -256,7 +264,11 @@ ok("and the armour class it implies", Number(await strip().innerText()), 12);
 // has to be true on the other, or the split has quietly forked the numbers.
 await go(page, "sheet");
 ok("the sheet agrees with the gear screen",
-  await page.locator(".strip div", { hasText: "Armour" }).locator("b").innerText(), "12");
+  /* By name: the strip's armour cell is labelled "AC" as the concept labels
+     it, and hit points joined the strip in front of it, so neither the word
+     nor the position it used to hold survived. */
+  await page.locator(".strip > div").filter({ has: page.getByText("AC", { exact: true }) })
+    .locator("b").innerText(), "12");
 ok("and carries the same attacks",
   (await page.locator(".atk .n").allInnerTexts()).length, 2);
 

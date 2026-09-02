@@ -150,6 +150,50 @@ export function isShield(i: Item): boolean {
   return i.armorCategory === "Shield";
 }
 
+/**
+ * What a character can carry: Strength x 15, which is the rule as written.
+ *
+ * NOT a limit the app enforces — it is a number the table reads. A player who
+ * decides to drag the chest anyway is making a choice, and an app that refuses
+ * it has taken a ruling away from the person whose ruling it is.
+ */
+export const carryLimit = (strength: number): number => strength * 15;
+
+/** What it all weighs, quantities counted. */
+export const weightOf = (
+  inv: readonly Stack[],
+  of: (id: string) => Item | undefined,
+): number => inv.reduce((n, s) => n + (of(s.itemId)?.weight ?? 0) * s.qty, 0);
+
+/**
+ * The four headings a pack sorts under.
+ *
+ * Ported from V2. The plurals matter: the catalogue says "Arrows (20)", not
+ * "Arrow", so a pattern written in the singular finds none of the ammunition
+ * anybody actually carries.
+ */
+export type Bucket = "weapons" | "armor" | "gear" | "consumables";
+
+const SPENT =
+  /\b(potions?|elixirs?|philters?|oils?|scrolls?|rations?|antitoxins?|acids?|alchemist's fire|holy water|poisons?|ammunition|arrows?|bolts?|bullets?|needles?|darts?)\b/i;
+
+export function bucketOf(i: Item): Bucket {
+  if (isWeapon(i)) return "weapons";
+  if (i.category === "armor") return "armor";
+  if (SPENT.test(i.name)) return "consumables";
+  return "gear";
+}
+
+/** Anything the catalogue never named is gear: it is a thing in a bag. */
+export const inBucket = (
+  inv: readonly Stack[],
+  of: (id: string) => Item | undefined,
+  bucket: Bucket,
+): Stack[] => inv.filter((s) => {
+  const i = of(s.itemId);
+  return i === undefined ? bucket === "gear" : bucketOf(i) === bucket;
+});
+
 export function hasProperty(i: Item, p: WeaponProperty): boolean {
   return (i.properties ?? []).includes(p);
 }

@@ -38,12 +38,14 @@ async function device(name) {
 }
 
 const dm = await device("dm");
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 
 const p1 = await device("kira");
 await p1.page.locator('input[aria-label="Room code"]').fill(code);
+await p1.page.getByRole("button", { name: "The table", exact: true }).click();
 await p1.page.getByRole("button", { name: "Join", exact: true }).click();
 await p1.page.waitForSelector('button:has-text("Load sample")', { timeout: 20000 });
 await p1.page.getByRole("button", { name: "Load sample" }).click();

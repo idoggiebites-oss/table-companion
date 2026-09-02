@@ -49,6 +49,7 @@ const dm = await device("dm");
 const player = await device("player");
 
 // --- the DM starts a room and makes a character --------------------------
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
@@ -71,6 +72,7 @@ ok("dm applied damage", await hp(dm), "40 / 52");
 
 // --- a second device joins by code and receives the whole log ------------
 await player.page.locator('input[aria-label="Room code"]').fill(code);
+await player.page.getByRole("button", { name: "The table", exact: true }).click();
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 // A joining device starts in the DM seat; taking a character is the real flow.
 await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 15000 });

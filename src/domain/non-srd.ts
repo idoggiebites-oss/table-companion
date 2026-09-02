@@ -1,5 +1,5 @@
 /**
- * ⚠ NOT SRD CONTENT. NOT REDISTRIBUTABLE.
+ * !! NOT SRD CONTENT. NOT REDISTRIBUTABLE.
  *
  * Everything outside SRD 5.1 lives here and nowhere else, so the app has one
  * file standing between it and being shareable. Each table was checked

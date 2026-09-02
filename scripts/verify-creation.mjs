@@ -111,12 +111,14 @@ async function device(name) {
 const stat = (p, label) => p.locator(".cr-grid div", { hasText: label }).locator(".v");
 
 const dm = await device("dm");
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 
 const player = await device("player");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
+await player.page.getByRole("button", { name: "The table", exact: true }).click();
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForTimeout(1200);
 
@@ -328,9 +330,15 @@ await flow.page.waitForSelector(".klass-cards", { timeout: 20000 });
 await flow.page.getByRole("button", { name: "Wizard", exact: true }).click();
 await flow.page.waitForTimeout(400);
 // Where a person is when they finish a long step.
-await flow.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+/* The shell's middle scrolls; the window does not move at all. */
+await flow.page.evaluate(() => { const e = document.querySelector(".sh-scroll");
+  if (e !== null) e.scrollTop = e.scrollHeight; });
 await flow.page.waitForTimeout(300);
-const before = await flow.page.evaluate(() => Math.round(window.scrollY));
+const scrolled = () => flow.page.evaluate(() => {
+  const e = document.querySelector(".sh-scroll");
+  return e === null ? 0 : Math.round(e.scrollTop);
+});
+const before = await scrolled();
 ok("a long step leaves you at the bottom of it", before > 200, true);
 
 await flow.page.getByRole("button", { name: "Continue" }).click();
@@ -338,7 +346,7 @@ await flow.page.waitForTimeout(900);
 const landed = await flow.page.evaluate(() => ({
   rail: Math.round(document.querySelector(".cr-rail").getBoundingClientRect().top),
   anim: getComputedStyle(document.querySelector(".cr-steps")).animationName,
-  scrollY: Math.round(window.scrollY),
+
   viewH: window.innerHeight,
 }));
 /* Two claims, because one of them used to stand in for both and stopped
@@ -349,7 +357,7 @@ const landed = await flow.page.evaluate(() => ({
    What is actually meant is that you are no longer where you were, and that
    the steps are on screen — both of which hold whether the next step fills
    the page or not. */
-ok("you are no longer at the bottom of the last step", landed.scrollY < before, true);
+ok("you are no longer at the bottom of the last step", (await scrolled()) < before, true);
 ok("and the steps are on screen",
   landed.rail >= 0 && landed.rail < landed.viewH, true);
 ok("arriving from the side it came from", landed.anim, "cr-arrive");
@@ -403,6 +411,7 @@ await noSourceOnScreen(player.page, "the builder");
    come from, and taking any here would remove the thing that suite measures. */
 const caster = await device("caster");
 await caster.page.locator('input[aria-label="Room code"]').fill(code);
+await caster.page.getByRole("button", { name: "The table", exact: true }).click();
 await caster.page.getByRole("button", { name: "Join", exact: true }).click();
 await caster.page.waitForTimeout(1200);
 await caster.page.getByRole("button", { name: "Build a character" }).click();

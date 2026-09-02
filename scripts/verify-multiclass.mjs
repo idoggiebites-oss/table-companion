@@ -374,8 +374,12 @@ await p3.selectOption('select[aria-label="Add a class"]', { label: "Wizard" });
 await p3.waitForTimeout(500);
 await p3.locator('input[aria-label="Wizard levels"]').fill("2");
 await p3.waitForTimeout(700);
+/* The rail is a run of dots now — the step's NAME is its accessible name
+   (`Step 6, Spells`) rather than visible text, because the header says which
+   step you are on and fourteen labelled pills had to be swiped to be read.
+   Found by role, which is what the name is for. */
 ok("adding the wizard adds the step",
-  await p3.locator(".cr-node").filter({ hasText: /spells/i }).count(), 1);
+  await p3.getByRole("button", { name: /^Step \d+, Spells$/ }).count(), 1);
 
 await atStep(p3, "Race");
 await p3.selectOption('select[aria-label="Race"]', "human");
@@ -428,8 +432,15 @@ ok("each casting class gets its own pickers",
   ["wizard · cantrips", "wizard · spells", "cleric · cantrips", "cleric · spells"]);
 const counts = (await p4.locator(".chooser-hd .num").allInnerTexts()).map((t) => t.trim());
 /* Three each, from two different lines of two different tables — not six
-   from one pool. */
-ok("with its own allowance", [counts[0], counts[2]], ["0 OF 3", "0 OF 3"]);
+   from one pool.
+
+   Lowercased before comparing, because `innerText` returns RENDERED text and
+   the case of these is a stylesheet decision, not a fact about the app. This
+   read "0 OF 3" while the source said "0 of 3" and a `text-transform` made up
+   the difference; when buttons stopped shouting, so did this. Assert the
+   words, not the typography. */
+ok("with its own allowance",
+  [counts[0].toLowerCase(), counts[2].toLowerCase()], ["0 of 3", "0 of 3"]);
 
 /* And the lists are different books: a wizard is not offered Cure Wounds. */
 await p4.getByRole("button", { name: /^Wizard Cantrips/ }).click();

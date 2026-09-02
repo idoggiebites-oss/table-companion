@@ -30,6 +30,7 @@ const go = async (tab) => {
   if (await t.count()) { await t.first().click(); await page.waitForTimeout(400); }
 };
 
+await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();

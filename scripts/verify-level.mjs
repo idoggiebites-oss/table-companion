@@ -134,12 +134,14 @@ async function device(name) {
 const stat = (p, label) => p.locator(".cr-grid div", { hasText: label }).locator(".v");
 
 const dm = await device("dm");
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 
 const player = await device("player");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
+await player.page.getByRole("button", { name: "The table", exact: true }).click();
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForTimeout(1200);
 await player.page.getByRole("button", { name: "Build a character" }).click();

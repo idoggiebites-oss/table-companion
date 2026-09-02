@@ -66,6 +66,7 @@ const go = async (page, tab) => {
 
 // --- a campaign somebody is playing ---------------------------------------
 const app = await device();
+await app.getByRole("button", { name: "The table", exact: true }).click();
 await app.getByRole("button", { name: "Start a room" }).click();
 await app.waitForSelector(".rb-code");
 await measure(app, "the room, before anything");
@@ -110,6 +111,7 @@ await measure(app, "the sheet with its drawers open");
 // --- and the builder, step by step ----------------------------------------
 // Background chips at 30 and feat rows at 39 both lived in here.
 const build = await device();
+await build.getByRole("button", { name: "The table", exact: true }).click();
 await build.getByRole("button", { name: "Start a room" }).click();
 await build.waitForSelector(".rb-code");
 await build.getByRole("button", { name: "Build a character" }).click();

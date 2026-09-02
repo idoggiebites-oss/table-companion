@@ -50,6 +50,7 @@ const go = async (page, tab) => {
 
 // A room with somebody in it, because the buzz control lives beside the fight.
 const dm = await device();
+await dm.getByRole("button", { name: "The table", exact: true }).click();
 await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
@@ -58,6 +59,7 @@ await dm.waitForSelector('select[aria-label="Seat"], .join-row');
 
 const join = async (page) => {
   await page.locator('input[aria-label="Room code"]').fill(code);
+  await page.getByRole("button", { name: "The table", exact: true }).click();
   await page.getByRole("button", { name: "Join", exact: true }).click();
   await page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
   const row = page.locator(".join-row", { hasText: "Kira Vance" });

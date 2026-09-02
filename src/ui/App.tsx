@@ -69,6 +69,9 @@ const TAB_NAME: Record<TabId, string> = {
 };
 import { Shop } from "./Shop.js";
 import { UpdateBar } from "./UpdateBar.js";
+import { useTheme } from "./useTheme.js";
+import { Crest, Icon } from "./Icon.js";
+import { Shell } from "./Shell.js";
 
 export function App() {
   const { seat, mine: myCharacters, setSeat, claim, claimOnly } = useSeat();
@@ -89,6 +92,20 @@ export function App() {
   /** The two sheets behind the header: the room's controls, and this device's. */
   const [roomOpen, setRoomOpen] = useState(false);
   const [deviceOpen, setDeviceOpen] = useState(false);
+  /*
+   * What the header says while a character is being made.
+   *
+   * V2 names the step in the header — which is what lets its rail be a run of
+   * dots rather than fourteen labelled pills that have to be swiped. The flow
+   * still owns which step it is on; this only holds the word.
+   */
+  const [stepName, setStepName] = useState<string | null>(null);
+  /*
+   * The theme. Device-local, like the seat — it never enters the log, so it
+   * is read here rather than off state, and it lives beside the other things
+   * this device decides for itself.
+   */
+  const theme = useTheme();
 
   // Events are signed by the seat, which is what makes one person editing
   // another's sheet acceptable rather than merely convenient.
@@ -192,23 +209,23 @@ export function App() {
     offeredToMe !== null && reactionSpare && answeredOffer !== offerKey;
 
   const dmTabs: TabDef<TabId>[] = [
-    { id: "combat", label: "Combat", dot: state.combat?.phase === "rolling" },
-    { id: "party", label: "Party" },
-    { id: "prep", label: "Prep" },
-    { id: "book", label: "Book" },
-    { id: "log", label: "Log" },
+    { id: "combat", label: "Combat", icon: "sword", dot: state.combat?.phase === "rolling" },
+    { id: "party", label: "Party", icon: "person" },
+    { id: "prep", label: "Prep", icon: "map" },
+    { id: "book", label: "Book", icon: "book" },
+    { id: "log", label: "Log", icon: "list" },
   ];
   /** Only casters get a Spells tab — a fighter has nothing to put on it. */
   const casts =
     mine !== undefined &&
     (mine.spellSlots.some((n) => n > 0) || (mineState?.spells.length ?? 0) > 0);
   const playerTabs: TabDef<TabId>[] = [
-    { id: "combat", label: "Combat", dot: myTurn || askingReaction },
-    { id: "sheet", label: "Sheet", dot: owed > 0 || saveOwed },
-    ...(casts ? [{ id: "spells" as const, label: "Spells" }] : []),
-    { id: "gear", label: "Gear", dot: shopOpen },
-    { id: "notes", label: "Notes" },
-    { id: "log", label: "Log" },
+    { id: "combat", label: "Combat", icon: "sword", dot: myTurn || askingReaction },
+    { id: "sheet", label: "Sheet", icon: "person", dot: owed > 0 || saveOwed },
+    ...(casts ? [{ id: "spells" as const, label: "Spells", icon: "spark" as const }] : []),
+    { id: "gear", label: "Gear", icon: "pack", dot: shopOpen },
+    { id: "notes", label: "Notes", icon: "page" },
+    { id: "log", label: "Log", icon: "list" },
   ];
   /*
    * Wide enough for two things at once, and there is a fight to be the first
@@ -435,6 +452,111 @@ export function App() {
     }
   }
 
+  /*
+   * The band under the header: who you are, and the code read aloud.
+   *
+   * It is a BAND rather than a page-level bar, so it is pinned with the
+   * header and the scroll below it starts under it rather than after it. The
+   * two things that are pressed — the table and this device — went up into
+   * the header's own slots, where every screen already reserves the room.
+   */
+  /*
+   * The band under the header: who you are, and the code read aloud.
+   *
+   * It is a BAND rather than a page-level bar — pinned with the header, so
+   * the scroll below starts under it rather than after it. The two things
+   * that are PRESSED (the table, this device) went up into the header's own
+   * slots, where every screen already reserves the room for them.
+   *
+   * It was three stacked bands once: a room card with four controls, the
+   * offline notice, and the seat — 460 pixels of an 844px phone before the
+   * first card on every screen, two of the three touched about twice a
+   * session. Nothing is added back to it; anything new goes behind one of
+   * those two buttons, which is what they are for.
+   */
+  /* One entry is not a choice — see the pill below. */
+  const seatOptions = (mayBeDm ? 1 : 0) + seatable.length;
+
+  const seatRow = (
+    <div className="seatbar">
+      {needsClaim ? (
+        <span className="label">Joining the table</span>
+      ) : seatOptions <= 1 ? (
+        /*
+          * Nothing to choose between is not a dropdown.
+          *
+          * A device with no characters is the DM, and a device with one and no
+          * DM claim is that character — either way the control was a select
+          * with a single entry, which is a picture of a choice. V2's rule: it
+          * becomes a pill that says who you are.
+          */
+        <span className="sb-only" data-testid="seat">
+          {seat.kind === "dm" ? "The DM" : (seatable[0]?.name ?? "The DM")}
+        </span>
+      ) : (
+        <>
+            {/* Associated, not merely adjacent — a label beside a control
+                is a label only to somebody who can see them together. */}
+            <label className="label" htmlFor="seat-pick">I am</label>
+            <select
+              id="seat-pick"
+              aria-label="Seat"
+              value={seat.kind === "dm" ? "dm" : `pc:${seat.characterId}`}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSeat(v === "dm" ? { kind: "dm" } : { kind: "player", characterId: v.slice(3) });
+              }}
+            >
+              {mayBeDm && <option value="dm">the DM</option>}
+              {/* Only this device's own characters. */}
+              {seatable.map((b) => (
+                <option key={b.id} value={`pc:${b.id}`}>{b.name}</option>
+              ))}
+            </select>
+        </>
+      )}
+      {adding && <button onClick={() => setAdding(false)}>Cancel</button>}
+
+      {/* The crest. Centred, and the one deliberate flourish in the app —
+          it is also what tells you at a glance which of the six tabs you
+          are looking at is still Table Companion. */}
+      <span className="sb-crest" aria-hidden="true"><Crest size={30} /></span>
+
+      <span className="sb-end">
+        {room && (
+          <>
+            {/* Read aloud, never pressed. It stays on screen because a
+                table that cannot find the code cannot start. */}
+            <span className="rb-code num" title="Read this out to join">{room.code}</span>
+            {/* The connection, as a dot with the words on it: three
+                states, and only one of them is worth a sentence. */}
+            <span
+              className={`rb-dot s-${status}`}
+              title={STATUS_SAID[status]}
+              aria-label={STATUS_SAID[status]}
+              role="img"
+            />
+          </>
+        )}
+        {/*
+          * "The table", not "the room": the room is where the fight is
+          * happening, it is named that on this very screen, and two controls
+          * answering to one name is an ambiguity for anything driving by name
+          * — a browser suite or a screen reader. It is here in or out of a
+          * room: with no room this is where you start or join one, which is
+          * how a permanent four-control card became a button.
+          */}
+        <button className="sb-i" aria-label="The table" onClick={() => setRoomOpen(true)}>
+          <Icon name="group" size={20} />
+        </button>
+        <button className="sb-i" aria-label="This device" onClick={() => setDeviceOpen(true)}>
+          <Icon name="more" size={20} />
+        </button>
+      </span>
+    </div>
+  );
+
+
   if (!ready) return <div className="app"><p className="faint">Loading…</p></div>;
 
   return (
@@ -452,10 +574,8 @@ export function App() {
         showTurnBar ? " has-turnbar" : ""
       }`}
     >
-      <UpdateBar />
       {/* Said once, for a screen reader: see the h1 rule in app.css. */}
       <h1>Table Companion</h1>
-      <RoomBar room={room} onJoin={joinRoom} />
 
       {/*
         * One row of chrome, not three.
@@ -471,66 +591,14 @@ export function App() {
         * connection. The room's own controls and this device's are two
         * sheets, split by what they act on rather than by what fits.
         */}
-      {(room || builds.length > 0) && (
-        <div className="seatbar">
-          {needsClaim ? (
-            <span className="label">Joining the table</span>
-          ) : builds.length > 0 ? (
-            <>
-              {/* Associated, not merely adjacent — a label beside a control
-                  is a label only to somebody who can see them together. */}
-              <label className="label" htmlFor="seat-pick">I am</label>
-              <select
-                id="seat-pick"
-                aria-label="Seat"
-                value={seat.kind === "dm" ? "dm" : `pc:${seat.characterId}`}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setSeat(v === "dm" ? { kind: "dm" } : { kind: "player", characterId: v.slice(3) });
-                }}
-              >
-                {mayBeDm && <option value="dm">the DM</option>}
-                {/* Only this device's own characters. */}
-                {seatable.map((b) => (
-                  <option key={b.id} value={`pc:${b.id}`}>{b.name}</option>
-                ))}
-              </select>
-            </>
-          ) : null}
-          {adding && <button onClick={() => setAdding(false)}>Cancel</button>}
 
-          <span className="sb-end">
-            {room && (
-              <>
-                {/* Read aloud, never pressed. It stays on screen because a
-                    table that cannot find the code cannot start. */}
-                <span className="rb-code num" title="Read this out to join">{room.code}</span>
-                {/* The connection, as a dot with the words on it: three
-                    states, and only one of them is worth a sentence. */}
-                <span
-                  className={`rb-dot s-${status}`}
-                  title={STATUS_SAID[status]}
-                  aria-label={STATUS_SAID[status]}
-                  role="img"
-                />
-                {/* "The table", not "the room": the room is where the fight
-                    is happening, it is named that on this very screen, and two
-                    controls answering to one name is an ambiguity for anything
-                    driving by name — a browser suite or a screen reader. */}
-                <button className="sb-i" aria-label="The table" onClick={() => setRoomOpen(true)}>
-                  <span aria-hidden="true">{"\u2699"}</span>
-                </button>
-              </>
-            )}
-            <button className="sb-i" aria-label="This device" onClick={() => setDeviceOpen(true)}>
-              <span aria-hidden="true">{"\u22EF"}</span>
-            </button>
-          </span>
-        </div>
-      )}
-
-      {room && (
-        <Popover open={roomOpen} title="The table" onClose={() => setRoomOpen(false)}>
+      <Popover open={roomOpen} title="The table" onClose={() => setRoomOpen(false)}>
+        {room === null ? (
+          /* Getting IN is the whole screen for forty seconds and then never
+             again, which is exactly what a sheet is for — and it means a solo
+             device spends no pixels at all on a room it does not have. */
+          <RoomBar room={room} onJoin={joinRoom} />
+        ) : (
           <RoomMenu
             room={room}
             status={status}
@@ -540,8 +608,8 @@ export function App() {
             onLeave={leaveRoom}
             onClaim={claimDm}
           />
-        </Popover>
-      )}
+        )}
+      </Popover>
 
       <Popover open={deviceOpen} title="This device" onClose={() => setDeviceOpen(false)}>
         <div className="rm">
@@ -549,6 +617,22 @@ export function App() {
             Characters, content and seats live on this device. The log lives in
             the room.
           </p>
+          {/*
+            * Three states, one control.
+            *
+            * The button says what pressing it DOES rather than what is on
+            * screen, because a toggle labelled with its current state is
+            * read both ways by different people. "Following this phone" is
+            * the third state and is the default — it earns a line of its own
+            * only once a choice has overridden it, since a control that
+            * undoes something nobody did is noise.
+            */}
+          <button aria-label={`Switch to the ${theme.showing === "light" ? "dark" : "light"} theme`} onClick={theme.flip}>
+            {theme.showing === "light" ? "Dark theme" : "Light theme"}
+          </button>
+          {theme.choice !== "system" && (
+            <button onClick={theme.follow}>Follow this phone</button>
+          )}
           {(builds.length > 0 || dmView) && !adding && (
             <button
               onClick={() => {
@@ -588,14 +672,62 @@ export function App() {
         </div>
       )}
 
-      {/* The landmark. Five hundred and seventy-two divs and not one <main>:
-          a screen reader arriving here had no way to skip the room code, the
-          seat selector and the tab bar to reach the thing the page is about.
-          Styled by class, so the tag is free. */}
-      <main className="pane-main" data-pane={current}>
-      {!needsCharacter && !needsClaim && (
-        <Tabs tabs={tabs} active={current} onPick={setTab} />
-      )}
+      {/*
+        * The shell. Header, one scrolling middle, a pinned action bar, and
+        * the tab bar under it — five declared bands, and the middle is the
+        * only thing that moves.
+        *
+        * `main` is inside it, on the scroller: five hundred and seventy-two
+        * divs and not one landmark meant a screen reader arriving here had no
+        * way to skip the code, the seat and the tab bar to reach the thing the
+        * page is about.
+        */}
+      <Shell
+        title={
+          building && stepName !== null
+            ? stepName
+            /* The sheet is a sheet OF somebody, and the concept names them
+               here — it is the one screen whose title is not the name of a
+               place. Everything else keeps the tab's own word. */
+            : current === "sheet" && mine !== undefined
+              ? mine.name
+              : TAB_NAME[current]
+        }
+        before={
+          <>
+            <UpdateBar />
+            {/* Always, because the two ways in live in it now. A device with
+                no character still needs to reach the table and its own
+                settings. */}
+            {seatRow}
+          </>
+        }
+        below={
+          <>
+            {/*
+              * Your turn, reachable from wherever you are looking — a BAND of
+              * the shell now, standing on the tab bar rather than fixed over a
+              * page that no longer scrolls. Only off the fight: on it the whole
+              * turn is already on screen, and a second copy would be a door
+              * into a room you are standing in.
+              */}
+            {showTurnBar && mine && (
+              <TurnBar
+                who={mine.id}
+                selfId={mySeatId}
+                actionSpent={Boolean(state.characters[mine.id]?.economy.action)}
+                dodging={myTags.includes("dodging")}
+                onGo={(t) => setTab(t)}
+                append={append}
+              />
+            )}
+            {!needsCharacter && !needsClaim && (
+              <Tabs tabs={tabs} active={current} onPick={setTab} />
+            )}
+          </>
+        }
+        pane={current}
+      >
 
       {/* Owed NOW, both of them, so they sit above whatever tab you happen to
           be on rather than waiting to be found. */}
@@ -675,6 +807,7 @@ export function App() {
         building ? (
           <CreateCharacter
             onCreate={create}
+            onStep={setStepName}
             /* A re-roll is a fresh character at the level they REACHED. The
                form defaults to 1, which made the first rebuild a level 1
                wizard with eight hit points. */
@@ -924,23 +1057,8 @@ export function App() {
         </section>
       )}
       </Boundary>
-      </main>
+      </Shell>
 
-      {/*
-        * Your turn, reachable from wherever you are looking. Only off the
-        * fight — on it the whole turn is already on screen, and a second copy
-        * would be a door into a room you are standing in.
-        */}
-      {showTurnBar && mine && (
-        <TurnBar
-          who={mine.id}
-          selfId={mySeatId}
-          actionSpent={Boolean(state.characters[mine.id]?.economy.action)}
-          dodging={myTags.includes("dodging")}
-          onGo={(t) => setTab(t)}
-          append={append}
-        />
-      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
 } from "../domain/slots.js";
 import { loadEquipment } from "../store/srd.js";
 import { useCatalogue } from "./Inventory.js";
+import { Icon } from "./Icon.js";
 
 export function Doll({
   who, inventory, equipped, append, homebrew,
@@ -94,12 +95,23 @@ export function Doll({
             disabled={Boolean(spoken)}
             onClick={() => setOpen(open === id ? null : id)}
           >
-            <span className="g">{slot.glyph}</span>
+            <span className="g"><Icon name={slot.icon} size={22} /></span>
+            {/*
+              * The PLACE first, then what is in it, then what that does.
+              *
+              * It read the other way round — the item large and the place it
+              * goes as a footnote — which is backwards for a figure whose
+              * whole job is "what is on each part of me". Six of these are on
+              * screen at once and the thing being scanned for is the place.
+              */}
             <span className="t">
-              <span className="n">{item ? item.name : slot.name}</span>
-              <span className="s">
-                {item ? said(item) : spoken ? `both hands on the ${bothHands.name.toLowerCase()}` : "empty"}
+              <span className="s">{slot.name}</span>
+              <span className="n">
+                {item ? item.name
+                  : spoken ? `both hands on the ${bothHands.name.toLowerCase()}`
+                  : slot.what}
               </span>
+              {item && <span className="d">{said(item)}</span>}
             </span>
           </button>
         );

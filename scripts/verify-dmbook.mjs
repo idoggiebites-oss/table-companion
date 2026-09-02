@@ -26,6 +26,7 @@ const page = await ctx.newPage();
 page.on("pageerror", (e) => errors.push(`${e}`));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 await page.goto(URL, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();

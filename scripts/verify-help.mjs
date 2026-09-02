@@ -38,6 +38,7 @@ const go = async (page, tab) => {
 
 // --- a table of two -------------------------------------------------------
 const dm = await device("dm");
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
@@ -64,6 +65,7 @@ const kira = await device("kira");
 const bram = await device("bram");
 for (const [d, who] of [[kira, "Kira Vance"], [bram, "Bram Holt"]]) {
   await d.page.locator('input[aria-label="Room code"]').fill(code);
+  await d.page.getByRole("button", { name: "The table", exact: true }).click();
   await d.page.getByRole("button", { name: "Join", exact: true }).click();
   await d.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
   const row = d.page.locator(".join-row", { hasText: who });

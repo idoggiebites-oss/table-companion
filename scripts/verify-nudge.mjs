@@ -45,6 +45,7 @@ async function device(name, watchSocket = false) {
 }
 
 const dm = await device("dm", true);
+await dm.getByRole("button", { name: "The table", exact: true }).click();
 await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
@@ -55,6 +56,7 @@ await dm.waitForSelector(".pm-name");
 
 const player = await device("player");
 await player.locator('input[aria-label="Room code"]').fill(code);
+await player.getByRole("button", { name: "The table", exact: true }).click();
 await player.getByRole("button", { name: "Join", exact: true }).click();
 await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.locator(".join-row", { hasText: "Kira Vance" });

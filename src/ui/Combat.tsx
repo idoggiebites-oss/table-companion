@@ -59,6 +59,8 @@ import { healthStep, VAGUE_LABEL } from "./HpBar.js";
 import { PlayerTurn } from "./PlayerTurn.js";
 import { Readiness } from "./Readiness.js";
 import { useAttacks } from "./useAttacks.js";
+import { Icon } from "./Icon.js";
+import { Actions } from "./Shell.js";
 
 const nextDisclosure = (d: Disclosure): Disclosure =>
   DISCLOSURE[(DISCLOSURE.indexOf(d) + 1) % DISCLOSURE.length]!;
@@ -949,7 +951,7 @@ export function Combat({
                     aria-label={`Apply ${c.damage} to ${c.targetName}`}
                     onClick={() => append({ type: "attackResolved", claimId: c.id, applied: true })}
                   >
-                    <span className="vg" aria-hidden="true">{"\u2694"}</span>
+                    <span className="vg"><Icon name="sword" size={18} /></span>
                     {c.save ? `Failed — ${c.damage}` : verdict === "misses" ? "Hits anyway" : "It hits"}
                   </button>
                   {/* The one place the app made the DM do arithmetic: a save
@@ -975,7 +977,7 @@ export function Combat({
                     aria-label={`Reject ${c.whoName}'s attack`}
                     onClick={() => append({ type: "attackResolved", claimId: c.id, applied: false })}
                   >
-                    <span className="vg" aria-hidden="true">{"\u26E8"}</span>
+                    <span className="vg"><Icon name="guard" size={18} /></span>
                     {c.save ? "Saved — none" : "Missed"}
                   </button>
                 </span>
@@ -1424,15 +1426,26 @@ export function Combat({
 
       {seat.kind === "dm" && (
         <div className="card-body" style={{ paddingBottom: 0 }}>
-          <button
-            className="next-turn"
-            disabled={!canEnd}
-            aria-label="Next turn"
-            onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
-          >
-            Next turn
-            <small>{upNext ? `${upNext.name} is up` : "round ends"}</small>
-          </button>
+          {/*
+            * The control that ends the turn, in the shell's pinned bar.
+            *
+            * DESIGN.md: the accent marks whose turn it is and the single
+            * control that moves the fight forward — and the second of those
+            * was below the initiative order, so a DM with six creatures
+            * scrolled to end every turn. It is pinned now, and it is the only
+            * thing in the bar on this screen.
+            */}
+          <Actions>
+            <button
+              className="next-turn"
+              disabled={!canEnd}
+              aria-label="Next turn"
+              onClick={() => append({ type: "turnAdvanced", from: combat.turn })}
+            >
+              Next turn
+              <small>{upNext ? `${upNext.name} is up` : "round ends"}</small>
+            </button>
+          </Actions>
           {/*
             * Back a turn used to live here, at the foot of the card and a
             * long way from the name that is wrong. It moved up beside that

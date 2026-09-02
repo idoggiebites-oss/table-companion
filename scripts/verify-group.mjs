@@ -28,6 +28,7 @@ dm.on("pageerror", (e) => errors.push(`${e}`));
 dm.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 await dm.goto(URL, { waitUntil: "networkidle" });
 
+await dm.getByRole("button", { name: "The table", exact: true }).click();
 await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 await dm.getByRole("button", { name: "Load sample" }).click();

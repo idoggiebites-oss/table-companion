@@ -72,6 +72,7 @@ await page.getByRole("button", { name: "Load sample" }).click();
 await page.waitForSelector(".tabs", { timeout: 20000 });
 ok("the SRD data loads through the gate",
   (await page.locator(".hp-big").innerText()).includes("/"), true);
+await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code", { timeout: 20000 });
 ok("and so does the room API", (await page.locator(".rb-code").innerText()).length, 6);

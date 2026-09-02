@@ -40,6 +40,7 @@ const atStep = async (page, label) => {
 };
 
 const dm = await device("dm");
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
@@ -50,6 +51,7 @@ await dm.page.waitForTimeout(600);
 
 const player = await device("player");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
+await player.page.getByRole("button", { name: "The table", exact: true }).click();
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const join = player.page.locator(".join-row", { hasText: "Kira Vance" });

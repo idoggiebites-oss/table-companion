@@ -33,6 +33,7 @@ async function device(name) {
 }
 
 const dm = await device("dm");
+await dm.getByRole("button", { name: "The table", exact: true }).click();
 await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
@@ -50,6 +51,7 @@ await dm.waitForTimeout(900);
 
 const kira = await device("kira");
 await kira.locator('input[aria-label="Room code"]').fill(code);
+await kira.getByRole("button", { name: "The table", exact: true }).click();
 await kira.getByRole("button", { name: "Join", exact: true }).click();
 await kira.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const pick = kira.locator(".join-row").first();
@@ -79,6 +81,7 @@ await kira.screenshot({ path: `${OUT}/42-notes.png`, fullPage: true });
    same character, same notes. */
 const second = await device("second");
 await second.locator('input[aria-label="Room code"]').fill(code);
+await second.getByRole("button", { name: "The table", exact: true }).click();
 await second.getByRole("button", { name: "Join", exact: true }).click();
 await second.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const same = second.locator(".join-row").first();
@@ -100,6 +103,7 @@ ok("without printing it", /innkeeper/i.test(dmLog), false);
 
 const bel = await device("bel");
 await bel.locator('input[aria-label="Room code"]').fill(code);
+await bel.getByRole("button", { name: "The table", exact: true }).click();
 await bel.getByRole("button", { name: "Join", exact: true }).click();
 await bel.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 const rows = bel.locator(".join-row");

@@ -99,8 +99,16 @@ await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".hp-big");
 
 ok("sheet shows imported hp", (await page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "52 / 52");
-ok("sheet shows the fixed armour class", await page.locator(".strip div").first().locator("b").innerText(), "16");
-ok("proficiency derived from level", await page.locator(".strip div").nth(3).locator("b").innerText(), "+3");
+/* Read by NAME, not by position. Hit points joined the strip as its first
+   cell — they were a card of their own below it — and every index in here
+   shifted by one, which is how an assertion about armour class came back
+   holding "52 / 52". A cell that moves should not be able to break a claim
+   about a different number. */
+const cell = (label) =>
+  page.locator(".strip > div").filter({ has: page.getByText(label, { exact: true }) })
+    .locator("b").innerText();
+ok("sheet shows the fixed armour class", await cell("AC"), "16");
+ok("proficiency derived from level", await cell("Prof bonus"), "+3");
 await openDrawer(page, "Skills");
 ok("stealth from the import",
   await page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText(), "+7");

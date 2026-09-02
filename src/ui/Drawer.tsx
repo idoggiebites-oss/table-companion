@@ -66,7 +66,15 @@ export function Drawer({
         <section className="card dw">
           <div className="card-hd">
             <span className="label">Skills</span>
-            <span className="label q">Tap to roll</span>
+            {/*
+              * Passive perception, where perception is.
+              *
+              * It was the sixth cell of the stat strip, which on a 390px phone
+              * clipped its own label — and it is not a number a table asks for
+              * mid-turn, it is the one a DM reads to decide whether you
+              * noticed something. It belongs with the skill it derives from.
+              */}
+            <span className="label q">Passive perception {build.passivePerception} · tap to roll</span>
           </div>
           <div className="dw-list">
             {[...SKILL_IDS]

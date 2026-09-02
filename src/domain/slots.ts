@@ -1,3 +1,4 @@
+import type { IconName } from "../ui/Icon.js";
 /**
  * What is worn where.
  *
@@ -25,18 +26,25 @@ export interface Slot {
   readonly id: SlotId;
   readonly name: string;
   /** Drawn, not fetched — the app ships no icon set. */
-  readonly glyph: string;
+  /*
+   * SVG, not a character. Three of the six were pictographic — U+1F5E1
+   * DAGGER for the off hand and U+26D1 for the head are pictures on any
+   * platform that has them, and this figure is drawn six times on one
+   * screen, so three of the six arriving in colour is what the worn figure
+   * looked like on a phone.
+   */
+  readonly icon: IconName;
   /** What goes here, for the empty state. */
   readonly what: string;
 }
 
 export const SLOTS: readonly Slot[] = [
-  { id: "head", name: "Head", glyph: "⛑", what: "a helm, a circlet, a hat" },
-  { id: "body", name: "Body", glyph: "⛨", what: "armour" },
-  { id: "cloak", name: "Cloak", glyph: "◈", what: "a cloak or mantle" },
-  { id: "main", name: "Main hand", glyph: "⚔", what: "what you attack with" },
-  { id: "off", name: "Off hand", glyph: "🗡", what: "a shield, or a second weapon" },
-  { id: "belt", name: "Belt", glyph: "◐", what: "a belt, a pouch, a horn" },
+  { id: "head", name: "Head", icon: "helm", what: "a helm, a circlet, a hat" },
+  { id: "body", name: "Body", icon: "shield", what: "armour" },
+  { id: "cloak", name: "Cloak", icon: "cloak", what: "a cloak or mantle" },
+  { id: "main", name: "Main hand", icon: "sword", what: "what you attack with" },
+  { id: "off", name: "Off hand", icon: "dagger", what: "a shield, or a second weapon" },
+  { id: "belt", name: "Belt", icon: "pouch", what: "a belt, a pouch, a horn" },
 ];
 
 /** The left-hand column, then the right, as the figure is drawn. */

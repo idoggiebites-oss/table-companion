@@ -104,7 +104,10 @@ await page.waitForTimeout(600);
 const spellDot = async () => {
   await atStep(page, "Story");
   await page.waitForTimeout(300);
-  return page.locator(".cr-rail button", { hasText: /SPELLS/i }).innerText();
+  /* The dot says it, and it says it to a screen reader: the rail carries no
+     visible text now, so the tick lives in the node's own textContent behind
+     `text-indent`. Found by accessible name, read by content. */
+  return page.getByRole("button", { name: /^Step \d+, Spells$/ }).innerText();
 };
 ok("a caster with no spells chosen is not finished with Spells",
   /\u2713/.test(await spellDot()), false);

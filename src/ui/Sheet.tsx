@@ -8,7 +8,7 @@
  */
 
 import { describeSenses, hasSenses } from "../domain/senses.js";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatModifier } from "../domain/abilities.js";
 import { describeAttack } from "../domain/attack.js";
 import type { EffectiveBuild } from "../domain/build.js";
@@ -18,7 +18,7 @@ import { previewRest, type RestKind, type RestPreview } from "../domain/rest.js"
 import type { RollMode } from "../domain/roll.js";
 import { RollPad, type RollTarget } from "./RollPad.js";
 import type { CampaignState } from "../domain/project.js";
-import { HpBar, healthStep, VAGUE_LABEL } from "./HpBar.js";
+import { healthStep, VAGUE_LABEL } from "./HpBar.js";
 import { Field } from "./Field.js";
 import { useCatalogue } from "./Inventory.js";
 import { Doll } from "./Doll.js";
@@ -31,6 +31,12 @@ import {
 import { resolveAttack } from "../domain/attack.js";
 import { loadEquipment } from "../store/srd.js";
 import { StateCard } from "./StateCard.js";
+import { Actions } from "./Shell.js";
+import { Icon, LevelShield } from "./Icon.js";
+import { shapeOf } from "../domain/guidance.js";
+import { loadPortrait, savePortrait, clearPortrait, shrink } from "./portrait.js";
+import { xpForLevel, xpToNextLevel } from "../domain/progression.js";
+import type { Ability } from "../domain/abilities.js";
 
 function Pips({
   max, spent, die, onSpend, onRestore,
@@ -138,6 +144,62 @@ export function Sheet({
   const openCheck = (target: RollTarget) => setPad({ kind: "check", target });
 
   const who = build.id;
+
+  /*
+   * The portrait, read once per character and kept here.
+   *
+   * Device-local, never an event — ui/portrait.ts says why, and says plainly
+   * what it costs: the picture does not travel to the DM's screen.
+   */
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [face, setFace] = useState<string | null>(() => loadPortrait(who));
+  const [faceSaid, setFaceSaid] = useState<string | null>(null);
+  useEffect(() => { setFace(loadPortrait(who)); setFaceSaid(null); }, [who]);
+
+  const pickFace = async (file: File | undefined) => {
+    if (file === undefined) return;
+    setFaceSaid(null);
+    try {
+      /* Shrunk before it is stored: a phone hands over three to eight
+         megabytes and this device has about five for everything it owns. */
+      const small = await shrink(file);
+      const wrong = savePortrait(who, small);
+      if (wrong !== null) { setFaceSaid(`Not saved — ${wrong}.`); return; }
+      setFace(small);
+    } catch (e) {
+      setFaceSaid(`Not saved — ${e instanceof Error ? e.message : "that file could not be read"}.`);
+    } finally {
+      /* So choosing the same file twice still fires a change. */
+      if (fileRef.current !== null) fileRef.current.value = "";
+    }
+  };
+  const dropFace = () => { clearPortrait(who); setFace(null); setFaceSaid(null); };
+
+  /*
+   * The pill row goes to a control rather than repeating it.
+   *
+   * `scrollIntoView` on the CARD, then focus on the field inside it: scrolling
+   * a focused input into view is the browser's job and it does it without the
+   * smooth scroll, so the two have to happen in that order and a frame apart.
+   */
+  const cards = useRef<Record<string, HTMLElement | null>>({});
+  const jump = (card: string, field?: string) => {
+    cards.current[card]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (field === undefined) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(field);
+      if (el instanceof HTMLInputElement) { el.focus(); el.select(); }
+    });
+  };
+
+  /* Only where a table is counting it — a milestone campaign has no XP at all. */
+  const xpMode = campaign.progression === "xp";
+  /* `next` is the next LEVEL, not the XP for it — reading it as the threshold
+     printed "0 / 2" on a level 8 ranger. `xpForLevel` turns it into a number
+     of experience points, which is what "0 / 300" means. */
+  const nextLevel = xpMode ? xpToNextLevel(state.xp) : null;
+  const nextAt = nextLevel === null ? null : xpForLevel(nextLevel.next);
+
   const step = healthStep(state.currentHp, build.maxHp);
   const conMod = build.abilityMods.con;
   const hitDice = build.resources.find((r) => r.id === "hitDice");
@@ -174,27 +236,155 @@ export function Sheet({
 
   return (
     <>
-      <section className="card">
-        <div className="ident">
-          <div className="nm">{build.name}</div>
-          <div className="cls label">
+      {/*
+        * Who they are, before anything that can change during a session.
+        *
+        * The level was a word in a lowercase line of class ids — "ranger 8" —
+        * which is the one number on this card a table says out loud. It is a
+        * crest now, and the name is set in the display face because a
+        * character's name is the one romantic gesture this app allows itself.
+        */}
+      <div className="ident" data-testid="identity">
+        {/*
+          * The portrait, and it is a control.
+          *
+          * A face is the fastest way to tell six character sheets apart, and
+          * the app ships no art — so the only picture that can be here is one
+          * the player supplies. Empty, it is the class mark, which is still
+          * more than a grey circle.
+          *
+          * Device-local: see ui/portrait.ts for why a picture must not become
+          * an event, and for the cost of that decision.
+          */}
+        <span className="id-port">
+          <button
+            className={`id-face${face === null ? " empty" : ""}`}
+            aria-label={face === null ? `Add a portrait for ${build.name}` : `Change ${build.name}'s portrait`}
+            onClick={() => fileRef.current?.click()}
+          >
+            {face === null
+              ? <Icon name={shapeOf(build.classes[0]?.classId ?? "")?.icon ?? "diamond"} size={30} />
+              : <img src={face} alt="" />}
+          </button>
+          {/*
+            * The pencil, on the rim.
+            *
+            * A circle you can press is not obviously a circle you can press —
+            * it looks like a picture. The badge is the affordance, and it
+            * rides the portrait so it cannot be read as belonging to the name
+            * beside it. `aria-hidden`, because the button underneath already
+            * says what pressing does; two names for one target is one too
+            * many for anything driving by name.
+            */}
+          <span className="id-pen" aria-hidden="true"><Icon name="pencil" size={13} /></span>
+        </span>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="id-file"
+          aria-label="Portrait image"
+          onChange={(e) => void pickFace(e.target.files?.[0])}
+        />
+        <span className="id-who">
+          <span className="id-nm">{build.name}</span>
+          <span className="id-kind">
             {build.classes.map((c) => `${c.classId} ${c.level}`).join(" · ")}
             {build.edition === "2014" ? "" : ` · ${build.edition}`}
-          </div>
-        </div>
-        <div className="strip">
-          <div title={ac.from}>
-            <b className="num">{ac.value}</b>
-            <span>{acBoons(state.boons).length > 0 ? `Armour ${acBoons(state.boons)[0]!.modifier ?? ""}` : "Armour"}</span>
-          </div>
-          <div><b className="num">{formatModifier(build.abilityMods.dex)}</b><span>Initiative</span></div>
-          <div><b className="num">{build.speed - ac.speedPenalty}</b><span>Speed</span></div>
-          <div><b className="num">{formatModifier(build.proficiencyBonus)}</b><span>Proficiency</span></div>
-          <div><b className="num">{build.passivePerception}</b><span>Passive per.</span></div>
-        </div>
-      </section>
+          </span>
+          {faceSaid !== null && <span className="id-said">{faceSaid}</span>}
+          {face !== null && (
+            <button className="id-drop" onClick={dropFace}>Remove portrait</button>
+          )}
+        </span>
+        <span className="id-lvl">
+          <span className="label">Level</span>
+          <LevelShield level={build.classes.reduce((n, c) => n + c.level, 0)} size={38} />
+          {/* Only where a table is counting it. In a milestone campaign the
+              XP column does not exist at all — see Progression. */}
+          {xpMode && (
+            <>
+              <span className="label">XP</span>
+              <span className="id-xp num">
+                {state.xp.toLocaleString()}
+                {nextAt !== null && <i> / {nextAt.toLocaleString()}</i>}
+              </span>
+            </>
+          )}
+        </span>
+      </div>
 
-      <section className="card">
+      {/*
+        * The four things a player does to their own sheet, as one row of
+        * pills under the name.
+        *
+        * They were spread down two cards — damage and healing inside Hit
+        * points, conditions inside State, the hit die below both. A row of
+        * four is what the concept draws and it is right: these are the verbs,
+        * and the cards below are the reference.
+        */}
+      <div className="id-quick">
+        {/*
+          * These GO to the control rather than being a second copy of it.
+          *
+          * A second Damage button beside the first is a door into a room you
+          * are standing in, and the sheet has been burned by that before. What
+          * these are actually worth is the distance: the hit die sits eleven
+          * hundred pixels down, and "d8 · 1/1" both says the answer and takes
+          * you to where you change it.
+          */}
+        <button aria-label="Damage — go to hit points" onClick={() => jump("hp", "sh-amount")}>
+          Damage
+        </button>
+        <button aria-label="Heal — go to hit points" onClick={() => jump("hp", "sh-amount")}>
+          Heal
+        </button>
+        <button aria-label="Conditions — go to state" onClick={() => jump("state")}>
+          Conditions{state.conditions.length > 0 ? ` · ${state.conditions.length}` : "…"}
+        </button>
+        <button aria-label="Hit dice — go to hit points" onClick={() => jump("hp", "sh-roll")}>
+          d{die} · {hitDiceLeft}/{build.totalLevel}
+        </button>
+      </div>
+
+      {/*
+        * What is true right now, in one strip. Hit points lead it, because
+        * they are the number a table asks for most and they were a card of
+        * their own below this one.
+        */}
+      <div className="strip" data-testid="vitals">
+        <div className="st-hp">
+          <span>HP</span>
+          {/*
+            * `hp-big` follows the number.
+            *
+            * It moved out of a card of its own and into this cell, and
+            * thirty-eight browser suites reach for it — both to wait for the
+            * sheet and to read "38 / 52" off it. The name is still true: this
+            * IS the big hit-point number. Renaming it would have been thirty-
+            * eight edits to say the same thing.
+            */}
+          <b className="num hp-big">
+            {state.currentHp}<i> / {build.maxHp}</i>
+            {state.tempHp > 0 && <i> +{state.tempHp}</i>}
+          </b>
+          <span className="st-bar">
+            <i
+              className={`st-fill h-${healthStep(state.currentHp, build.maxHp)}`}
+              style={{ width: `${Math.round((state.currentHp / Math.max(1, build.maxHp)) * 100)}%` }}
+            />
+          </span>
+        </div>
+        <div title={ac.from}>
+          <b className="num">{ac.value}</b>
+          <span>{acBoons(state.boons).length > 0 ? `AC ${acBoons(state.boons)[0]!.modifier ?? ""}` : "AC"}</span>
+        </div>
+        <div><b className="num">{formatModifier(build.abilityMods.dex)}</b><span>Initiative</span></div>
+        <div><b className="num">{build.speed - ac.speedPenalty}</b><span>Speed</span></div>
+        <div><b className="num">{formatModifier(build.proficiencyBonus)}</b><span>Prof bonus</span></div>
+      </div>
+
+      <section className="card" ref={(el) => { cards.current["hp"] = el; }}>
         <div className="card-hd">
           <span className="label">Hit points</span>
           <span className="label" style={{ color: "var(--faint)" }}>
@@ -234,17 +424,20 @@ export function Sheet({
             </div>
           )}
 
-          <div className="hp-row">
-            <span className="hp-big">{state.currentHp}<s> / {build.maxHp}</s></span>
-            {state.tempHp > 0 && <span className="hp-temp">+{state.tempHp} temp</span>}
-            {state.currentHp === 0 && (
+          {/*
+            * The number and the bar moved UP into the stat strip, which is
+            * where a table now reads them. What is left here is what you do
+            * about them — and the one thing the strip cannot say in a cell,
+            * which is that you are on the floor and how the saves are going.
+            */}
+          {state.currentHp === 0 && (
+            <div className="hp-row">
               <span className="label" style={{ color: "var(--near)" }}>
                 Down · {state.deathSaves.successes}✓ {state.deathSaves.failures}✕
                 {state.stable ? " · stable" : ""}{state.dead ? " · dead" : ""}
               </span>
-            )}
-          </div>
-          <HpBar current={state.currentHp} max={build.maxHp} />
+            </div>
+          )}
 
           {/* One number and three buttons: without a name it read as
               whatever you last used it for. */}
@@ -314,10 +507,33 @@ export function Sheet({
             <span className="faint aside">{hitDiceLeft} left</span>
           </div>
 
-          <div className="controls">
-            <button onClick={() => setRest(rest === "short" ? null : "short")}>Short rest</button>
-            <button onClick={() => setRest(rest === "long" ? null : "long")}>Long rest</button>
-          </div>
+          {/*
+            * The two rests moved to the shell's pinned bar — see <Actions>
+            * below. They are what a player does BETWEEN fights and they were
+            * eleven hundred pixels down a card, under the hit dice.
+            */}
+
+          {/*
+            * Rendered DOWN into the shell's action bar. The rule for whether
+            * a rest is offered lives here, with the state it reads; passing
+            * it up to App would give that rule a second home.
+            */}
+          <Actions>
+            <button
+              aria-pressed={rest === "short"}
+              className={rest === "short" ? "filled" : undefined}
+              onClick={() => setRest(rest === "short" ? null : "short")}
+            >
+              Short rest
+            </button>
+            <button
+              aria-pressed={rest === "long"}
+              className={rest === "long" ? "filled" : undefined}
+              onClick={() => setRest(rest === "long" ? null : "long")}
+            >
+              Long rest
+            </button>
+          </Actions>
 
           {rest && (
             <RestPanel
@@ -348,7 +564,11 @@ export function Sheet({
        * for anything added here later: what is happening to you, then what you
        * can do about it, then what you are.
        */}
-      <StateCard build={build} state={state} append={append} />
+      {/* Wrapped so the pill row has something to scroll to: StateCard owns
+          its own markup and a layout should not reach in and rename its parts. */}
+      <div ref={(el) => { cards.current["state"] = el; }}>
+        <StateCard build={build} state={state} append={append} />
+      </div>
 
 
       {build.resources.length > 0 && (
@@ -477,10 +697,46 @@ export function Sheet({
         </div>
       </section>
 
+      {/*
+        * The six scores, as tiles.
+        *
+        * This sheet was written with "abilities demoted to a reference strip"
+        * — right, in that you almost never roll a raw ability, and wrong in
+        * that it left them nowhere at all. They are the first thing anybody
+        * reads back off a character, and six tiles cost one band. The
+        * MODIFIER is the number you actually use, so it sits under the score
+        * rather than in brackets beside it.
+        *
+        * Placed HERE, low, and not second where the concept draws it. Law 7
+        * orders this screen by the questions it raises, and a score is the
+        * most static thing on a sheet — it is what you ARE, which is the
+        * bottom of that order, beside who they are. The concept can put it
+        * first because it has an Overview TAB to put it at the top of; this
+        * screen has no tabs, so second would push conditions and
+        * concentration down a card, which is the exact failure law 7 was
+        * written after. `verify-panel` refused the seventh card until it was
+        * placed on purpose, which is what that guard is for.
+        */}
+      <section className="card">
+        <div className="card-hd"><span className="label">Ability scores</span></div>
+        <div className="card-body">
+          <div className="abil">
+            {(Object.keys(build.abilities) as Ability[]).map((a) => (
+              <div className="abil-t" key={a}>
+                <span className="label">{a}</span>
+                <b className="num">{build.abilities[a]}</b>
+                <span className="num abil-m">{formatModifier(build.abilityMods[a])}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Who they are. Nothing here is mechanical, and it is the only part of
           the sheet the player wrote themselves. */}
       {(build.identity.alignment || build.identity.personality || build.identity.ideals
         || build.identity.bonds || build.identity.flaws) && (
+
         <section className="card">
           <div className="card-hd">
             <span className="label">Who they are</span>

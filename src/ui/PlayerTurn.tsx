@@ -30,6 +30,7 @@ import {
 import type { CharacterId } from "../domain/build.js";
 import type { EventBody } from "../domain/events.js";
 import type { CharacterState } from "../domain/project.js";
+import { Icon } from "./Icon.js";
 
 /*
  * A stand-in for a build this device has not resolved yet. The casting hook
@@ -365,7 +366,7 @@ export function PlayerTurn({
                         title={why ?? a.what}
                         onClick={() => setLooking(looking === a.id ? null : a.id)}
                       >
-                        <span className="hg">{a.glyph}</span>
+                        <span className="hg"><Icon name={a.icon} size={22} /></span>
                         <span className="ht">{a.name}</span>
                         <i />
                       </button>

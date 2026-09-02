@@ -37,9 +37,19 @@ await go(page, "sheet");
 await page.waitForSelector(".dl", { timeout: 20000 });
 
 // --- the panel ------------------------------------------------------------
-const tall = await page.evaluate(() => document.body.scrollHeight);
-ok("the sheet is no longer a document to scroll past", tall < 2600, true);
-console.log(`      ${tall}px tall, was 3131`);
+/* Measured on the SHELL'S SCROLLER, not on the body.
+   The app is a fixed 100dvh shell now — header, one scrolling middle, a
+   pinned action bar — so `document.body.scrollHeight` is the height of the
+   phone and says nothing at all. The claim is unchanged: the sheet is a panel
+   rather than a document you scroll past. */
+const tall = await page.evaluate(() => {
+  const e = document.querySelector(".sh-scroll");
+  return e === null ? -1 : e.scrollHeight;
+});
+ok("the sheet is no longer a document to scroll past", tall > 0 && tall < 2600, true);
+console.log(`      ${tall}px of content, was 3131`);
+ok("and the page itself does not scroll at all",
+  await page.evaluate(() => document.body.scrollHeight <= window.innerHeight), true);
 
 /* --- the order, pinned ---------------------------------------------------
 
@@ -53,12 +63,24 @@ console.log(`      ${tall}px tall, was 3131`);
    six cards; it is defending the decision. A seventh card fails it, and the
    only way past is to look at the list and say where the new one belongs. */
 const order = await page.evaluate(() =>
-  [...document.querySelectorAll(".card")]
+  /* The identity card is no longer a `.card` with a `.label` in it — it is
+     the hero card, and the class line is its own element. It is still the
+     first thing on the sheet, which is the whole of what this defends. */
+  [...document.querySelectorAll(".ident, .card")]
     .filter((c) => !c.parentElement.closest(".card"))
-    .map((c) => (c.querySelector(".card-hd .label, .label")?.textContent ?? "?").trim()));
+    .map((c) => (
+      c.querySelector(".id-kind, .card-hd .label, .label")?.textContent ?? "?"
+    ).trim()));
+/* Ability scores are the seventh card, and this guard refused them until
+   somebody said where they go. They go LAST, with who they are: a score is
+   the most static thing on a sheet — it is what you ARE, which is the bottom
+   of this order. The concept puts them first because it has an Overview TAB
+   to put them at the top of; this screen has no tabs, so second would push
+   conditions and concentration down a card, which is the exact failure the
+   order was written after. */
 ok("the sheet asks its questions in order: what is true of you, what you can do, what you are",
   order.join(" > "),
-  "ranger 8 > Hit points > State > Pools > Attacks > Worn & wielded");
+  "ranger 8 > Hit points > State > Pools > Attacks > Worn & wielded > Ability scores");
 
 /* --- a press is acknowledged ---------------------------------------------
 
@@ -72,26 +94,58 @@ ok("the sheet asks its questions in order: what is true of you, what you can do,
    a rule that exists and a rule that WINS are different claims. A pixel, not
    a scale: these sit in lists of 44px rows and anything that changes a
    button's size reflows the row under a thumb still resting on it. */
-/* The tab already showing, so the press is a no-op — pressing any OTHER
-   button here navigates, and the two assertions further down then measure a
-   screen that is not the sheet. */
-const tab = page.locator('.tabs [data-tab="sheet"]').first();
-const atRest = await tab.evaluate((e) => getComputedStyle(e).transform);
-const seat = await tab.boundingBox();
-await page.mouse.move(seat.x + seat.width / 2, seat.y + seat.height / 2);
-await page.mouse.down();
-await page.waitForTimeout(200);
-const held = await tab.evaluate((e) => ({
-  transform: getComputedStyle(e).transform,
-  background: getComputedStyle(e).backgroundColor,
-}));
-await page.mouse.up();
+/* TWO presses, because they are two different rules now.
+
+   A button SCALES — the mockup's press. Transform-only either way, so
+   nothing reflows the 44px row under a thumb still resting on it; the
+   original worry here was that a size change would, and it does not.
+
+   A TAB does not scale. It lives in a fixed bar across the foot of the
+   screen, and one control shrinking while the bar around it holds still
+   reads as the bar itself flexing. It darkens instead, which is the same
+   claim — the press reads under a finger — made the way that bar allows.
+
+   Measured on the live element rather than by reading the stylesheet,
+   because a rule that exists and a rule that WINS are different claims.
+   Backgrounds are compared against their own resting value rather than a
+   literal, so this says "it changed" in either theme. */
+const press = async (loc) => {
+  const rest = await loc.evaluate((e) => ({
+    transform: getComputedStyle(e).transform,
+    background: getComputedStyle(e).backgroundColor,
+  }));
+  const box = await loc.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  const held = await loc.evaluate((e) => ({
+    transform: getComputedStyle(e).transform,
+    background: getComputedStyle(e).backgroundColor,
+  }));
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const after = await loc.evaluate((e) => getComputedStyle(e).transform);
+  return { rest, held, after };
+};
+
+/* The header's own button: it opens a sheet on release rather than
+   navigating, so the assertions below still measure the sheet screen. */
+const b = await press(page.getByRole("button", { name: "This device", exact: true }));
+ok("a button at rest is not transformed", b.rest.transform, "none");
+ok("and gives under the finger", b.held.transform, "matrix(0.98, 0, 0, 0.98, 0, 0)");
+ok("returning when released", b.after, "none");
+await page.getByRole("button", { name: "Close This device" }).click();
 await page.waitForTimeout(250);
-ok("a button at rest is not translated", atRest, "none");
-ok("and moves one pixel down while held", held.transform, "matrix(1, 0, 0, 1, 0, 1)");
-ok("and darkens, so the press reads even under a finger",
-  held.background, "rgb(22, 26, 24)");
-ok("returning when released", await tab.evaluate((e) => getComputedStyle(e).transform), "none");
+
+/* The tab already showing, so the press is a no-op — pressing any OTHER
+   tab here navigates, and the assertions further down then measure a screen
+   that is not the sheet. */
+const tab = page.locator('.tabs [data-tab="sheet"]').first();
+const t = await press(tab);
+ok("a tab in the bar does not change size", t.held.transform, "none");
+ok("it darkens instead, so the press still reads under a finger",
+  t.held.background !== t.rest.background, true);
+
 
 /* One landmark, so a screen reader can skip the room code, the seat selector
    and the tab bar to reach what the page is actually about. */
@@ -138,8 +192,16 @@ await page.waitForSelector(".dl", { timeout: 20000 });
    bag — which is the distinction the old flat list could not make. */
 ok("carrying three things fills no slots", await page.locator(".dl-slot.empty").count(), 6);
 
+/* By NAME, not by position. Hit points joined the strip as its first cell, so
+   `.first()` started returning "52 / 52" — and `replace(/\D/g,"")` turned that
+   into 5252, which is a number, which meant this read as a wrong armour class
+   rather than as a broken selector. */
 const acNow = async () =>
-  Number((await page.locator(".strip .num").first().innerText()).replace(/\D/g, ""));
+  Number(
+    (await page.locator(".strip > div")
+      .filter({ has: page.getByText("AC", { exact: true }) })
+      .locator("b").innerText()).replace(/\D/g, ""),
+  );
 const before = await acNow();
 await page.getByRole("button", { name: "Body, empty" }).click();
 await page.waitForTimeout(300);

@@ -8,92 +8,288 @@
  * Shared primitives live in the base, "shared utilities", "chips" and "pips"
  * sections; components are expected to scope those (`.rp-out .num`).
  *
- * Tokens from the interface design language.
+ * ---------------------------------------------------------------------------
  *
- * Dark only, by constraint — tables are dimly lit. Active state is carried by
- * LUMINANCE, never a hue, so nothing here defines a brand accent: red already
- * means damage and green already means healing. --steel is structural and
- * never indicates state.
+ * TOKENS. Ported from V2's `src/design/tokens.css`, which was drawn from a
+ * mockup and measured rather than picked.
  *
- * Outstanding: the language calls for real embedded typefaces rather than a
- * system stack, since numerals are the primary content. Face selection and
- * licensing are still open, so this runs on system-ui with tabular figures.
+ * This file used to open with "dark only, by constraint — tables are dimly
+ * lit". That constraint is withdrawn deliberately, not forgotten: the light
+ * ground is the one that was drawn, and a phone at a table is as often on a
+ * lit one. Both themes are real. Light is the default; dark is V1's lamplit
+ * room, kept, and now neutral rather than green-biased so that one warm ink
+ * reads on both.
+ *
+ * THREE STATES, not two. "System" is the DEFAULT and is the ABSENCE of
+ * `data-theme` — which is what the media query below is for. An explicit
+ * choice stamps `data-theme` and wins in both directions. See ui/useTheme.ts;
+ * the trap it exists to avoid is a toggle that believes it is light while the
+ * stylesheet is following the system into dark, so the first press sets what
+ * was already set and visibly does nothing.
+ *
+ * THE DARK BLOCK APPEARS TWICE and `check-contrast.mjs` asserts the two
+ * copies are identical. A toggle that works while system-dark does not is the
+ * classic way this file rots, and CSS has no way to write it once.
+ *
+ * EVERY PAIR IS MEASURED, by `npm run lint`. Five of V2's light values do not
+ * survive this app: V1 puts every button and every input on `--surface-2`,
+ * where V2 uses it sparingly, so `--ink-dim`, `--gold-ink`, `--gold-edge`,
+ * `--heal` and `--bloodied` all fell under the floor on the one ground V2
+ * never tested them against. They are V2's colours nudged until they pass —
+ * the ratios are in the table in check-contrast.mjs, not in prose here, so
+ * that they cannot drift out of date.
  */
 
 :root {
-  --ground: #0f1211;
-  --panel: #161a18;
-  --raised: #1e2320;
-  --rule: #272e2a;
+  color-scheme: light dark;
 
-  --ink: #e8ede9;
-  --ink-dim: #a7b1ac;
-  --muted: #78837d;
-  --faint: #4c554f;
-
-  --steel: #6e8fa8;
   /*
-   * Warm accent, for the things you are about to COMMIT to — a confirm, the
-   * step you are on, the frame around a decision. Deliberately not used for
-   * health or damage: those colours mean something, and a gold that also
-   * meant "fine" would break them.
+   * Surfaces — parchment, not paper. The neutrals are warm all the way
+   * through; a cool grey next to this gold reads as a screenshot of a
+   * spreadsheet.
    */
-  --gold: #c9a227;
-  --gold-dim: #8a7220;
+  --canvas: #faf7f2;
+  --surface-1: #ffffff;
+  --surface-2: #f1ede4;
+  --hairline: #e6e2da;
+
+  /* Ink. Three levels: read, secondary, and not-a-value. */
+  --ink: #1e1f22;
+  --ink-dim: #686c73;
   /*
-   * The trim. It started as a rule with warmth barely in it, which read as
-   * grey beside the study page — the page uses the dim gold itself on every
-   * frame, and that is what makes it look gilded rather than merely dark.
-   *
-   * The accent still has somewhere to go: --gold is brighter than --trim, so
-   * the thing being decided still stands out against the frame around it.
+   * The dimmest tier, for a placeholder and a disabled control — things that
+   * must be seen and must not be read as content. V2 has no such token and
+   * did not need one; V1 does, because an empty name field on iOS renders
+   * the browser's own placeholder bright enough to look like a name already
+   * filled in.
    */
-  --trim: #6d5a1c;
+  --ink-faint: #878680;
 
   /*
-   * A radius scale rather than a number per component.
+   * Gold — four tokens, because one gold cannot do four jobs on a light
+   * ground. The supplied #c8a04d is 2.29:1 as text and 2.44:1 under white,
+   * so it fills and outlines but never writes. There is no `--gold`: the
+   * whole point of splitting it is that the wrong one cannot be reached for
+   * by habit, and 49 rules in this file had reached for it.
+   */
+  --gold-fill: #c8a04d;
+  --on-gold: #1e1f22;
+  --gold-ink: #856527;
+  --gold-edge: #a87f31;
+  --gold-wash: #faf3e4;
+
+  /*
+   * Semantics. Each means one thing and only that thing — never reach for
+   * one because a screen needs a colour. The health ramp is these same four,
+   * aliased below, so a bar and the word beside it cannot disagree.
+   */
+  --damage: #b03a3a;
+  --heal: #2b765e;
+  --injured: #7a6a2e;
+  --bloodied: #856527;
+  --concentration: #6b5ba8;
+  --steel: #4f6e86;
+
+  /*
+   * Elevation is shadow on light and luminance on dark — never a hue, since
+   * every hue here already means something. Two levels; there is no third.
+   * On dark both collapse to `none` and `--panel-border` carries the
+   * separation instead, because a shadow on a near-black ground is invisible
+   * work.
+   */
+  /*
+   * A magnitude ramp, five steps, and it INVERTS between the themes.
    *
-   * The app had nine different radii and the four controls people touch most
-   * — button, input, select, and the card itself — had none at all, which is
-   * what made it read as squarer than the concept beside it. Three sizes:
-   * a control, a card, and a pill.
+   * "More" is more contrast against the ground, so on a near-black ground the
+   * ramp climbs toward light and on parchment it climbs toward dark. These
+   * were five hardcoded blues written for the dark ground, and on light the
+   * whole gauge read backwards — the easy end was the loudest thing in it.
+   * A single hue, because difficulty is a magnitude: the green-to-red ramp is
+   * reserved for creature health and never stands in for anything else.
+   */
+  --ramp-1: #c2ced6; --ramp-2: #93a9b8; --ramp-3: #6e8fa8;
+  --ramp-4: #4f6e86; --ramp-5: #35526a;
+  /* Rarity as a rim: the two ends the steel does not already cover. */
+  --rare-plain: #97a3ac;
+  --rare-high: #3f6f92;
+
+  --lift-1: 0 1px 2px rgb(0 0 0 / .04), 0 1px 3px rgb(0 0 0 / .06);
+  --lift-2: 0 4px 6px rgb(0 0 0 / .04), 0 10px 20px rgb(0 0 0 / .08);
+  --panel-border: 1px solid transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #131416;
+    --surface-1: #1e1f22;
+    --surface-2: #26282c;
+    --hairline: #33363b;
+    --ink: #f1ede4;
+    --ink-dim: #9ba1a9;
+    --ink-faint: #727880;
+    --gold-fill: #c8a04d;
+    --on-gold: #1e1f22;
+    --gold-ink: #d5b570;
+    --gold-edge: #c8a04d;
+    --gold-wash: #241f16;
+    --damage: #e0706b;
+    --heal: #5fbe97;
+    --injured: #a9b872;
+    --bloodied: #d8ae5e;
+    --concentration: #a899da;
+    --steel: #7fa3be;
+    --ramp-1: #2a3238; --ramp-2: #3c4a54; --ramp-3: #52646f;
+    --ramp-4: #6e8fa8; --ramp-5: #9cbbd1;
+    --rare-plain: #4d6472;
+    --rare-high: #9fc3d6;
+    --lift-1: none;
+    --lift-2: none;
+    --panel-border: 1px solid var(--hairline);
+  }
+}
+
+:root[data-theme="dark"] {
+  --canvas: #131416;
+  --surface-1: #1e1f22;
+  --surface-2: #26282c;
+  --hairline: #33363b;
+  --ink: #f1ede4;
+  --ink-dim: #9ba1a9;
+  --ink-faint: #727880;
+  --gold-fill: #c8a04d;
+  --on-gold: #1e1f22;
+  --gold-ink: #d5b570;
+  --gold-edge: #c8a04d;
+  --gold-wash: #241f16;
+  --damage: #e0706b;
+  --heal: #5fbe97;
+  --injured: #a9b872;
+  --bloodied: #d8ae5e;
+  --concentration: #a899da;
+  --steel: #7fa3be;
+  --ramp-1: #2a3238; --ramp-2: #3c4a54; --ramp-3: #52646f;
+  --ramp-4: #6e8fa8; --ramp-5: #9cbbd1;
+  --rare-plain: #4d6472;
+  --rare-high: #9fc3d6;
+  --lift-1: none;
+  --lift-2: none;
+  --panel-border: 1px solid var(--hairline);
+}
+
+:root {
+  /*
+   * V1's own names, kept as aliases.
+   *
+   * Two thousand eight hundred lines below this point were written against
+   * --ground / --panel / --raised / --rule, and renaming them all in one
+   * commit would put a mechanical diff over every component in the app with
+   * nothing to review it against. An alias resolves against whatever the
+   * canonical token computes to on :root, so these follow the theme for
+   * free. New rules should use the canonical name.
+   */
+  --ground: var(--canvas);
+  --panel: var(--surface-1);
+  --raised: var(--surface-2);
+  --rule: var(--hairline);
+  --muted: var(--ink-dim);
+  --faint: var(--ink-faint);
+  /* The edge that marks the active thing — the tab you are on, the row you
+     chose. Non-text, so it is the 3:1 gold rather than the 4.5:1 one. */
+  --edge: var(--gold-edge);
+
+  /*
+   * The health ramp. Never stands in for a category or a creature — these
+   * are the semantic four under the names the sheet reads them by.
+   */
+  --unharmed: var(--heal);
+  --near: var(--damage);
+  --conc: var(--concentration);
+
+  /*
+   * Type. No webfont ships: a table opens this on a phone in a basement with
+   * no signal, and a font that arrives late is a layout that moves while
+   * somebody is reading. Three families, one job each — a serif for names,
+   * the system sans for everything read, and a monospace for every number
+   * that has to line up.
+   */
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Iowan Old Style", "Hoefler Text", "Palatino Linotype", Palatino,
+    Georgia, serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /*
+   * Twelve steps and nothing between them, plus six for display.
+   *
+   * These are not new sizes — they are the eighteen this file already used,
+   * given names. Every `font-size` here already landed on one of them, which
+   * is why the port needed no re-typesetting: the consolidation had been
+   * done. Naming them is what stops the nineteenth being added.
+   */
+  --t-micro: 0.54rem;  --t-2: 0.6rem;    --t-label: 0.66rem; --t-4: 0.72rem;
+  --t-5: 0.78rem;      --t-aside: 0.8rem; --t-note: 0.84rem; --t-8: 0.88rem;
+  --t-sm: 0.94rem;     --t-body: 1rem;   --t-11: 1.1rem;    --t-card: 1.2rem;
+  --t-d1: 1.4rem; --t-d2: 1.5rem; --t-d3: 1.6rem;
+  --t-d4: 2rem;   --t-d5: 3rem;   --t-d6: 3.2rem;
+
+  /* Eight spacing steps. Cards pad 16; rows gap 10. Prefer `gap` on the
+     flex or grid parent over a margin per element. */
+  --s-1: 2px; --s-2: 4px; --s-3: 6px;  --s-4: 8px;
+  --s-5: 10px; --s-6: 12px; --s-7: 16px; --s-8: 18px;
+  --card-pad: 16px;
+  --row-gap: 10px;
+  /* 44px, everywhere a thumb goes. This app broke that four separate times
+     and every one was found by measuring rather than by looking. */
+  --tap: 44px;
+
+  /*
+   * A radius scale rather than a number per component. The app had nine
+   * different radii and the four controls people touch most — button, input,
+   * select, and the card itself — had none at all, which is what made it
+   * read as squarer than the concept beside it.
    */
   --r-control: 8px;
   --r-card: 12px;
   --r-pill: 999px;
 
-  /* The ground under something chosen — warm, and dark enough to read on. */
-  --gold-wash: #1f1c14;
-
   /*
-   * The edge that marks the active thing — the tab you are on, the row you
-   * chose. It was USED in three places and never defined, so it silently fell
-   * back to currentColor and the active tab has been ink-coloured all along.
-   * That is the slot this accent belongs in.
+   * Motion. Every duration is a token so a test can set it to zero, which is
+   * the join between the two things this port is for: hand-rolled
+   * per-component animation is the classic reason a browser suite goes
+   * flaky, and this suite was already flaky without it.
    */
-  --edge: var(--gold);
+  --motion-scale: 1;
+  --m-press: calc(100ms * var(--motion-scale));
+  --m-state: calc(180ms * var(--motion-scale));
+  --m-expand: calc(240ms * var(--motion-scale));
+  --m-sheet: calc(320ms * var(--motion-scale));
+  --m-ease-out: cubic-bezier(.2, 0, 0, 1);
+  --m-ease-in-out: cubic-bezier(.4, 0, .2, 1);
+}
 
-  /* Reserved ramp — never stands in for a category or a creature. */
-  --unharmed: #4fa97a;
-  --injured: #8fa85e;
-  --bloodied: #d4a03c;
-  --near: #d9534a;
+/*
+ * Reduced motion means fewer and gentler, not none: a fade still says a thing
+ * changed, and it is the movement that causes trouble. `data-motion="off"` is
+ * the hard switch, and only a test throws it.
+ */
+:root[data-motion="off"] { --motion-scale: 0; }
 
-  --damage: #d9534a;
-  --heal: #4fa97a;
-  --conc: #9887c9;
+/*
+ * Shared motion, defined once, so that three components animating "the same
+ * way" are one animation rather than three that happen to agree.
+ */
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
 
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  /*
-   * A stack rather than a download: no webfont means nothing to block, fail,
-   * or add to a 30MB payload. Headings only — the numbers stay mono, because
-   * a sheet is read in columns.
-   */
-  --display: "Iowan Old Style", "Hoefler Text", "Palatino Linotype", Palatino,
-    Georgia, serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+@keyframes appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
-  color-scheme: dark;
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8%); }
+  to { opacity: 1; transform: none; }
 }
 
 * { box-sizing: border-box; }
@@ -104,8 +300,15 @@ body {
   margin: 0;
   background: var(--ground);
   color: var(--ink);
-  font: 17px/1.55 var(--sans);
-  -webkit-font-smoothing: antialiased;
+  font: var(--t-body)/1.45 var(--sans);
+  -webkit-text-size-adjust: 100%;
+  /*
+   * The glyphs that legitimately remain — dashes, chevrons, middots, the
+   * die — are text, and on some platforms a bare codepoint arrives as a
+   * colour picture instead. This is one of three defences; the font stack
+   * naming no emoji family is the second.
+   */
+  font-variant-emoji: text;
 }
 
 .num {
@@ -113,15 +316,49 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * A section's name, not its content. Tracked caps are what this app keeps
+ * uppercase — the mockup does the same — and they are the ONLY thing that
+ * stays uppercase now that buttons read as sentences.
+ */
 .label {
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.66rem;
-  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: var(--t-label);
+  color: var(--ink-dim);
 }
 
-.app { max-width: 720px; margin: 0 auto; padding: 24px 18px 96px; }
+/*
+ * The frame. The shell inside it owns the height and does the scrolling.
+ *
+ * This was a padded, centred, scrolling column with `padding-bottom` reserved
+ * by hand for a bar fixed over it. Nothing here scrolls any more — see
+ * `.sh-scroll`, which is the one thing that does.
+ */
+.app {
+  height: 100dvh;
+  /* Nothing outside the shell scrolls. A popover or a pinned pane that
+     overflows would otherwise give the BODY a scrollbar, which is the exact
+     thing the shell exists to remove. */
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* Explicit rather than relying on the shell's own auto margins: a grid item
+     with a definite max-width aligns to the start under `justify-self:
+     stretch`, so on a laptop the whole app sat against the left edge. */
+  justify-items: center;
+}
+
+/*
+ * An icon inherits the meaning of wherever it sits.
+ *
+ * `currentColor` on the stroke is the whole contract — an icon can never
+ * arrive in a colour that means something else, which in this palette would
+ * be a lie the table reads at speed. `flex: none` because an SVG in a flex
+ * row is shrunk by the row before its own width is consulted.
+ */
+.ico { display: block; flex: none; }
 /*
  * The app is drawn for a phone held under a table, which is right for a
  * player and wrong for a DM with an iPad propped in front of them. Two steps,
@@ -141,33 +378,43 @@ body {
 }
 
 @media (min-width: 1024px) {
+  /*
+   * Two things at once, when there is room for two.
+   *
+   * The fight is what gets pinned, because it is what you GLANCE at — the tab
+   * bar exists to work around a phone showing one thing at a time, and given
+   * the room that constraint is simply gone. The DM gets the wider side: a DM
+   * is not glancing, the fight IS their work surface, and it carries a whole
+   * statblock.
+   *
+   * Both columns are full height now rather than a sticky block inside a
+   * scrolling page — the shell is 100dvh, so the pinned pane scrolls itself
+   * exactly like the shell's middle does.
+   */
   .app.two {
-    max-width: 1280px;
-    display: grid;
+    max-width: 1280px; margin: 0 auto;
     grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
-    column-gap: 22px;
-    align-items: start;
+    column-gap: var(--s-8);
+    padding: 0 var(--s-8);
   }
-  /* The room bar, the title and the seat belong to the whole screen. */
-  .app.two > :not(.pane-pin):not(.pane-main) { grid-column: 1 / -1; }
-
+  .app.two { justify-items: stretch; }
+  .app.two > div { max-width: none; }
   .pane-pin {
     grid-column: 1;
-    position: sticky;
-    top: 18px;
-    max-height: calc(100vh - 36px);
+    height: 100dvh;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding: var(--card-pad) 0;
   }
-  .pane-main { grid-column: 2; min-width: 0; }
   /*
    * The tab bar stretches to fill a phone, which is right there and silly
-   * across eight hundred pixels — four words spread so far apart they stop
+   * across eight hundred pixels — six entries spread so far apart they stop
    * reading as one control. Element selectors, because the bar belongs to
    * another component and a layout should not reach in and rename its parts.
    */
-  .pane-main > nav { gap: 4px; }
-  .pane-main > nav > button { flex: 0 0 auto; }
+  .app.two nav[aria-label="Sections"] {
+    grid-auto-columns: minmax(0, 120px); justify-content: center;
+  }
 }
 
 /*
@@ -180,8 +427,8 @@ body {
  * one — and the tab bar keeps the full width so it still reads as one control.
  */
 @media (min-width: 1180px) {
-  .pane-main[data-pane="sheet"],
-  .pane-main[data-pane="gear"] {
+  .sh-scroll[data-pane="sheet"],
+  .sh-scroll[data-pane="gear"] {
     /*
      * Columns rather than a grid: cards are wildly different heights, and a
      * grid aligns rows — which leaves a hole under every short card. Columns
@@ -195,10 +442,9 @@ body {
     column-count: 2;
     column-gap: 18px;
   }
-  .pane-main[data-pane="sheet"] > *,
-  .pane-main[data-pane="gear"] > * { break-inside: avoid; }
-  .pane-main[data-pane="sheet"] > nav,
-  .pane-main[data-pane="gear"] > nav { column-span: all; }
+  .sh-scroll[data-pane="sheet"] > *,
+  .sh-scroll[data-pane="gear"] > * { break-inside: avoid; }
+
 }
 
 /*
@@ -214,7 +460,7 @@ h1 {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap;
 }
-h2 { font-size: 1.1rem; margin: 0 0 10px; font-weight: 500; }
+h2 { font-size: var(--t-11); margin: 0 0 var(--s-5); font-weight: 500; }
 
 button {
   /*
@@ -224,17 +470,27 @@ button {
    * tapped twice, and how the background chips behaved before them. The
    * exceptions are marked `pill` — badges that are read rather than pressed.
    */
-  min-height: 44px;
+  min-height: var(--tap);
   font: inherit;
-  font-size: 0.78rem;
+  /*
+   * A button says a sentence, not a shout.
+   *
+   * Every control in this app was 0.78rem tracked uppercase, which is the
+   * treatment a section LABEL gets — so a hundred and forty things you press
+   * were set in the same voice as the words naming the boxes they sat in,
+   * and none of them read as the thing to do next. The mockup sets them as
+   * sentences at body size and it is right: "Short rest" is a phrase, and
+   * uppercase is for the four or five words that name a region of a screen.
+   *
+   * Tracked caps are not gone from the app — see `.label`, which keeps them.
+   */
+  font-size: var(--t-sm);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--ink-dim);
-  background: var(--raised);
-  border: 1px solid var(--rule);
+  color: var(--ink);
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
   border-radius: var(--r-control);
-  padding: 10px 14px;
+  padding: var(--s-5) var(--s-7);
   cursor: pointer;
   /*
    * Asymmetric on purpose: the release eases, the press does not.
@@ -244,8 +500,8 @@ button {
    * acting, so it is instant — see the `:active` rule below; this is the
    * hand coming back off.
    */
-  transition: color 0.15s, border-color 0.15s, background 0.12s,
-    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: color var(--m-state), border-color var(--m-state),
+    background var(--m-press), transform var(--m-press) var(--m-ease-out);
 }
 /*
  * A single word alone on the last line reads as a mistake in the copy rather
@@ -258,7 +514,9 @@ button {
 p { text-wrap: pretty; }
 h1, h2, h3 { text-wrap: balance; }
 
-@media (hover: hover) and (pointer: fine) { button:hover:not(:disabled) { color: var(--ink); border-color: var(--faint); } }
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled) { border-color: var(--ink-dim); }
+}
 /*
  * The press, acknowledged.
  *
@@ -276,22 +534,33 @@ h1, h2, h3 { text-wrap: balance; }
 button:active:not(:disabled) {
   /* Nothing to wait for on the way down. */
   transition: transform 0s;
-  transform: translateY(1px);
-  background: var(--panel);
-  border-color: var(--faint);
+  /*
+   * Scale, not a shift. Either is transform-only and so neither reflows the
+   * row under a thumb still resting on it — which was the original worry
+   * here, and it was unfounded. The mockup's press is a scale, and at 44px
+   * it reads more like the button giving under the finger than a nudge does.
+   */
+  transform: scale(0.98);
+  background: var(--surface-2);
 }
-button:disabled { color: var(--faint); cursor: default; }
+button:disabled { color: var(--ink-faint); opacity: 0.45; cursor: default; }
+button:disabled:active { transform: none; }
 button:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
 
 input, select {
-  min-height: 44px;
+  min-height: var(--tap);
   font: inherit;
-  font-size: 0.94rem;
+  font-size: var(--t-sm);
   color: var(--ink);
-  background: var(--raised);
-  border: 1px solid var(--rule);
+  /*
+   * A field is a hole in the card, so it is the one control that stays on
+   * the recessed surface while buttons sit up on the panel. On light that
+   * reads as ruled paper; on dark it is the luminance step it always was.
+   */
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
   border-radius: var(--r-control);
-  padding: 9px 10px;
+  padding: var(--s-4) var(--s-5);
   width: 100%;
 }
 input:focus-visible, select:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
@@ -303,48 +572,202 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--steel); out
  * name already filled in. It sits at the dim end of the ramp now, well below
  * anything typed.
  */
-input::placeholder, textarea::placeholder { color: var(--faint); opacity: 1; }
+input::placeholder, textarea::placeholder { color: var(--ink-faint); opacity: 1; }
 input[type="number"] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
+/*
+ * The card, lifted rather than outlined.
+ *
+ * Every box in this app was a dim-gold rectangle on a near-black ground, and
+ * on parchment that would be a second accent on every single box — which the
+ * one-accent rule forbids outright. So depth is carried the way the mockup
+ * carries it: shadow on light, and on dark no shadow at all but a hairline,
+ * because a shadow on a near-black ground is invisible work. `--lift-1` and
+ * `--panel-border` are the pair that swap over; neither rule knows which
+ * theme it is in.
+ */
 section.card {
-  border: 1px solid var(--trim); background: var(--panel); margin-top: 18px;
+  border: var(--panel-border);
+  background: var(--surface-1);
+  margin-top: var(--s-8);
   border-radius: var(--r-card);
+  box-shadow: var(--lift-1);
   /* So a header's own border-bottom does not square off the top corners. */
   overflow: hidden;
 }
 .card-hd {
   display: flex; justify-content: space-between; align-items: center;
-  gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--trim); flex-wrap: wrap;
+  gap: var(--s-6); padding: var(--s-6) var(--card-pad);
+  border-bottom: 1px solid var(--hairline); flex-wrap: wrap;
 }
 /* The card's own name reads warm; everything else in it stays as it was. */
-.card-hd > .label:first-child { color: var(--gold); }
-.card-body { padding: 16px; }
+.card-hd > .label:first-child { color: var(--gold-ink); }
+.card-body { padding: var(--card-pad); }
 
 /* ---- identity + stat strip ---- */
-.ident { padding: 20px 16px 16px; }
-.ident .nm { font-size: 1.5rem; line-height: 1.1; }
-.ident .cls { margin-top: 6px; }
+/*
+ * The hero card. Who they are, before anything a session can change.
+ *
+ * The level was a word inside a lowercase line of class ids — "ranger 8" —
+ * and it is the one number on this card a table says out loud. It is a crest
+ * now. The name is set in the display face because a character's name is the
+ * one romantic gesture this app allows itself; everything else here is the
+ * system sans it shares with every other screen.
+ */
+.ident {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: var(--s-6);
+  padding: var(--card-pad);
+  background: var(--surface-1);
+  border: var(--panel-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--lift-1);
+}
+/*
+ * The portrait, and it is a control.
+ *
+ * A face is the fastest way to tell six sheets apart, and the app ships no
+ * art — so the only picture that can be here is one the player supplies.
+ * Empty, it falls back to the class mark, which is still more than a grey
+ * circle. The gold rim is the same one the crest and the level shield wear;
+ * it is the frame, not a third accent.
+ */
+.id-face {
+  width: 72px; height: 72px; flex: 0 0 auto; padding: 0;
+  border-radius: var(--r-pill); overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface-2); border: 2px solid var(--gold-edge);
+  color: var(--gold-ink);
+}
+.id-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The portrait and its badge are one object, so the badge can sit on the rim
+   rather than in the row. */
+.id-port { position: relative; flex: 0 0 auto; display: inline-flex; }
+.id-pen {
+  position: absolute; right: -2px; bottom: -2px;
+  width: 26px; height: 26px; border-radius: var(--r-pill);
+  display: grid; place-items: center;
+  background: var(--surface-1); color: var(--gold-ink);
+  border: 1px solid var(--gold-edge);
+  /* Sits on top of the portrait's own rim, and must not eat the tap: the
+     button underneath is the whole 72px target. */
+  pointer-events: none;
+  box-shadow: var(--lift-1);
+}
+/* The picker itself is never seen: the circle is the affordance. */
+.id-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.id-said { font-size: var(--t-note); color: var(--damage); }
+/* Quiet. `.linky` is the app's link treatment and at full strength it was
+   the loudest thing on the card — louder than the name, for a control used
+   once. It is a footnote under a picture. */
+.id-drop {
+  font-size: var(--t-2); align-self: flex-start;
+  color: var(--ink-dim); text-decoration: none; padding: 0; min-height: 0;
+  /* tap-ok: a text footnote inside a card, not a control a thumb hunts for —
+     the portrait itself is the 72px target, and this only appears once one
+     has been set. */
+}
+@media (hover: hover) and (pointer: fine) {
+  .id-drop:hover:not(:disabled) { color: var(--ink); text-decoration: underline; }
+}
+.id-xp { font-family: var(--mono); font-size: var(--t-aside); color: var(--ink-dim); }
+.id-xp i { font-style: normal; color: var(--ink-faint); }
 
-.strip { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--rule); }
-.strip > div { padding: 13px 6px; text-align: center; border-right: 1px solid var(--rule); }
-.strip > div:last-child { border-right: 0; }
+/*
+ * The four verbs, as one row of pills under the name.
+ *
+ * They GO to a control rather than being a second copy of it — a second
+ * Damage button beside the first is a door into a room you are standing in.
+ * What they are worth is the distance: the hit die sits eleven hundred pixels
+ * down, and "d8 · 1/1" both says the answer and takes you to where it changes.
+ */
+.id-quick { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+/* Four on one line at 390px, which is what the row is for: wrapped onto two
+   they read as eight small cards rather than one strip of verbs. */
+.id-quick > button {
+  flex: 0 1 auto; min-width: 0; border-radius: var(--r-pill);
+  padding: var(--s-4) var(--s-5); font-size: var(--t-5);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.id-who { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.id-nm { font-family: var(--display); font-size: var(--t-d2); line-height: 1.05; }
+.id-kind { font-size: var(--t-note); color: var(--ink-dim); text-transform: capitalize; }
+.id-lvl {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-1);
+  flex: 0 0 auto;
+}
+/* The six scores, as tiles: the score large, the modifier under it, because
+   the modifier is the number you actually use. */
+.abil {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--s-3);
+}
+.abil-t {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-1);
+  padding: var(--s-5) var(--s-2);
+  background: var(--surface-2); border-radius: var(--r-control);
+}
+.abil-t b {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: var(--t-11); font-weight: 400; line-height: 1;
+}
+.abil-t .label { font-size: var(--t-micro); }
+.abil-m { font-size: var(--t-2); color: var(--ink-dim); }
+
+/*
+ * What is true right now, in one strip, and hit points lead it.
+ *
+ * They were a card of their own below this one — the number a table asks for
+ * most, one scroll away from the four it asks for least. FIVE cells, and the
+ * first is wider because it carries a bar and a total. A sixth was tried and
+ * clipped its own label at 390px; passive perception went to the skills
+ * drawer, beside the skill it derives from.
+ */
+.strip {
+  display: grid; grid-template-columns: 1.5fr repeat(4, 1fr);
+  background: var(--surface-1);
+  border: var(--panel-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--lift-1);
+  overflow: hidden;
+}
+.strip > div {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-1);
+  padding: var(--s-5) var(--s-3); text-align: center;
+  border-left: 1px solid var(--hairline);
+}
+.strip > div:first-child { border-left: 0; align-items: flex-start; text-align: left; }
 .strip b {
   display: block; font-family: var(--mono); font-variant-numeric: tabular-nums;
-  font-size: 1.2rem; font-weight: 400; line-height: 1.1;
+  font-size: var(--t-11); font-weight: 400; line-height: 1.1;
+  /* A number that changes must not reflow the row it lives in. */
+  transition: color var(--m-state) var(--m-ease-out);
 }
+.strip b i { font-style: normal; color: var(--ink-dim); font-size: var(--t-note); }
 .strip span {
-  display: block; font-size: 0.54rem; text-transform: uppercase;
-  letter-spacing: 0.1em; color: var(--faint); margin-top: 4px;
+  display: block; font-size: var(--t-micro); text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--ink-dim); white-space: nowrap;
 }
+.st-hp { gap: var(--s-2) !important; }
+.st-bar {
+  width: 100%; height: 4px; border-radius: var(--r-pill);
+  background: var(--surface-2); overflow: hidden;
+}
+.st-fill {
+  display: block; height: 100%;
+  transition: width var(--m-state) var(--m-ease-out);
+}
+/* The reserved ramp, and only ever this. */
+.st-fill.h-unharmed { background: var(--unharmed); }
+.st-fill.h-injured { background: var(--injured); }
+.st-fill.h-bloodied { background: var(--bloodied); }
+.st-fill.h-near { background: var(--near); }
 
 /* ---- hit points ---- */
-.hp-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.hp-big {
-  font-family: var(--mono); font-variant-numeric: tabular-nums;
-  font-size: 3rem; line-height: 1;
-}
-.hp-big s { text-decoration: none; font-size: 0.32em; color: var(--faint); }
-.hp-temp { color: var(--steel); font-family: var(--mono); font-size: 0.88rem; }
+.hp-row { display: flex; align-items: baseline; gap: var(--s-6); flex-wrap: wrap; }
+/* The number itself is styled by the strip it now lives in — see `.strip b`.
+   This name survives because thirty-eight suites reach for it, and because it
+   is still what it says: the big hit-point number. */
 
 .hpbar { position: relative; height: 20px; margin-top: 12px; }
 .hpbar-track {
@@ -400,7 +823,7 @@ section.card {
 .pip.dice::before { transform: rotate(45deg); }
 
 /* ---- chips ---- */
-.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chips { display: flex; gap: var(--s-4); flex-wrap: wrap; }
 /*
  * A chip is a tap target on a phone, and it was 30px tall with 7px between
  * neighbours — under every published minimum, and small enough that a
@@ -411,12 +834,28 @@ section.card {
  * the box around it grew.
  */
 .chip {
-  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 500;
-  padding: 6px 11px; min-height: 44px; color: var(--ink-dim); background: var(--raised);
-  border: 1px solid var(--rule); display: inline-flex; align-items: center; gap: 6px;
+  /*
+   * A chip carries a NAME — a character, a condition, a source. Tracked caps
+   * are for the words that label a region of a screen, and a name set in them
+   * is a name you read letter by letter: "KIRA VANCE" is slower than "Kira
+   * Vance" and always was. Sentence case, at the size a name deserves.
+   */
+  font-size: var(--t-5); font-weight: 500;
+  padding: var(--s-3) var(--s-6); min-height: var(--tap);
+  color: var(--ink-dim); background: var(--surface-1);
+  border: 1px solid var(--hairline); border-radius: var(--r-pill);
+  display: inline-flex; align-items: center; gap: var(--s-3);
 }
-.chip.on { color: var(--ink); border-color: var(--gold); background: var(--gold-wash); }
-.chip.conc { color: var(--conc); border-color: rgba(152, 135, 201, 0.45); }
+/* Chosen is a fill, like every other chosen thing now — a wash on parchment
+   is a two-percent step and reads as "hovered". */
+.chip.on {
+  color: var(--on-gold); border-color: var(--gold-edge); background: var(--gold-fill);
+  font-weight: 600;
+}
+.chip.conc {
+  color: var(--conc);
+  border-color: color-mix(in srgb, var(--conc) 45%, transparent);
+}
 
 /* ---- stat lists ---- */
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 18px; }
@@ -453,7 +892,24 @@ section.card {
 /* ---- shared utilities ---- */
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }
-.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row { display: flex; gap: var(--row-gap); flex-wrap: wrap; align-items: center; }
+/*
+ * The two filled variants, and there is at most ONE of them on a screen.
+ *
+ * Every control in this app was the same outlined box, so the thing you press
+ * forty times an evening looked exactly like the thing you press twice. Gold
+ * is the accent and it marks whose turn it is and the single control that
+ * moves the fight forward; ink is for the second filled thing on the rare
+ * screen that genuinely has one — a fill on a light ground competes more than
+ * on a dark one, so two golds is worse here than it was.
+ *
+ * The label on gold is INK, never white: white on this gold is 2.48:1.
+ */
+.filled { background: var(--gold-fill); border-color: var(--gold-edge); color: var(--on-gold); }
+.filled:active:not(:disabled) { background: var(--gold-edge); }
+.filled:disabled { background: var(--surface-2); border-color: var(--hairline); color: var(--ink-faint); }
+.solid { background: var(--ink); border-color: var(--ink); color: var(--surface-1); }
+.solid:active:not(:disabled) { background: var(--ink-dim); }
 .field { margin-bottom: 12px; }
 .field > label { display: block; margin-bottom: 6px; }
 .six { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px; }
@@ -464,16 +920,22 @@ section.card {
  */
 .seg { display: flex; gap: 6px; flex-wrap: wrap; }
 .seg > button { flex: 1 1 auto; min-height: 44px; }
+/* Filled, not washed. A gold wash on a parchment ground is a two-percent
+   luminance step — it read as "hovered" rather than "chosen", which is the
+   exact failure this rule was added to fix in the first place. */
 .seg > button.on {
-  border-color: var(--gold); background: var(--gold-wash); color: var(--ink);
+  border-color: var(--gold-edge); background: var(--gold-fill); color: var(--on-gold);
+  font-weight: 600;
 }
 
 /* ---- roll pad: pinned to the viewport, thumb-height ---- */
 .rollpad {
+  /* Over the tab bar deliberately: you are answering a roll, and the way out
+     is the pad's own control rather than a tab. */
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  background: var(--raised);
-  border-top: 1px solid var(--faint);
-  box-shadow: 0 -16px 32px rgba(0, 0, 0, 0.5);
+  background: var(--surface-1);
+  border-top: 1px solid var(--hairline);
+  box-shadow: var(--lift-2);
   padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
   max-width: 720px; margin: 0 auto;
 }
@@ -506,7 +968,7 @@ section.card {
 }
 .rp-total { font-size: 2rem; line-height: 1; color: var(--ink); }
 .rp-expl { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
-.rp-out.nat-twenty .rp-total { color: #fff; }
+.rp-out.nat-twenty .rp-total { color: var(--ink); }
 .rp-out.nat-one .rp-total { color: var(--near); }
 
 /* the row you tapped stays marked while the pad is up */
@@ -550,8 +1012,14 @@ textarea.paste:focus-visible { outline: 2px solid var(--steel); outline-offset: 
   white-space: nowrap;
 }
 /* Severity by form as well as colour — the labels differ, not just the hue. */
-.ikind.k-missing { color: var(--bloodied); border-color: rgba(212, 160, 60, 0.4); }
-.ikind.k-assumed { color: var(--steel); border-color: rgba(110, 143, 168, 0.4); }
+.ikind.k-missing {
+  color: var(--bloodied);
+  border-color: color-mix(in srgb, var(--bloodied) 40%, transparent);
+}
+.ikind.k-assumed {
+  color: var(--steel);
+  border-color: color-mix(in srgb, var(--steel) 40%, transparent);
+}
 .ikind.k-unmapped { color: var(--muted); }
 
 input[type="file"] { padding: 8px; font-size: 0.84rem; }
@@ -572,7 +1040,9 @@ input[type="file"] { padding: 8px; font-size: 0.84rem; }
 .alarm-k { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 500; color: var(--conc); }
 .alarm-q { margin: 8px 0 4px; font-size: 1.0rem; color: var(--ink); }
 .alarm-s { margin: 0; font-size: 0.8rem; color: var(--muted); }
-.chip.bad { border-color: rgba(217, 83, 74, 0.5); color: var(--near); }
+.chip.bad {
+  border-color: color-mix(in srgb, var(--near) 50%, transparent); color: var(--near);
+}
 .exh { margin: 10px 0 0; font-size: 0.84rem; color: var(--bloodied); }
 
 /* ---- attacks ---- */
@@ -604,16 +1074,36 @@ input[type="file"] { padding: 8px; font-size: 0.84rem; }
  * it. A fixed banner with no reserved space silently swallows clicks on
  * whatever it covers.
  */
+/*
+ * A strip, not a card.
+ *
+ * It was a bordered box 150px tall above the header on a phone — a fifth of
+ * the screen, permanently, to say a thing that is true once. It says the same
+ * words in one line now, and it does not wrap: two buttons and a sentence on
+ * one row is what the flex-wrap was hiding rather than solving.
+ */
 .updatebar {
-  position: sticky; top: 0; z-index: 30;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap;
-  background: var(--raised); border: 1px solid var(--steel);
-  padding: 10px 14px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: var(--s-5);
+  min-height: var(--tap);
+  background: var(--gold-wash);
+  border-bottom: 1px solid var(--gold-edge);
+  padding: var(--s-1) var(--s-7);
 }
-.ub-text { font-size: 0.88rem; color: var(--ink); }
-.updatebar button { padding: 7px 12px; font-size: 0.6rem; }
-.ub-dismiss { background: transparent; border-color: transparent; color: var(--muted); }
+.ub-text { flex: 1 1 auto; font-size: var(--t-note); color: var(--ink); min-width: 0; }
+.updatebar .row { flex: 0 0 auto; display: flex; gap: var(--s-3); }
+/*
+ * Full tap targets, and the strip is 52px because of it.
+ *
+ * These were shrunk to 32 to buy the strip back, with a `tap-ok:` reason
+ * written beside them — and `verify-guidance` failed anyway, on all three
+ * screens, because it measures what is on the page rather than reading the
+ * stylesheet. It was right to. A comment is not a reason a thumb can read,
+ * and the 44px floor has been broken four separate times in this app, every
+ * one of them found by measuring. The height came out of the bar's padding
+ * instead, which is where it should have come from.
+ */
+.updatebar button { padding: var(--s-2) var(--s-5); font-size: var(--t-5); }
+.ub-dismiss { background: transparent; border-color: transparent; color: var(--ink-dim); }
 @media (hover: hover) and (pointer: fine) { .ub-dismiss:hover:not(:disabled) { border-color: var(--rule); } }
 
 /*
@@ -726,15 +1216,15 @@ html, body { overscroll-behavior-y: none; }
 .sp-tile .c { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
 .sp-tile .cost {
   font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--gold);
+  text-transform: uppercase; color: var(--gold-ink);
 }
 .sp-tile .sc {
   font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--muted);
 }
 /* A gold rim means you can pay for it this second. */
-.sp-tile.ready { border-color: var(--gold-dim); }
-.sp-tile.on { border-color: var(--gold); background: var(--gold-wash); }
+.sp-tile.ready { border-color: var(--gold-edge); }
+.sp-tile.on { border-color: var(--gold-edge); background: var(--gold-wash); }
 /* Dimmed, never hidden: "why can't I cast this" needs the tile to exist. */
 .sp-tile.no { opacity: 0.45; }
 .sp-tile.no .cost { color: var(--faint); }
@@ -757,7 +1247,7 @@ html, body { overscroll-behavior-y: none; }
 .sp-main .faint { font-size: 0.72rem; }
 .sp button { padding: 6px 10px; font-size: 0.6rem; }
 .sp-detail {
-  margin-top: 10px; padding-top: 11px; border-top: 1px solid var(--gold-dim);
+  margin-top: 10px; padding-top: 11px; border-top: 1px solid var(--gold-edge);
   font-size: 0.78rem;
 }
 .sp-detail .nm { font-family: var(--display); font-size: 1rem; color: var(--ink); margin-right: 8px; }
@@ -783,38 +1273,198 @@ html, body { overscroll-behavior-y: none; }
 .gear-choice select { margin-top: 8px; width: 100%; }
 .gear-choice .chip { text-transform: none; letter-spacing: 0; font-size: 0.8rem; }
 
-/* ---- tabs ---- */
-.tabs {
-  display: flex; gap: 2px; margin: 0 0 16px;
-  position: sticky; top: 0; z-index: 25;
-  background: var(--ground); border-bottom: 1px solid var(--rule);
-  overflow-x: auto; scrollbar-width: none;
-}
-.tabs::-webkit-scrollbar { display: none; }
-.tab {
-  /*
-   * Six of these now, and six at 14px of padding needed 416px on a phone
-   * that has 354. A tab you have to swipe to is a tab a first-timer does not
-   * know exists — the row still scrolls, but it should not have to.
-   */
-  position: relative; flex: 1 0 auto; padding: 12px 8px;
-  /* A tab is an underline, not a box — the base radius bent it into a bowl. */
-  border: 0; border-radius: 0; border-bottom: 2px solid transparent; background: none;
-  color: var(--muted); font-size: 0.6rem; letter-spacing: 0.08em;
-  text-transform: uppercase; white-space: nowrap;
-}
-/* Active is luminance, never a hue — the same rule the initiative track uses. */
-.tab.on { color: var(--ink); border-bottom-color: var(--edge); }
-.tab-dot {
-  position: absolute; top: 8px; right: 6px;
-  width: 6px; height: 6px; border-radius: 50%; background: var(--near);
+/* ---- the shell ---- */
+/*
+ * Five declared bands, a fixed height, and one of them scrolls.
+ *
+ * This app was a scrolling DOCUMENT with the chrome riding at the top of it
+ * and the tab bar fixed over the bottom. That works until the control you
+ * must press is below the fold — and at a table the scroll happens while five
+ * people wait. Now the header and the action bar cannot move, and the middle
+ * is the only thing that goes anywhere.
+ *
+ * `dvh`, never `vh`: `100vh` on iOS counts browser chrome that is not there,
+ * so a pinned footer sits below the bottom of the screen.
+ */
+.shell {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  height: 100dvh;
+  /* A phone is the design target; on a laptop the column stops widening
+     rather than stretching one card across a metre of screen. */
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  background: var(--canvas);
 }
 
+.sh-head {
+  display: flex; align-items: center; gap: var(--s-5);
+  min-height: var(--tap);
+  padding: 0 var(--s-3);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--hairline);
+}
+/* Reserved either side so the title centres on the HEADER rather than on the
+   space the lead button leaves behind. */
+.sh-slot {
+  flex: 0 0 var(--tap); display: flex; align-items: center; min-width: 0;
+}
+.sh-end { justify-content: flex-end; }
+.sh-title {
+  flex: 1; min-width: 0; margin: 0;
+  text-align: center; font-size: var(--t-label); font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* A header control is an icon in a tap target, flat against the bar — a
+   bordered box around an icon in a bar reads as a second surface. */
+.sh-i {
+  min-width: var(--tap); min-height: var(--tap); padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border-color: transparent; color: var(--ink-dim);
+  font-size: var(--t-card); line-height: 1;
+}
+.sh-i:active:not(:disabled) { background: var(--surface-2); }
+
+/* Always rendered, empty or not: five declared rows need five children, or
+   the scroller silently loses its 1fr and the page grows instead. */
+.sh-band { min-height: 0; }
+
+.sh-scroll {
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--card-pad);
+  display: flex; flex-direction: column; gap: var(--row-gap);
+}
+/*
+ * Nothing in the scroller shrinks below its own content. A flex column lets
+ * its children shrink when it overflows, and a child with `overflow: hidden`
+ * shrinks all the way — V2 had a stat strip render 2px tall with 88px of
+ * content inside it, clipped and invisible.
+ */
+.sh-scroll > * { flex: none; }
+/* The cards inside it own their spacing through the parent's gap. */
+.sh-scroll > section.card { margin-top: 0; }
+
+.sh-foot {
+  display: flex; flex-direction: column; gap: var(--s-4);
+  padding: var(--s-6) var(--card-pad);
+  padding-bottom: calc(var(--s-6) + env(safe-area-inset-bottom, 0px));
+  background: var(--surface-1);
+  border-top: 1px solid var(--hairline);
+}
+/* When the tab bar is under it, the bar carries the safe area instead. */
+.shell:has(.tabs) .sh-foot { padding-bottom: var(--s-6); }
+.sh-foot:empty { display: none; }
+.sh-acts { display: flex; gap: var(--row-gap); }
+/* Share the row, never shrink below a thumb. */
+.sh-acts > button { flex: 1 1 auto; min-width: calc(var(--tap) * 2); }
+.sh-counter {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: var(--t-note); color: var(--ink-dim); font-family: var(--mono);
+}
+
+/* ---- tabs ---- */
+/*
+ * The bar, at the bottom.
+ *
+ * It was six words across the TOP of the page under three other bars, and at
+ * six entries it overflowed a 390px phone and scrolled sideways — a tab you
+ * have to swipe to is a tab a first-timer never finds. Down here it is where
+ * the thumb already rests, it cannot be scrolled past, and it stops competing
+ * with the content for the top of the screen. The icon is what makes six fit
+ * where six words did not.
+ *
+ * It is a BAND of the shell rather than a fixed element over a document —
+ * it was fixed while the page still scrolled underneath, which is the same
+ * picture and a different thing: the page had to reserve its height by hand,
+ * and every screen paid for that padding whether the bar was there or not.
+ *
+ * Still the lowest of the things that own the bottom of this app. The turn
+ * bar sits ON it, and the roll pad and any sheet cover both — those are
+ * moments you are mid-way through answering, and navigating away is not what
+ * the thumb is there for.
+ */
+.tabs {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  background: var(--surface-1);
+  border-top: 1px solid var(--hairline);
+  /* Above the home indicator, not under it. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-1);
+  min-height: var(--tap); padding: var(--s-3) var(--s-1);
+  border: 0; border-radius: 0; background: none; box-shadow: none;
+  color: var(--ink-dim);
+  font-size: var(--t-micro); font-weight: 500; letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+/*
+ * The one place the accent marks a place rather than an action. Luminance
+ * alone was the old rule and it was written for a near-black ground; on
+ * parchment a slightly darker grey does not read as "you are here" at arm's
+ * length, so the active tab takes the gold as ink AND goes to full weight.
+ */
+.tab.on { color: var(--gold-ink); }
+.tab.on .tab-l { font-weight: 600; }
+.tab:active:not(:disabled) { transform: none; background: var(--surface-2); }
+.tab-g { position: relative; display: inline-flex; line-height: 0; }
+.tab-l { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tab-dot {
+  position: absolute; top: -1px; right: -3px;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--near);
+  /* Ringed against the bar, so it stays legible over an icon stroke. */
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
+
+/* ---- the pack, under four headings ---- */
+/*
+ * HEADINGS, not tabs.
+ *
+ * The concept draws four tabs, and it can: its inventory is the whole screen.
+ * Here this is one card among three on the Gear tab, and a pack is usually
+ * under a dozen things — so tabs hid three quarters of it, including whatever
+ * had just been added, which is the one thing somebody opens this list to see.
+ * "What am I carrying" is one question and it gets one answer.
+ */
+.pk-hd { display: flex; align-items: baseline; gap: var(--s-4); }
+/* How many are under it, so the shape of the pack reads before the rows do. */
+.pk-n { font-style: normal; font-size: var(--t-2); color: var(--ink-faint); }
+
 /* ---- gear ---- */
-.gear-sum { padding: 12px 16px 14px; }
-.gear-sum > div:first-child { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.gear-sum b { font-size: 1.6rem; color: var(--ink); }
-.gear-sum .faint { font-size: 0.78rem; }
+.gear-sum { padding: var(--s-6) var(--card-pad) var(--s-7); }
+/*
+ * The carry band, ported from V2: what you are carrying against what you can,
+ * with the armour class beside it and what that armour cost underneath.
+ */
+.carry { display: flex; flex-direction: column; gap: var(--s-3); }
+.carry-hd, .carry-b { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-6); }
+.carry-w { font-size: var(--t-d1); line-height: 1; }
+.carry-w i { font-style: normal; color: var(--ink-dim); font-size: var(--t-11); }
+/* The armour class as a crest, because that is the number a table asks for by
+   name — the shield shape is the one the level crest already uses. */
+.carry-ac {
+  flex: 0 0 auto; min-width: 46px; text-align: center;
+  padding: var(--s-3) var(--s-5); font-size: var(--t-d1); line-height: 1;
+  color: var(--gold-ink); background: var(--gold-wash);
+  border: 1px solid var(--gold-edge); border-radius: var(--r-control);
+}
+.carry-tr {
+  height: 6px; border-radius: var(--r-pill);
+  background: var(--surface-2); overflow: hidden;
+}
+.carry-fl {
+  display: block; height: 100%; background: var(--gold-edge);
+  transition: width var(--m-state) var(--m-ease-out);
+}
+/* Over the limit is a fact, not an error — the app does not refuse it. */
+.carry-fl.over { background: var(--bloodied); }
+.carry-from { font-size: var(--t-note); color: var(--ink-dim); }
+.carry-cost { font-size: var(--t-note); color: var(--damage); }
+.gear-sum b { font-size: var(--t-d3); color: var(--ink); }
+.gear-sum .faint { font-size: var(--t-5); }
 .gear-atk {
   display: flex; align-items: baseline; gap: 8px;
   padding: 8px 0 0; border-top: 1px solid var(--rule); margin-top: 10px;
@@ -896,31 +1546,100 @@ html, body { overscroll-behavior-y: none; }
 
 /* ---- seat ---- */
 /*
- * One row of chrome.
+ * The header. One row, fixed shape, on every screen.
  *
- * It was three bars — the room, the app's own name with two buttons, and the
- * seat — and 330px of a phone before the tabs, on every screen. What is left
- * here is what a table READS: who you are, the code somebody reads aloud, and
- * a dot for the connection. Everything that is pressed went into two sheets.
+ * It was THREE stacked bands and then it was three again: a room card with
+ * four controls, the offline notice, and the seat — 460px of an 844px phone
+ * before the first card. Two of the three were things a table touches about
+ * twice a session, sitting permanently above the thing it touches constantly.
+ *
+ * What is left is what a table READS: who you are, the crest, the code
+ * somebody reads aloud, and a dot for the connection. Everything pressed is
+ * behind the two buttons at the end. Starting or joining a room went in
+ * there too, so a solo device now spends nothing on a room it does not have.
+ *
+ * Sticky rather than fixed: it is one row, it scrolls away on a long list if
+ * the page wants it to, and — unlike the tab bar — nothing about it needs to
+ * be reachable mid-scroll.
  */
 .seatbar {
-  display: flex; align-items: center; gap: 10px;
-  margin-top: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--rule);
+  position: relative;
+  display: flex; align-items: center; gap: var(--s-5);
+  min-height: var(--tap);
+  /* The crest is absolute inside this row — see .sb-crest. */
+  isolation: isolate;
+  padding: var(--s-3) var(--s-7);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--hairline);
 }
 /* The label never breaks in half, the select takes what is left, and the
    marks at the end keep their room: at 390px the first draft of this row put
    "I AM" on two lines and then clipped it. */
-.seatbar > .label { white-space: nowrap; flex: 0 0 auto; }
-.seatbar select { width: auto; flex: 1 1 auto; min-width: 0; max-width: 200px; }
-/* The trailing group, pushed right: the two marks and the two ways in. */
-.sb-end { margin-left: auto; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
-/* Square, because these are icons rather than words: a gear and an ellipsis
-   in a 44px box, which is the rule everywhere else a thumb goes. */
-.sb-i {
-  min-width: 44px; padding: 8px; font-size: 0.94rem; line-height: 1;
-  letter-spacing: 0; text-transform: none;
+.seatbar > .label {
+  white-space: nowrap; flex: 0 0 auto;
+  font-size: var(--t-micro); letter-spacing: 0.1em;
 }
-
+/*
+ * The seat, as a pill.
+ *
+ * It was a bare select on the header's own surface, which read as a hole in
+ * the bar rather than as the one control in it. A pill is what the concept
+ * draws, and it is the right shape: this is a thing you are — "the DM",
+ * "Kira Vance" — not a field you fill in.
+ */
+.seatbar select {
+  width: auto; flex: 0 1 auto; min-width: 0;
+  /* A long character name must not push the crest around. */
+  max-width: 12rem; text-overflow: ellipsis;
+  padding: 0 var(--s-5);
+  background: var(--surface-1); border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  font-size: var(--t-note); font-weight: 500;
+}
+/* Nothing to choose between: a pill that says who you are, not a dropdown
+   with one entry in it. */
+.sb-only {
+  flex: 0 1 auto; min-width: 0;
+  display: inline-flex; align-items: center; min-height: var(--tap);
+  padding: 0 var(--s-6);
+  border: 1px solid var(--hairline); border-radius: var(--r-pill);
+  background: var(--surface-1); color: var(--ink);
+  font-size: var(--t-note); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/*
+ * The crest is centred on the HEADER, not on what is left over.
+ *
+ * `flex: 1` in the middle of a row centres a thing in the GAP between its
+ * neighbours, and the neighbours here are different widths and sometimes
+ * absent entirely: with no character yet there is no seat select at all, and
+ * the crest sat well left of centre on the first screen anybody sees. V2 hit
+ * exactly this with its step titles and fixed it by reserving equal slots;
+ * that does not work here, because the lead is a name of any length.
+ *
+ * So: taken out of the flow and centred on the row. `pointer-events: none`
+ * because it now spans the row and would otherwise eat taps meant for the
+ * select underneath it.
+ */
+.sb-crest {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; pointer-events: none;
+}
+/* The trailing group: the two marks and the two ways in. */
+.sb-end { margin-left: auto; flex: 0 0 auto; display: flex; align-items: center; gap: var(--s-3); }
+/*
+ * ROUND, because these are icons rather than words — a 44px circle is the
+ * shape the concept gives a tool, and it reads as a control in a way a bare
+ * glyph on the bar does not. Same hairline and same surface as the seat pill
+ * beside it, so the row is one set of objects rather than three treatments.
+ */
+.sb-i {
+  min-width: var(--tap); min-height: var(--tap); padding: 0; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--hairline); border-radius: var(--r-pill);
+  background: var(--surface-1); color: var(--ink-dim);
+}
+.sb-i:active:not(:disabled) { background: var(--surface-2); }
 
 /* ---- initiative ---- */
 /*
@@ -969,9 +1688,10 @@ html, body { overscroll-behavior-y: none; }
    */
   display: grid; grid-template-columns: 38px minmax(0, 1fr) auto;
   gap: 8px 10px; align-items: center;
-  padding: 11px 12px; border-radius: var(--r-card);
-  border: 1px solid var(--rule);
-  border-left: 2px solid var(--rule);
+  padding: var(--s-6) var(--s-6); border-radius: var(--r-card);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--hairline);
+  background: var(--surface-1);
 }
 /* The bands under the name line, each the whole width on purpose. */
 .cbt > .cbt-do, .cbt > .cbt-band { grid-column: 1 / -1; }
@@ -986,15 +1706,29 @@ html, body { overscroll-behavior-y: none; }
 .cbt .hp { font-size: 0.84rem; color: var(--muted); text-align: right; white-space: nowrap; }
 /* Active is luminance, never a hue — red already means damage in this list,
    and the box means the edge can carry it all the way round. */
-.cbt.on { background: var(--raised); border-color: var(--muted); border-left-color: var(--ink); }
-.cbt.on .nm { color: #fff; font-weight: 500; }
+/*
+ * Whose turn it is. THE thing the accent exists for.
+ *
+ * It was a luminance step — a slightly lighter panel with a brighter left
+ * edge — which was the right rule on a near-black ground and is a
+ * two-percent step on parchment. Six rows deep, nothing said which one was
+ * live. Ground rule one: one accent, and it marks whose turn it is and the
+ * single control that ends the turn. This is the first of those two.
+ */
+.cbt.on {
+  background: var(--gold-wash);
+  border-color: var(--gold-edge);
+  border-left-color: var(--gold-edge);
+  border-left-width: 3px;
+}
+.cbt.on .nm { color: var(--ink); font-weight: 600; }
 .cbt.on .i, .cbt.on .hp { color: var(--ink); }
 .disc, .hitbtn { padding: 4px 8px; font-size: 0.54rem; }
 
 .disc { background: transparent; color: var(--steel); border-color: var(--rule); }
 /* Turn distance: brightness carries "it's you", never a hue. */
 .turns-away { color: var(--faint); }
-.turns-away.now { color: #fff; }
+.turns-away.now { color: var(--ink); }
 /* Attribution: quiet, but always there. */
 .fr .by {
   margin-left: 8px; font-size: 0.6rem; text-transform: uppercase;
@@ -1045,7 +1779,7 @@ html, body { overscroll-behavior-y: none; }
 /* Acting is signalled by brightness, never a hue — red means damage here. */
 .pt-turn {
   font-weight: 500; text-transform: uppercase; letter-spacing: 0.2em;
-  font-size: 1.2rem; color: #fff; line-height: 1.1;
+  font-size: var(--t-card); color: var(--ink); line-height: 1.1;
 }
 .pt-turn small {
   display: block; font-size: 0.6rem; letter-spacing: 0.13em;
@@ -1073,7 +1807,7 @@ html, body { overscroll-behavior-y: none; }
   font-size: 0.94rem; font-weight: 400; color: var(--ink-dim);
 }
 @media (hover: hover) and (pointer: fine) { .mrow:hover:not(:disabled) { color: var(--ink); } }
-.mrow.open { color: #fff; }
+.mrow.open { color: var(--ink); }
 .mrow .ty { font-size: 0.78rem; }
 .mrow .cr { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
 
@@ -1133,8 +1867,9 @@ html, body { overscroll-behavior-y: none; }
    is reserved for creature health and never stands in for anything else. */
 .gauge { position: relative; display: flex; gap: 2px; height: 12px; }
 .gauge i { flex: 1; height: 100%; border-radius: 1px; }
-.b1 { background: #2a3238; } .b2 { background: #3c4a54; } .b3 { background: #52646f; }
-.b4 { background: #6e8fa8; } .b5 { background: #9cbbd1; }
+.b1 { background: var(--ramp-1); } .b2 { background: var(--ramp-2); }
+.b3 { background: var(--ramp-3); }
+.b4 { background: var(--ramp-4); } .b5 { background: var(--ramp-5); }
 /*
  * The pin travels on `transform`, not on `left`.
  *
@@ -1173,7 +1908,7 @@ html, body { overscroll-behavior-y: none; }
 .hb {
   margin-left: 8px; font-size: 0.54rem; text-transform: uppercase;
   letter-spacing: 0.1em; color: var(--steel);
-  border: 1px solid rgba(110, 143, 168, 0.45); padding: 2px 5px;
+  border: 1px solid color-mix(in srgb, var(--steel) 45%, transparent); padding: 2px 5px;
 }
 .hb-note { margin: 8px 0 0; font-size: 0.8rem; }
 .linky {
@@ -1218,23 +1953,23 @@ html, body { overscroll-behavior-y: none; }
 
 /* ---- level up ---- */
 /* The level-up is a decision, so it carries the accent and the flourish. */
-.lv { border-color: var(--gold-dim); position: relative; }
+.lv { border-color: var(--gold-edge); position: relative; }
 .lv::before, .lv::after {
   content: ""; position: absolute; width: 14px; height: 14px;
-  border: 1px solid var(--gold); opacity: 0.9; pointer-events: none;
+  border: 1px solid var(--gold-edge); opacity: 0.9; pointer-events: none;
 }
 .lv::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: var(--r-card) 0 0 0; }
 .lv::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 var(--r-card) 0; }
 .lv-head { padding: 18px 16px 14px; border-bottom: 1px solid var(--rule); }
 .lv-k {
   display: block; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.16em; font-size: 0.6rem; color: var(--gold);
+  letter-spacing: 0.16em; font-size: 0.6rem; color: var(--gold-ink);
 }
 /* A name, not a label — so it wears the display face. */
 .lv-n {
   font-family: var(--display); letter-spacing: -0.005em; text-transform: none;
   display: block; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.13em; font-size: 1.4rem; color: #fff; margin-top: 8px;
+  letter-spacing: 0.13em; font-size: var(--t-d1); color: var(--ink); margin-top: var(--s-4);
 }
 .lv-s {
   display: block; font-size: 0.6rem; text-transform: uppercase;
@@ -1436,7 +2171,7 @@ html, body { overscroll-behavior-y: none; }
 .cnd.add { color: var(--muted); min-width: 26px; }
 /* The one gold thing on a creature's row: it is the only control there that
    puts something NEW on the table, rather than spending or revealing. */
-.cbt-do .cnd.add { color: var(--gold); border-color: var(--gold-dim); }
+.cbt-do .cnd.add { color: var(--gold-ink); border-color: var(--gold-edge); }
 
 .offer, .shove-ask { display: flex; flex-direction: column; gap: 8px; }
 .offer-row { text-align: left; padding: 9px 11px; }
@@ -1484,12 +2219,12 @@ html, body { overscroll-behavior-y: none; }
   width: min(420px, calc(100vw - 32px));
   display: flex; flex-direction: column; gap: 10px;
   padding: 18px; border-radius: var(--r-card);
-  background: var(--panel); border: 1px solid var(--gold);
-  box-shadow: 0 18px 48px #000b;
+  background: var(--panel); border: 1px solid var(--gold-edge);
+  box-shadow: var(--lift-2);
   animation: react-land 160ms ease-out;
 }
 /* Yes is the one with weight: it is the answer that costs something. */
-.react-ask .react-yes { flex: 1; border-color: var(--gold); color: var(--gold); }
+.react-ask .react-yes { flex: 1; border-color: var(--gold-edge); color: var(--gold-ink); }
 @keyframes react-land {
   from { transform: translate(-50%, -46%); opacity: 0; }
   to { transform: translate(-50%, -50%); opacity: 1; }
@@ -1569,12 +2304,14 @@ html, body { overscroll-behavior-y: none; }
   background: var(--panel); color: var(--ink-dim);
   font: inherit; letter-spacing: 0; text-transform: none;
 }
-.klass.on { border-color: var(--gold); background: var(--gold-wash); }
+.klass.on { border-color: var(--gold-edge); background: var(--gold-wash); }
+/* A tile, the way the mockup draws one: the recessed surface, no border, and
+   the mark inheriting the ink. It carried a per-class hue and no longer does
+   — see the note where CLASS_HUE used to be. */
 .kg {
-  width: 34px; height: 34px; flex: 0 0 auto; border-radius: var(--r-control);
-  border: 1px solid var(--rule); background: var(--ground);
-  display: flex; align-items: center; justify-content: center; font-size: 1.0rem;
-  /* The hue is on the mark and nowhere else — see CLASS_HUE. */
+  width: 38px; height: 38px; flex: 0 0 auto; border-radius: var(--r-control);
+  border: 0; background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
   color: var(--ink-dim);
 }
 .kbody { display: block; min-width: 0; }
@@ -1589,9 +2326,16 @@ html, body { overscroll-behavior-y: none; }
   font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--muted);
 }
-.ktag.spellcaster { border-color: var(--conc); color: var(--conc); }
-.ktag.martial { border-color: var(--bloodied); color: var(--bloodied); }
-.ktag.tank { border-color: var(--steel); color: var(--steel); }
+/*
+ * No colour per tag either, for the reason the class marks lost theirs.
+ *
+ * These borrowed --conc, --bloodied and --steel, which mean concentration,
+ * bloodied and what-a-player-may-know. Three of the six tags on this screen
+ * were wearing meanings from the fight screen, and a card can carry two of
+ * them at once. The tags are already WORDS — they do not need a second
+ * channel saying the same thing in a colour that is spoken for.
+ */
+.ktag.spellcaster, .ktag.martial, .ktag.tank { color: var(--ink-dim); }
 /* Complexity: bookkeeping and decisions, never power. */
 .kcx { display: flex; gap: 3px; align-items: center; margin-left: auto; }
 .kcx i { width: 5px; height: 5px; border-radius: 50%; background: var(--faint); }
@@ -1698,52 +2442,71 @@ html, body { overscroll-behavior-y: none; }
 }
 .cr-vitals b { font-size: 0.94rem; color: var(--ink); font-variant-numeric: tabular-nums; }
 
+/*
+ * The rail: a run of dots on one rule, and nothing else.
+ *
+ * It was a scrolling row of labelled pills — fourteen steps at "1 CLASS",
+ * "2 RACE", tracked uppercase, so the rail itself needed swiping and the step
+ * you were on could be off screen. The label moved to the header, which is
+ * the one place on every screen that is already reserved for saying where you
+ * are. What is left reads as a PATH: one line behind, dots on top, and the
+ * one you are standing on is larger and gold.
+ */
 .cr-rail {
-  display: flex; gap: 4px; padding: 12px 16px;
-  border-bottom: 1px solid var(--rule); overflow-x: auto; scrollbar-width: none;
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--s-6) var(--card-pad) var(--s-5);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--hairline);
 }
-.cr-rail::-webkit-scrollbar { display: none; }
+.cr-rail::before {
+  content: ""; position: absolute;
+  left: var(--card-pad); right: var(--card-pad);
+  height: 2px; background: var(--hairline);
+}
 .cr-node {
-  display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
-  padding: 6px 10px 6px 6px; border: 1px solid transparent; border-radius: var(--r-pill);
-  background: transparent; color: var(--muted);
-  font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.1em;
-  text-transform: uppercase;
+  position: relative; flex: 0 0 auto;
+  /* tap-ok: the dot is a 9px mark inside a full 44px target — see the
+     min-height below, which is what a thumb actually gets. */
+  padding: 0; border: 0; background: none;
+  min-width: 22px; min-height: var(--tap);
+  display: flex; align-items: center; justify-content: center;
 }
 .cr-dot {
-  width: 20px; height: 20px; border-radius: 50%; flex: 0 0 auto;
-  border: 1px solid var(--rule); background: var(--raised);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.6rem; color: var(--faint);
+  width: 9px; height: 9px; border-radius: var(--r-pill);
+  background: var(--hairline);
+  /* Punched out of the rule behind it, so the line reads as passing under. */
+  box-shadow: 0 0 0 4px var(--surface-1);
+  /* The tick and the number are for a screen reader and for nobody's eye. */
+  overflow: hidden; text-indent: -99px; color: transparent;
+  display: block;
 }
-.cr-node.done .cr-dot { border-color: var(--unharmed); color: var(--unharmed); }
-.cr-node.on { border-color: var(--rule); background: var(--raised); color: var(--ink); }
+.cr-node.done .cr-dot { background: var(--gold-edge); }
 /* Gold marks the step you are ON — the decision in front of you. */
-.cr-node.on .cr-dot { border-color: var(--gold); color: var(--gold); }
-
-.cr-nav { display: flex; gap: 8px; margin-top: 12px; }
-.cr-nav button { flex: 0 0 auto; }
-/* And the button that commits to it, with the study page's weight. */
-.cr-nav .cr-on {
-  flex: 1; border-color: var(--gold); color: var(--gold);
-  background: linear-gradient(var(--gold-wash), #17140e);
+.cr-node.on .cr-dot {
+  width: 11px; height: 11px; background: var(--gold-fill);
+  box-shadow: 0 0 0 4px var(--surface-1), 0 0 0 6px var(--gold-wash);
 }
+
+/* The button that commits to the step, in the pinned bar. Filled, because
+   it is the one control on the screen that moves you forward. */
+.cr-on { flex: 2 1 auto; }
 
 /* ---- the review: a character, not a form you filled in ---- */
 /* A drawn flourish: ornament without an image to ship. */
 .cr-review { position: relative; }
 .cr-review::before, .cr-review::after {
   content: ""; position: absolute; width: 14px; height: 14px;
-  border: 1px solid var(--gold); opacity: 0.9; pointer-events: none;
+  border: 1px solid var(--gold-edge); opacity: 0.9; pointer-events: none;
 }
 .cr-review::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-radius: var(--r-card) 0 0 0; }
 .cr-review::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-radius: 0 0 var(--r-card) 0; }
 .cr-review .rv-nm { font-family: var(--display); text-transform: none; }
 .cr-review .rv-who { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
 .rv-crest {
-  width: 44px; height: 44px; flex: 0 0 auto; border-radius: var(--r-control);
-  border: 1px solid var(--rule); background: var(--raised);
-  display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+  width: var(--tap); height: var(--tap); flex: 0 0 auto; border-radius: var(--r-control);
+  border: 0; background: var(--surface-2); color: var(--ink-dim);
+  display: flex; align-items: center; justify-content: center;
 }
 .rv-nm { display: block; color: var(--ink); font-size: 1.0rem; }
 .rv-sub { display: block; font-size: 0.8rem; color: var(--muted); text-transform: capitalize; }
@@ -1851,7 +2614,7 @@ html, body { overscroll-behavior-y: none; }
   padding: 11px; border-radius: var(--r-control);
   background: var(--raised); border: 1px solid var(--rule);
 }
-.ba-col.to { border-color: var(--gold-dim); }
+.ba-col.to { border-color: var(--gold-edge); }
 .ba-r {
   display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
   font-size: 0.78rem; color: var(--muted);
@@ -1866,7 +2629,7 @@ html, body { overscroll-behavior-y: none; }
 .ba-r.moved b { color: var(--unharmed); }
 .ba-arrow {
   align-self: center; text-align: center;
-  color: var(--gold); font-size: 1.1rem;
+  color: var(--gold-ink); font-size: 1.1rem;
 }
 
 
@@ -1909,8 +2672,8 @@ html, body { overscroll-behavior-y: none; }
   background: transparent; color: var(--ink-dim);
   letter-spacing: 0; text-transform: none; font-size: 0.88rem;
 }
-.pl-row.on { border-color: var(--gold); background: var(--gold-wash); color: var(--ink); }
-.pl-tick { color: var(--gold); font-size: 0.78rem; }
+.pl-row.on { border-color: var(--gold-edge); background: var(--gold-wash); color: var(--ink); }
+.pl-tick { color: var(--gold-ink); font-size: 0.78rem; }
 
 /* ---- the one thing the app cannot see: where the fight is ---- */
 .scene { border: 1px solid var(--rule); border-radius: var(--r-control); overflow: hidden; margin: 12px 0; }
@@ -1942,13 +2705,13 @@ html, body { overscroll-behavior-y: none; }
 }
 .scene-row .nm { font-size: 0.88rem; }
 .scene-row .faint { font-size: 0.78rem; }
-.scene-row.on { border-color: var(--gold); background: var(--gold-wash); color: var(--ink); }
+.scene-row.on { border-color: var(--gold-edge); background: var(--gold-wash); color: var(--ink); }
 
 /* On a player's turn it is a statement, not a control. */
 .room-is {
   display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px;
   padding: 8px 11px; border-radius: var(--r-control);
-  background: var(--raised); border-left: 2px solid var(--gold);
+  background: var(--raised); border-left: 2px solid var(--gold-edge);
   font-size: 0.84rem; color: var(--ink-dim); text-transform: capitalize;
 }
 
@@ -1971,20 +2734,20 @@ html, body { overscroll-behavior-y: none; }
 /* The one press the whole card exists for. */
 .sc-open {
   flex: 0 0 auto; min-height: 44px;
-  border-color: var(--gold); background: var(--gold-wash); color: var(--ink);
+  border-color: var(--gold-edge); background: var(--gold-wash); color: var(--ink);
 }
 /* The line the DM reads out, given the weight of speech rather than data. */
 .sc-said {
   display: flex; align-items: flex-start; gap: 10px;
   margin: 0 0 12px; padding: 11px 13px;
-  border-left: 2px solid var(--gold); border-radius: 0 var(--r-control) var(--r-control) 0;
+  border-left: 2px solid var(--gold-edge); border-radius: 0 var(--r-control) var(--r-control) 0;
   background: var(--raised); color: var(--ink-dim);
   font-family: var(--display); font-size: 0.88rem; line-height: 1.45;
 }
 .sc-said button { flex: 0 0 auto; min-height: 44px; }
 .sc-draft { margin-top: 10px; }
 /* A rule only where there is something above to be ruled off from. */
-.sc-draft.under { padding-top: 12px; border-top: 1px solid var(--gold-dim); }
+.sc-draft.under { padding-top: 12px; border-top: 1px solid var(--gold-edge); }
 .sc-note { margin-top: 12px; }
 .sc-note label {
   display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;
@@ -2025,8 +2788,8 @@ html, body { overscroll-behavior-y: none; }
 .claim .acts button { flex: 1 1 auto; min-height: 44px; }
 /* The app's own reading, carried on the edge rather than in a colour that
    means something else — red is damage here and green is healing. */
-.claim.v-hits { border-left-color: var(--gold); }
-.claim.v-hits .say { color: var(--gold); }
+.claim.v-hits { border-left-color: var(--gold-edge); }
+.claim.v-hits .say { color: var(--gold-ink); }
 .claim.v-misses .say { color: var(--faint); }
 
 /* ---- last time, in six sentences ---- */
@@ -2049,7 +2812,7 @@ html, body { overscroll-behavior-y: none; }
 .rc-n {
   display: flex; flex-direction: column; gap: 2px;
   padding: 7px 11px; border-radius: var(--r-control);
-  background: var(--raised); border-left: 2px solid var(--gold-dim);
+  background: var(--raised); border-left: 2px solid var(--gold-edge);
 }
 .rc-n .num { font-family: var(--mono); font-size: 1rem; color: var(--ink); }
 .rc-n .label { font-size: 0.6rem; color: var(--muted); }
@@ -2074,7 +2837,7 @@ html, body { overscroll-behavior-y: none; }
      sign rather than something anybody reads. */
   text-transform: none; letter-spacing: 0; font-weight: 400;
   background: var(--raised); border: 1px solid var(--rule);
-  border-left: 2px solid var(--gold-dim); border-radius: var(--r-control);
+  border-left: 2px solid var(--gold-edge); border-radius: var(--r-control);
 }
 .wn-said {
   font-family: var(--display); font-size: 0.88rem; line-height: 1.4;
@@ -2103,40 +2866,64 @@ html, body { overscroll-behavior-y: none; }
 .dl-fig { display: grid; place-items: center; }
 .dl-fig svg { width: 100%; height: auto; opacity: 0.85; }
 
+/*
+ * A worn slot, as the mockup draws one: the slot's NAME in tracked caps above
+ * what is in it, with an icon tile on the recessed surface at the left.
+ *
+ * It read the other way round — the item large and the place it goes as a
+ * mono footnote — which is backwards for a figure whose whole job is "what is
+ * on each part of me". Six of these are on screen at once and the thing you
+ * are scanning for is the PLACE.
+ */
 .dl-slot {
-  display: flex; align-items: center; gap: 8px; min-width: 0;
-  min-height: 56px; padding: 7px 9px; text-align: left;
-  border-radius: var(--r-control); letter-spacing: 0; text-transform: none;
-  background: var(--raised); border: 1px solid var(--rule);
+  display: flex; align-items: center; gap: var(--s-5); min-width: 0;
+  min-height: 62px; padding: var(--s-5); text-align: left;
+  border-radius: var(--r-card); letter-spacing: 0; text-transform: none;
+  background: var(--surface-1); border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
 }
-.dl-slot.empty { background: transparent; border-style: dashed; }
-.dl-slot.on { border-color: var(--gold); }
+.dl-slot.empty { box-shadow: none; background: var(--canvas); border-style: dashed; }
+.dl-slot.on { border-color: var(--gold-edge); }
 .dl-slot .g {
-  flex: 0 0 auto; width: 26px; height: 26px; display: grid; place-items: center;
-  border-radius: 6px; background: var(--gold-wash); font-size: 0.94rem;
+  flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center;
+  border-radius: var(--r-control); background: var(--surface-2); color: var(--ink-dim);
 }
-.dl-slot.empty .g { background: transparent; border: 1px dashed var(--rule); color: var(--faint); }
-.dl-slot .t { flex: 1; min-width: 0; }
+.dl-slot.empty .g { background: transparent; border: 1px dashed var(--hairline); }
+.dl-slot .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--s-1); }
 /* Two lines rather than an ellipsis: "Studded le…" is nothing anybody wears. */
 .dl-slot .n {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-  overflow: hidden; font-size: 0.78rem; line-height: 1.2; color: var(--ink);
+  overflow: hidden; line-height: 1.15; color: var(--gold-ink);
+  font-family: var(--display); font-size: var(--t-11); order: 2;
 }
-.dl-slot.empty .n { color: var(--faint); }
+.dl-slot.empty .n {
+  color: var(--ink-dim); font-family: var(--sans); font-size: var(--t-note);
+}
+/* The place, above the thing — and it is the label treatment, because that is
+   what it is: the name of a region of the figure. */
 .dl-slot .s {
-  display: block; font-family: var(--mono); font-size: 0.6rem; color: var(--muted);
+  display: block; order: 1;
+  font-size: var(--t-micro); font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--ink-dim); font-family: var(--sans);
+}
+/* What it does, under what it is. */
+.dl-slot .d {
+  display: block; order: 3;
+  font-family: var(--mono); font-size: var(--t-2); color: var(--ink-dim);
 }
 /*
  * Rarity as a rim, never as a fill, and never as the only signal — the word
  * is on the slot. Red is damage here and green is healing, so rarity climbs
  * the structural steel into gold instead of inventing a hue.
  */
-.dl-slot[data-rarity="1"] { border-color: #4d6472; }
+.dl-slot[data-rarity="1"] { border-color: var(--rare-plain); }
 .dl-slot[data-rarity="2"] { border-color: var(--steel); box-shadow: inset 0 0 14px -6px var(--steel); }
-.dl-slot[data-rarity="3"] { border-color: #9fc3d6; box-shadow: inset 0 0 14px -5px #9fc3d6; }
-.dl-slot[data-rarity="4"] { border-color: var(--gold); box-shadow: inset 0 0 14px -5px var(--gold); }
+.dl-slot[data-rarity="3"] {
+  border-color: var(--rare-high); box-shadow: inset 0 0 14px -5px var(--rare-high);
+}
+.dl-slot[data-rarity="4"] { border-color: var(--gold-edge); box-shadow: inset 0 0 14px -5px var(--gold-edge); }
 
-.dl-pick { margin-top: 10px; padding-top: 11px; border-top: 1px solid var(--gold-dim); }
+.dl-pick { margin-top: 10px; padding-top: 11px; border-top: 1px solid var(--gold-edge); }
 .dl-what { margin: 6px 0 9px; font-size: 0.88rem; color: var(--ink); }
 .dl-offer { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .dl-row {
@@ -2163,8 +2950,8 @@ html, body { overscroll-behavior-y: none; }
   text-transform: uppercase; color: var(--ink-dim);
 }
 .dw-open .v { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); }
-.dw-open.on { border-color: var(--gold); background: var(--gold-wash); }
-.dw-open.on .n { color: var(--gold); }
+.dw-open.on { border-color: var(--gold-edge); background: var(--gold-wash); }
+.dw-open.on .n { color: var(--gold-ink); }
 
 .dw-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; padding: 4px 13px 13px; }
 .dw-row {
@@ -2180,7 +2967,7 @@ html, body { overscroll-behavior-y: none; }
 }
 .dw-row .v { font-family: var(--mono); font-size: 0.8rem; color: var(--ink); }
 .dw-row.on .n { color: var(--ink); }
-.dw-row.on .v { color: var(--gold); }
+.dw-row.on .v { color: var(--gold-ink); }
 .dw-row.sel { background: var(--gold-wash); }
 
 /* ---- what you are holding, on the turn that needs it ---- */
@@ -2199,7 +2986,7 @@ html, body { overscroll-behavior-y: none; }
 .pt-arm .d {
   display: block; font-family: var(--mono); font-size: 0.66rem; color: var(--muted);
 }
-.pt-arm .v { font-family: var(--mono); font-size: 0.88rem; color: var(--gold); }
+.pt-arm .v { font-family: var(--mono); font-size: 0.88rem; color: var(--gold-ink); }
 .pt-arm:disabled .v { color: var(--faint); }
 
 /* ---- what a player wrote down ---- */
@@ -2229,22 +3016,30 @@ html, body { overscroll-behavior-y: none; }
   display: block; font-family: var(--mono); font-size: 0.54rem;
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
 }
-.up-now .n { font-family: var(--display); font-size: 1.1rem; color: var(--gold); }
+.up-now .n { font-family: var(--display); font-size: 1.1rem; color: var(--gold-ink); }
 .up-next { text-align: right; }
 .up-next .n { font-size: 0.88rem; color: var(--ink-dim); }
 
 /* The control a DM presses forty times an evening. It was one of five. */
+/*
+ * The one filled control on the screen. A DM presses this forty times an
+ * evening and it was an outlined box the same weight as "Back a turn" beside
+ * it — the accent exists for exactly this and was being spent on a wash.
+ */
 .next-turn {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  width: 100%; min-height: 54px; padding: 9px 12px;
-  border-color: var(--gold); background: var(--gold-wash); color: var(--ink);
-  font-size: 0.72rem; letter-spacing: 0.14em;
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-1);
+  width: 100%; min-height: 54px; padding: var(--s-4) var(--s-6);
+  border-color: var(--gold-edge); background: var(--gold-fill); color: var(--on-gold);
+  font-size: var(--t-sm); font-weight: 600; letter-spacing: 0;
 }
 .next-turn small {
-  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.06em;
-  text-transform: none; color: var(--muted);
+  font-family: var(--mono); font-size: var(--t-2); letter-spacing: 0.06em;
+  text-transform: none; color: var(--on-gold); opacity: 0.72;
 }
-.next-turn:disabled { border-color: var(--rule); background: transparent; }
+.next-turn:disabled {
+  border-color: var(--hairline); background: var(--surface-2); color: var(--ink-faint);
+}
+.next-turn:disabled small { color: var(--ink-faint); opacity: 1; }
 /* And the one that cannot be undone by pressing it again keeps its distance. */
 .end-it { color: var(--muted); }
 
@@ -2269,7 +3064,7 @@ html, body { overscroll-behavior-y: none; }
 .quick input { width: 56px; border: 0; background: transparent; padding: 4px 0; }
 
 /* Reinforcements. */
-.arrive { border-top: 1px solid var(--gold-dim); }
+.arrive { border-top: 1px solid var(--gold-edge); }
 
 /* ---- between fights, which is most of a session ---- */
 .ready-say { margin: 0 0 14px; font-size: 0.88rem; color: var(--ink-dim); }
@@ -2291,7 +3086,7 @@ html, body { overscroll-behavior-y: none; }
 /* ---- "tell me when it's my turn" ---- */
 .buzz { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
 .buzz-go { min-height: 46px; }
-.buzz-go.on { border-color: var(--gold); background: var(--gold-wash); color: var(--ink); }
+.buzz-go.on { border-color: var(--gold-edge); background: var(--gold-wash); color: var(--ink); }
 /* Every reason it might not work is a sentence, not a disabled control. */
 .buzz-say, .buzz-no { font-size: 0.78rem; color: var(--muted); margin: 0; }
 .buzz-no { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
@@ -2360,7 +3155,7 @@ html, body { overscroll-behavior-y: none; }
   background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
   color: var(--ink); font: inherit;
 }
-@media (hover: hover) and (pointer: fine) { .sb-act:hover { border-color: var(--gold); } }
+@media (hover: hover) and (pointer: fine) { .sb-act:hover { border-color: var(--gold-edge); } }
 .sb-act-n { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .sb-act-n b { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.84rem; }
 .sb-act-n .faint { font-size: 0.8rem; }
@@ -2439,7 +3234,7 @@ html, body { overscroll-behavior-y: none; }
  */
 .stance-why {
   margin: 6px 0 0; font-size: 0.84rem; line-height: 1.45;
-  color: var(--gold);
+  color: var(--gold-ink);
 }
 
 /* ---- a hand that is not free ---- */
@@ -2469,7 +3264,7 @@ html, body { overscroll-behavior-y: none; }
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
   display: flex; flex-direction: column; gap: 10px;
   padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
-  background: var(--panel); border-top: 1px solid var(--gold);
+  background: var(--panel); border-top: 1px solid var(--gold-edge);
   border-radius: var(--r-card) var(--r-card) 0 0;
   max-height: 76vh;
   animation: pop-rise 160ms ease-out;
@@ -2498,7 +3293,7 @@ html, body { overscroll-behavior-y: none; }
   .pop-pane {
     left: 50%; right: auto; transform: translateX(-50%);
     width: min(560px, 94vw); bottom: 18px;
-    border: 1px solid var(--gold); border-radius: var(--r-card);
+    border: 1px solid var(--gold-edge); border-radius: var(--r-card);
   }
   @keyframes pop-rise {
     from { transform: translate(-50%, 14px); opacity: 0; }
@@ -2562,7 +3357,7 @@ textarea,
  */
 .hb-reads {
   margin-top: 12px; padding: 10px 12px;
-  border: 1px solid var(--rule); border-left: 2px solid var(--gold);
+  border: 1px solid var(--rule); border-left: 2px solid var(--gold-edge);
   border-radius: 0 var(--r-card) var(--r-card) 0;
   background: var(--panel);
 }
@@ -2594,7 +3389,7 @@ textarea,
 }
 .ask-edit .faint { margin: 0; line-height: 1.45; }
 /* Granted reads as a door that is open, so it is not mistaken for the ask. */
-.ask-edit.granted { border-style: solid; border-color: var(--gold); }
+.ask-edit.granted { border-style: solid; border-color: var(--gold-edge); }
 .ask-row {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
   padding: 8px 0; border-bottom: 1px solid var(--rule);
@@ -2633,7 +3428,7 @@ textarea,
 
 /* The save a monster's own action asks for, above the grid that resolves it. */
 .area-from {
-  margin: 0 0 10px; font-size: 0.84rem; line-height: 1.45; color: var(--gold);
+  margin: 0 0 10px; font-size: 0.84rem; line-height: 1.45; color: var(--gold-ink);
 }
 
 /* ---- what a creature has left ---- */
@@ -2662,7 +3457,7 @@ textarea,
  */
 .legend {
   margin-top: 10px; padding: 8px 10px;
-  border: 1px solid var(--rule); border-left: 2px solid var(--gold);
+  border: 1px solid var(--rule); border-left: 2px solid var(--gold-edge);
   border-radius: 0 var(--r-card) var(--r-card) 0;
 }
 .legend-hd {
@@ -2671,7 +3466,7 @@ textarea,
   background: none; border: 0; padding: 0; text-align: left;
 }
 /* The lair is the place, not a creature — a different edge says so. */
-.legend.lair { border-left-color: var(--gold); }
+.legend.lair { border-left-color: var(--gold-edge); }
 
 /* Where the book omitted the count, the DM states it once. */
 .legend-ask { gap: 6px; align-items: center; flex-wrap: nowrap; }
@@ -2780,7 +3575,7 @@ textarea,
  * same length and weight; a sword and a shield are not.
  */
 .cbt .i .pc {
-  color: var(--gold);
+  color: var(--gold-ink);
   font-size: 0.72rem;
   margin-right: 5px;
   vertical-align: 1px;
@@ -2802,13 +3597,13 @@ textarea,
  * the pad wins.
  */
 .turnbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 19;
+  /* A band of the shell, standing ON the tab bar. A player mid-turn is
+     exactly the person who wants to check their own sheet, so it does not
+     cover the way there — and the safe-area inset belongs to the bar
+     underneath rather than to this. */
   display: flex; align-items: stretch;
-  background: var(--panel);
-  border-top: 1px solid var(--rule);
-  box-shadow: 0 -14px 28px rgba(0, 0, 0, 0.45);
-  padding-bottom: env(safe-area-inset-bottom);
-  max-width: 720px; margin: 0 auto;
+  background: var(--surface-1);
+  border-top: 1px solid var(--hairline);
 }
 .turnbar .tb {
   flex: 1 1 0; min-width: 0; min-height: 60px;
@@ -2829,10 +3624,11 @@ textarea,
 .turnbar .tb:active:not(:disabled) { background: var(--ground); transform: none; }
 .turnbar .tb:disabled .g, .turnbar .tb:disabled { color: var(--faint); }
 /* Taken, and still true: dodging is a stance that lasts until your next turn. */
-.turnbar .tb.on, .turnbar .tb.on .g { color: var(--gold); }
+.turnbar .tb.on, .turnbar .tb.on .g { color: var(--gold-ink); }
 
 /* The bar covers the foot of the page, so give the page its height back. */
-.has-turnbar .pane-main { padding-bottom: 84px; }
+/* Nothing to reserve any more: the bar is a row of the shell's grid, so the
+   scroller is sized around it rather than padded by hand. */
 
 /* ---- ending a round from its own header ---- */
 /*
@@ -2870,5 +3666,5 @@ textarea,
   font-size: 1.1rem; line-height: 1;
   color: var(--faint); background: none; border: 0;
 }
-@media (hover: hover) and (pointer: fine) { .up-step .us:hover:not(:disabled) { color: var(--gold); background: none; } }
+@media (hover: hover) and (pointer: fine) { .up-step .us:hover:not(:disabled) { color: var(--gold-ink); background: none; } }
 .up-step .us:disabled { color: var(--rule); }

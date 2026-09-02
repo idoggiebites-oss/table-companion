@@ -111,6 +111,7 @@ async function device(name) {
 const seats = (p) => p.locator('select[aria-label="Seat"] option').allInnerTexts();
 
 const dm = await device("dm");
+await dm.page.getByRole("button", { name: "The table", exact: true }).click();
 await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
@@ -157,6 +158,7 @@ await go(dm.page, "party");
 
 const player = await device("player");
 await player.page.locator('input[aria-label="Room code"]').fill(code);
+await player.page.getByRole("button", { name: "The table", exact: true }).click();
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await player.page.waitForTimeout(1200);
@@ -216,6 +218,7 @@ await dm.page.getByRole("button", { name: "Close The table" }).click();
 // The tablet: the same DM, a second device. It joins like anyone else first.
 const tablet = await device("tablet");
 await tablet.page.locator('input[aria-label="Room code"]').fill(code);
+await tablet.page.getByRole("button", { name: "The table", exact: true }).click();
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
 await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1200);
