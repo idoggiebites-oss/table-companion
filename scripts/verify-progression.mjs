@@ -2,6 +2,21 @@
    nothing interrupts; they resolve it later and eighteen skill modifiers move
    without anyone touching them. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
+
+/*
+ * A cell of the sheet's stat strip, BY NAME.
+ *
+ * Hit points joined the strip as its first cell — they were a card of their
+ * own below it — so every index shifted by one and `nth(3)` started returning
+ * Speed. That is a number, so it was reported as a wrong proficiency rather
+ * than as a broken read. Four separate suites did this; none of them should
+ * again.
+ */
+const stripCell = (p, label) =>
+  p.locator(".strip > div").filter({ has: p.getByText(label, { exact: true }) })
+    .locator("b").innerText();
+
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -51,7 +66,7 @@ const sitAs = async (page, name) => {
   // one it is, once; after that it is an ordinary seat change.
   const join = page.locator(".join-row", { hasText: name });
   if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  else await sitIn(page, name);
   await page.waitForTimeout(500);
 };
 
@@ -77,14 +92,14 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.page.selectOption('select[aria-label="Seat"]', "dm");
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm.page, "dm");
 await dm.page.waitForSelector(".prow");
 
-await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "The table", exact: true }).click();
+await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
-await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await player.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await sitAs(player.page, "Kira Vance");
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 
@@ -128,7 +143,7 @@ await player.page.screenshot({ path: `${OUT}/32-pending.png` });
 const before = {
   stealth: await (await openDrawer(player.page, "Skills"),
     player.page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText()),
-  prof: await player.page.locator(".strip div").nth(3).locator("b").innerText(),
+  prof: await stripCell(player.page, "Prof bonus"),
   hp: (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "),
 };
 ok("before: proficiency", before.prof, "+3");
@@ -146,7 +161,7 @@ await player.page.waitForTimeout(900);
 ok("the banner is gone", await player.page.locator(".lv").count(), 0);
 ok("hit points rose by the roll plus constitution",
   (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "52 / 61");
-ok("proficiency moved", await player.page.locator(".strip div").nth(3).locator("b").innerText(), "+4");
+ok("proficiency moved", await stripCell(player.page, "Prof bonus"), "+4");
 ok("stealth moved with it, untouched by hand",
   await (await openDrawer(player.page, "Skills"),
     player.page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText()), "+8");

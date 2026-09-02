@@ -11,6 +11,7 @@
    The rest was readable in the Book tab, which means leaving the fight — on
    the one screen a DM cannot leave. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -39,8 +40,8 @@ async function fightWith(page, monster) {
   await page.waitForSelector(".rb-code");
   const code = await page.locator(".rb-code").innerText();
   await page.getByRole("button", { name: "Load sample" }).click();
-  await page.waitForSelector('select[aria-label="Seat"], .join-row');
-  await page.selectOption('select[aria-label="Seat"]', "dm");
+  await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+  await sitIn(page, "dm");
   await page.waitForTimeout(700);
 
   await page.locator('[data-tab="prep"]').click();
@@ -135,12 +136,12 @@ ok("an action's rules text is not uppercased with the button",
 /* --- and a player never sees any of it ---------------------------------- */
 const code = await troll.locator(".rb-code").innerText();
 const player = await device(430, 900);
-await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "The table", exact: true }).click();
+await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const join = player.locator(".join-row", { hasText: "Kira Vance" });
-if (await join.count()) await join.first().click();
+await player.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player, "Kira Vance");
 await player.waitForTimeout(1500);
 // A fight is already running, so the player lands in it.
 const ptab = player.locator('[data-tab="combat"]');
@@ -161,7 +162,7 @@ ok("on a laptop the DM's fight is wide enough for a statblock beside it",
   wide > 600, true);
 ok("and it is the fight that got the room, not the tabs",
   wide > (await troll.evaluate(() => {
-    const m = document.querySelector(".pane-main");
+    const m = document.querySelector(".sh-scroll");
     return m ? m.getBoundingClientRect().width : 1e9;
   })), true);
 

@@ -10,6 +10,7 @@
    Three creatures on the board on purpose, so "only one is offered" is a
    claim about aiming rather than about there being one thing to hit. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -40,17 +41,17 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.selectOption('select[aria-label="Seat"]', "dm");
+await dm.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm, "dm");
 await dm.waitForTimeout(600);
 
 const player = await device("player");
-await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "The table", exact: true }).click();
+await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const join = player.locator(".join-row", { hasText: "Kira Vance" });
-if (await join.count()) await join.first().click();
+await player.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player, "Kira Vance");
 await player.waitForSelector(".hp-big", { timeout: 20000 });
 
 // Three, so narrowing to one is a real narrowing.

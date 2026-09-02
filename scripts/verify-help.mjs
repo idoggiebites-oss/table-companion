@@ -12,6 +12,7 @@
    next turn" and an advantage that outlives its moment is a bug nobody
    notices. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -43,7 +44,7 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
 /* The ally is a separate press, on purpose: "load the sample" means one known
    character on twenty screens, and quietly making it two would change what
    every one of them is showing. */
@@ -55,7 +56,7 @@ await dm.page.getByRole("button", { name: "Add an ally" }).click();
 await dm.page.waitForTimeout(700);
 const cancel = dm.page.getByRole("button", { name: "Cancel" });
 if (await cancel.count()) { await cancel.first().click(); await dm.page.waitForTimeout(400); }
-await dm.page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(dm.page, "dm");
 await dm.page.waitForTimeout(500);
 ok("there are two people at the table now",
   await dm.page.locator(".pm-name").count(), 2);
@@ -64,12 +65,13 @@ ok("there are two people at the table now",
 const kira = await device("kira");
 const bram = await device("bram");
 for (const [d, who] of [[kira, "Kira Vance"], [bram, "Bram Holt"]]) {
-  await d.page.locator('input[aria-label="Room code"]').fill(code);
   await d.page.getByRole("button", { name: "The table", exact: true }).click();
+  await d.page.locator('input[aria-label="Room code"]').fill(code);
   await d.page.getByRole("button", { name: "Join", exact: true }).click();
-  await d.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-  const row = d.page.locator(".join-row", { hasText: who });
-  if (await row.count()) await row.first().click();
+  await d.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+  /* Waits for the offer: it only appears once the log has replayed, and a
+     bare count() runs before it has. */
+  await sitIn(d.page, who);
   await d.page.waitForSelector(".hp-big", { timeout: 20000 });
 }
 ok("and each device is holding one of them",

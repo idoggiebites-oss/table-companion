@@ -9,6 +9,7 @@
 import { chromium } from "playwright-core";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -325,7 +326,7 @@ ok("and the concentration with it, in one go",
 // different ways of making an attack.
 // One device, both chairs: staging a fight is the DM's, casting is the
 // player's, and a solo device may be either.
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 await go(page, "combat");
 await page.getByRole("button", { name: "Add creature" }).click();
@@ -340,7 +341,7 @@ for (const [n, v] of [["Bel Ashcroft", 20], ["Goblin", 2]]) {
 }
 await page.getByRole("button", { name: "Begin", exact: true }).click();
 await page.waitForTimeout(900);
-await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitIn(page, "Bel Ashcroft");
 await page.waitForTimeout(700);
 
 /* Casting is on the turn itself — and it is the SPELLS that are on it, not a
@@ -406,7 +407,7 @@ await page.locator('input[aria-label="Spell damage roll"]').fill("7");
 await page.getByRole("button", { name: "Send to the DM" }).click();
 await page.waitForTimeout(700);
 ok("a spell cast from the turn spends the action", await page.locator(".ec.spent").count(), 1);
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(700);
 await go(page, "combat");
 ok("and reaches the DM exactly as a weapon attack does",
@@ -429,7 +430,7 @@ for (let i = 0; i < 2; i++) {
   await page.getByRole("button", { name: "Next turn" }).click();
   await page.waitForTimeout(700);
 }
-await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitIn(page, "Bel Ashcroft");
 await page.waitForTimeout(700);
 await go(page, "spells");
 
@@ -489,7 +490,7 @@ await page.locator('input[aria-label="Spell damage roll"]').fill("9");
 await page.getByRole("button", { name: "Send to the DM" }).click();
 await page.waitForTimeout(700);
 
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 await go(page, "combat");
 /* Relative, because a spell was already cast at this goblin from the turn
@@ -507,7 +508,7 @@ ok("confirming applies it", before9 - Number((await hpNow()).split("/")[0]), 9);
 
 // The economy is the point of the second half: a cantrip still costs the
 // action, and the app has to stop the next one.
-await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitIn(page, "Bel Ashcroft");
 await page.waitForTimeout(700);
 await go(page, "spells");
 ok("the action is gone", !(await castable(page, "Fire Bolt")), true);
@@ -537,7 +538,7 @@ await page.waitForTimeout(600);
 /* A fresh fight, and a goblin with enough hit points left to take half of
    anything. The one in the fight above is on its last four, and damage that
    clamps at zero proves nothing about halving. */
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 await go(page, "combat");
 await page.getByRole("button", { name: "End combat" }).click();
@@ -553,7 +554,7 @@ for (const [who, v] of [["Bel Ashcroft", 20], ["Ogre", 5]]) {
 }
 await page.getByRole("button", { name: "Begin", exact: true }).click();
 await page.waitForTimeout(700);
-await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitIn(page, "Bel Ashcroft");
 await page.waitForTimeout(700);
 await go(page, "spells");
 await castSpell(page, "Burning Hands");
@@ -575,7 +576,7 @@ await page.locator('input[aria-label="Spell damage roll"]').fill("13");
 await page.getByRole("button", { name: "Send to the DM" }).click();
 await page.waitForTimeout(700);
 
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(700);
 await go(page, "combat");
 const saveClaim = (await page.locator(".claim").first().innerText()).replace(/\s+/g, " ");

@@ -6,6 +6,7 @@
    whether the fight is still readable while you are demonstrably somewhere
    else, and whether a phone is left exactly as it was. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -40,16 +41,16 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.page.selectOption('select[aria-label="Seat"]', "dm");
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm.page, "dm");
 await dm.page.waitForTimeout(600);
 
-await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "The table", exact: true }).click();
+await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
-await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const join = player.page.locator(".join-row", { hasText: "Kira Vance" });
-if (await join.count()) await join.first().click();
+await player.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player.page, "Kira Vance");
 await player.page.waitForSelector(".hp-big", { timeout: 20000 });
 
 // Nothing changes until there is a fight to pin — a wide screen with no fight
@@ -85,7 +86,7 @@ await go(dm.page, "prep");
 ok("the fight is readable while you are demonstrably elsewhere",
   await dm.page.locator(".pane-pin .cbt", { hasText: "Goblin Boss" }).count(), 1);
 ok("and the tab you chose is beside it, not underneath it",
-  await dm.page.locator(".pane-main").count(), 1);
+  await dm.page.locator(".sh-scroll").count(), 1);
 await dm.page.screenshot({ path: `${OUT}/50-dm-desktop.png` });
 
 // One fight, one copy of it. Two mounts would mean two of every control.
@@ -135,29 +136,29 @@ ok("and back again on its side", await player.page.locator(".pane-pin").count(),
 await player.page.setViewportSize({ width: 1440, height: 950 });
 await player.page.waitForTimeout(600);
 await go(player.page, "sheet");
-const cols = await player.page.locator(".pane-main").evaluate(
+const cols = await player.page.locator(".sh-scroll").evaluate(
   (el) => getComputedStyle(el).columnCount,
 );
 ok("the sheet flows into two columns where there is room", cols, "2");
-const wide = await player.page.locator(".pane-main").boundingBox();
-const card = await player.page.locator(".pane-main .card").first().boundingBox();
+const wide = await player.page.locator(".sh-scroll").boundingBox();
+const card = await player.page.locator(".sh-scroll .card").first().boundingBox();
 ok("so a card is about half the pane, not all of it", card.width < wide.width * 0.6, true);
 await player.page.screenshot({ path: `${OUT}/53-sheet-two-up.png` });
 
 // The fight is a sequence, not a surface, and stays one column.
 await go(player.page, "log");
 ok("but the log does not — it is a sequence, and reading order matters",
-  await player.page.locator(".pane-main").evaluate((el) => getComputedStyle(el).columnCount),
+  await player.page.locator(".sh-scroll").evaluate((el) => getComputedStyle(el).columnCount),
   "auto");
 
 // The phone is what this app is for. It must be untouched.
 const phone = await device("phone", 390, 844);
-await phone.page.locator('input[aria-label="Room code"]').fill(code);
 await phone.page.getByRole("button", { name: "The table", exact: true }).click();
+await phone.page.locator('input[aria-label="Room code"]').fill(code);
 await phone.page.getByRole("button", { name: "Join", exact: true }).click();
-await phone.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const phoneJoin = phone.page.locator(".join-row", { hasText: "Kira Vance" });
-if (await phoneJoin.count()) await phoneJoin.first().click();
+await phone.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(phone.page, "Kira Vance");
 await phone.page.waitForTimeout(1000);
 ok("a phone pins nothing", await phone.page.locator(".pane-pin").count(), 0);
 ok("and still has every tab it had", await phone.page.locator('[data-tab="combat"]').count(), 1);

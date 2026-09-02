@@ -10,6 +10,7 @@
    What the app supplies is the number, the ability and what a success costs.
    Where the line falls and who is in it belongs to the table — law four. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -35,8 +36,8 @@ await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector('select[aria-label="Seat"], .join-row');
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 
 // A dragon, so the fight has something with a breath weapon in it.

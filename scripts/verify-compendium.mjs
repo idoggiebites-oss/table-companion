@@ -7,6 +7,7 @@
 import { chromium } from "playwright-core";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -31,7 +32,7 @@ const sitAs = async (page, name) => {
   // one it is, once; after that it is an ordinary seat change.
   const join = page.locator(".join-row", { hasText: name });
   if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  else await sitIn(page, name);
   await page.waitForTimeout(500);
 };
 const go = async (page, tab) => {
@@ -47,7 +48,7 @@ await page.goto(URL, { waitUntil: "networkidle" });
 // A DM, so the Book tab is available.
 await page.getByRole("button", { name: "Load sample" }).click();
 await page.waitForSelector(".tabs", { timeout: 20000 });
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 await go(page, "book");
 

@@ -6,6 +6,9 @@
    a nudge that is never sent and a nudge that is sent to nobody look the same
    from the screen. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
+
+
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -50,27 +53,28 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.selectOption('select[aria-label="Seat"]', "dm");
+await dm.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm, "dm");
 await dm.waitForSelector(".pm-name");
 
 const player = await device("player");
-await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "The table", exact: true }).click();
+await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const join = player.locator(".join-row", { hasText: "Kira Vance" });
-if (await join.count()) await join.first().click();
+await player.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player, "Kira Vance");
 await player.waitForSelector(".hp-big", { timeout: 20000 });
 /* The character id as the PLAYER's device holds it — a nudge is addressed to
    one, and it is the player's claim that decides which. Device-local state
    lives in IndexedDB here, not localStorage: it never enters the log. */
-const kira = await player.evaluate(async () => {
-  const build = document.querySelector(".seatbar select");
-  const chosen = build instanceof HTMLSelectElement ? build.value : "";
-  // The seat control's value carries a prefix; the nudge carries the id.
-  return chosen.replace(/^[a-z]+:/, "");
-});
+const kira = await player.evaluate(() =>
+  /* The SEAT, not the control's value. It was read off `select.value`, which
+     does not exist when there is nothing to choose and the control is a pill
+     instead — so the nudge was addressed to "" and the assertion below said
+     the wrong thing rang rather than that the read was broken. `data-seat`
+     is on both shapes. */
+  document.querySelector("[data-seat]")?.getAttribute("data-seat") ?? "");
 
 // --- the button -----------------------------------------------------------
 await go(player, "combat");

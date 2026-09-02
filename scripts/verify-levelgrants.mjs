@@ -5,6 +5,7 @@
    spells nobody mentioned, and gained features that appeared silently on the
    sheet. Every character meets this; only some multiclass. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -103,7 +104,7 @@ await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".tabs", { timeout: 20000 });
 
 // The DM grants a level.
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 await go(page, "party");
 await page.getByRole("button", { name: "Milestone" }).click();
@@ -113,7 +114,7 @@ for (let i = 0; i < 2; i++) {
   await page.getByRole("button", { name: "Level the party" }).click();
   await page.waitForTimeout(900);
 }
-await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitIn(page, "Bel Ashcroft");
 await page.waitForTimeout(700);
 await go(page, "sheet");
 await page.getByRole("button", { name: "Resolve it" }).first().click();
@@ -171,12 +172,12 @@ ok("and it reaches the sheet", sheet.toLowerCase().includes(chosen.toLowerCase()
 
 // --- what changes, before what to choose ---------------------------------
 // The level above was taken, so grant another to have one to look at.
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 await go(page, "party");
 await page.getByRole("button", { name: "Level the party" }).click();
 await page.waitForTimeout(900);
-await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitIn(page, "Bel Ashcroft");
 await page.waitForTimeout(700);
 await go(page, "sheet");
 await page.getByRole("button", { name: "Resolve it" }).first().click();

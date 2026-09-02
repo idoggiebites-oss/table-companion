@@ -8,6 +8,7 @@
    down, and two creatures typed with the same name were the same creature as
    far as the app was concerned. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -39,17 +40,17 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.selectOption('select[aria-label="Seat"]', "dm");
+await dm.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm, "dm");
 await dm.waitForSelector(".pm-name");
 
 const player = await device("player");
-await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "The table", exact: true }).click();
+await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const join = player.locator(".join-row", { hasText: "Kira Vance" });
-if (await join.count()) await join.first().click();
+await player.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player, "Kira Vance");
 await player.waitForSelector(".hp-big", { timeout: 20000 });
 
 // --- between fights, which is most of a session ---------------------------
@@ -102,11 +103,28 @@ ok("and who follows", /THEN Ghoul 1/i.test(upNow), true);
    screen is for — and then it is their turn and the app says so with a dot on
    a tab. The answer to "I did not notice" was never a louder dot.
 
-   Both halves, because the bar and the padding that makes room for it come
-   from ONE condition and must never disagree: a gap with no bar is a hole at
-   the foot of the page, and a bar with no gap covers the last control on it.
-   The first draft of this had exactly that bug — the padding condition left
-   out the tab check. */
+   Both halves, because the bar and the room made for it must never disagree:
+   a gap with no bar is a hole at the foot of the page, and a bar with no gap
+   covers the last control on it. The first draft of this had exactly that
+   bug — the padding condition left out the tab check.
+
+   The MEASUREMENT changed with the shell and the claim did not. There is no
+   hand-reserved padding any more: the bar is a row of the shell's grid, so
+   the scroller is sized around it by the layout rather than by a number
+   somebody has to remember to keep in step. Asserting "84px" was asserting
+   the mechanism; what is actually meant is that the bar and the content do
+   not overlap, which is what is checked now — and it would have caught the
+   original bug too. */
+const overlaps = (page) => page.evaluate(() => {
+  const bar = document.querySelector(".turnbar");
+  const scroll = document.querySelector(".sh-scroll");
+  if (scroll === null) return "no scroller";
+  if (bar === null) return false;
+  const b = bar.getBoundingClientRect();
+  const s = scroll.getBoundingClientRect();
+  /* A pixel of slack for the hairline between them. */
+  return s.bottom > b.top + 1;
+});
 await go(player, "sheet");
 await player.waitForTimeout(600);
 console.log("      DEBUG seat:", await player.locator('select[aria-label="Seat"]').inputValue().catch(()=>"-"));
@@ -114,16 +132,21 @@ console.log("      DEBUG up now:", await player.locator(".up-now .n").innerText(
 console.log("      DEBUG tabs dot:", await player.locator('[data-tab="combat"]').getAttribute("aria-label").catch(()=>"-"));
 ok("on another tab during your turn, the turn comes with you",
   await player.locator(".turnbar").count(), 1);
-ok("and the page keeps its own foot",
-  await player.locator(".pane-main").evaluate((e) => getComputedStyle(e).paddingBottom),
-  "84px");
+ok("and the page makes room for it rather than being covered",
+  await overlaps(player), false);
 await go(player, "combat");
 await player.waitForTimeout(600);
 ok("but not on the fight, where the whole turn is already on screen",
   await player.locator(".turnbar").count(), 0);
+/* And with the bar gone the scroller takes the height back — no hole at the
+   foot of the page where it used to be. */
 ok("and no gap is left behind it",
-  await player.locator(".pane-main").evaluate((e) => getComputedStyle(e).paddingBottom),
-  "0px");
+  await player.locator(".sh-scroll").evaluate((e) => {
+    const s = e.getBoundingClientRect();
+    const tabs = document.querySelector(".tabs")?.getBoundingClientRect();
+    return tabs === undefined ? null : Math.round(tabs.top - s.bottom);
+  }),
+  0);
 
 ok("with the turn counted, not just the round",
   /turn 1 of 3/i.test(await dm.locator(".card-hd").first().innerText()), true);

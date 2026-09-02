@@ -430,6 +430,13 @@ body {
   .sh-scroll[data-pane="sheet"],
   .sh-scroll[data-pane="gear"] {
     /*
+     * `display: block`, because the scroller is a flex column everywhere else
+     * and `column-count` does not lay out flex children — it computed as 2
+     * and every card still drew full width. The gap goes with it, so the
+     * cards carry their own margin here.
+     */
+    display: block;
+    /*
      * Columns rather than a grid: cards are wildly different heights, and a
      * grid aligns rows — which leaves a hole under every short card. Columns
      * flow, so the second one starts where the first ran out.
@@ -443,7 +450,10 @@ body {
     column-gap: 18px;
   }
   .sh-scroll[data-pane="sheet"] > *,
-  .sh-scroll[data-pane="gear"] > * { break-inside: avoid; }
+  .sh-scroll[data-pane="gear"] > * {
+    break-inside: avoid;
+    margin-bottom: var(--row-gap);
+  }
 
 }
 

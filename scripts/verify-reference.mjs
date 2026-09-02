@@ -1,5 +1,6 @@
 /* The SRD reference: DM only, loaded on demand, and present offline. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -24,7 +25,7 @@ const sitAs = async (page, name) => {
   // one it is, once; after that it is an ordinary seat change.
   const join = page.locator(".join-row", { hasText: name });
   if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  else await sitIn(page, name);
   await page.waitForTimeout(500);
 };
 
@@ -36,14 +37,14 @@ const go = async (page, tab) => {
 
 await page.goto(URL, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector('select[aria-label="Seat"], .join-row');
+await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
 
 // A player must not be able to look monsters up — that is the disclosure
 // ladder. With tabs the claim gets stronger: the section does not exist for
 // them at all, so there is nothing to find rather than something to hide.
 ok("a player has no Book tab", await page.locator('[data-tab="book"]').count(), 0);
 
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForSelector(".tabs");
 await go(page, "book");
 ok("dm has one", await page.getByRole("button", { name: "Monsters" }).count(), 1);
@@ -98,7 +99,7 @@ ok("every result is within the band", crs.every((c) => {
 // and it survives losing the network, which is the whole point at a table
 await ctx.setOffline(true);
 await page.reload({ waitUntil: "domcontentloaded" });
-await page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await go(page, "book");
 await page.getByRole("button", { name: "Monsters" }).click();
 await page.waitForSelector(".mrow", { timeout: 20000 });

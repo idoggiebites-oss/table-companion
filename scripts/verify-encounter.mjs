@@ -1,6 +1,7 @@
 /* The phase 3 exit criterion: build an encounter beforehand, open it later,
    and run the fight without typing a monster stat. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -20,7 +21,7 @@ const sitAs = async (page, name) => {
   // one it is, once; after that it is an ordinary seat change.
   const join = page.locator(".join-row", { hasText: name });
   if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  else await sitIn(page, name);
   await page.waitForTimeout(500);
 };
 
@@ -45,8 +46,8 @@ await laptop.page.getByRole("button", { name: "Start a room" }).click();
 await laptop.page.waitForSelector(".rb-code");
 const code = await laptop.page.locator(".rb-code").innerText();
 await laptop.page.getByRole("button", { name: "Load sample" }).click();
-await laptop.page.waitForSelector('select[aria-label="Seat"], .join-row');
-await laptop.page.selectOption('select[aria-label="Seat"]', "dm");
+await laptop.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(laptop.page, "dm");
 await laptop.page.waitForSelector(".pm-name");
 
 await go(laptop.page, "prep");
@@ -80,8 +81,15 @@ await laptop.page.locator('button[aria-label="One fewer Goblin"]').click();
 await laptop.page.locator('button[aria-label="Goblin disclosure"]').click(); // vague -> exact
 await laptop.page.locator('button[aria-label="Goblin disclosure"]').click(); // exact -> hidden
 await laptop.page.locator('button[aria-label="Goblin hit points"]').click(); // average -> rolled
-ok("disclosure set at prep", await laptop.page.locator('button[aria-label="Goblin disclosure"]').innerText(), "HIDDEN");
-ok("hit points set to rolled", await laptop.page.locator('button[aria-label="Goblin hit points"]').innerText(), "ROLLED");
+/* Lowercased before comparing: `innerText` returns RENDERED text, and the case
+   of a control is a stylesheet decision rather than a fact about the app.
+   These read "HIDDEN" and "ROLLED" while the source said "hidden" and
+   "rolled" and a `text-transform` made up the difference. When buttons
+   stopped shouting, so did these. Assert the words, not the typography. */
+const said = async (label) =>
+  (await laptop.page.locator(`button[aria-label="${label}"]`).innerText()).toLowerCase();
+ok("disclosure set at prep", await said("Goblin disclosure"), "hidden");
+ok("hit points set to rolled", await said("Goblin hit points"), "rolled");
 
 await laptop.page.locator('input[aria-label="Encounter name"]').fill("Road ambush");
 await laptop.page.getByRole("button", { name: "Save for later" }).click();
@@ -91,10 +99,10 @@ ok("saved for later", await laptop.page.locator(".sv-row .nm").innerText(), "Roa
 
 // --- at the table, on a different device ---------------------------------
 const tablet = await device("tablet");
-await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "The table", exact: true }).click();
+await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
-await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await tablet.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1000);
 // The DM's second device is still the DM, but it has to prove it — joining
 // with the room code makes you a player, whoever you are.
@@ -111,7 +119,7 @@ await tablet.page.locator('input[aria-label="DM key"]').fill(dmKey);
 await tablet.page.getByRole("button", { name: "Claim DM" }).click();
 await tablet.page.getByRole("button", { name: "Close The table" }).click();
 await tablet.page.waitForTimeout(1200);
-await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(tablet.page, "dm");
 await tablet.page.waitForTimeout(600);
 await go(tablet.page, "prep");
 await tablet.page.waitForSelector(".sv-row", { timeout: 20000 });
@@ -137,10 +145,10 @@ await tablet.page.screenshot({ path: `${OUT}/29-dropped.png` });
 // the disclosure default came with them
 await laptop.page.waitForTimeout(900);
 const playerView = await device("player");
-await playerView.page.locator('input[aria-label="Room code"]').fill(code);
 await playerView.page.getByRole("button", { name: "The table", exact: true }).click();
+await playerView.page.locator('input[aria-label="Room code"]').fill(code);
 await playerView.page.getByRole("button", { name: "Join", exact: true }).click();
-await playerView.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await playerView.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await sitAs(playerView.page, "Kira Vance");
 await playerView.page.waitForTimeout(1200);
 const seen = await playerView.page.locator(".cbt .nm").allInnerTexts();

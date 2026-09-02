@@ -5,6 +5,7 @@
    40px row) and "how many has he got" (a shopkeeper form that asked a price
    and hardcoded an endless supply). */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -39,9 +40,9 @@ await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector('select[aria-label="Seat"], .join-row');
+await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
 /* The device that starts a room is the DM, and gear is a player's screen. */
-await page.selectOption('select[aria-label="Seat"]', { label: "Kira Vance" });
+await sitIn(page, "Kira Vance");
 await page.waitForTimeout(800);
 
 /* --- holding an item ---------------------------------------------------- */
@@ -142,7 +143,7 @@ await page.waitForTimeout(300);
 
 /* --- a shopkeeper with three of a thing --------------------------------- */
 // Prep is the DM's screen.
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(700);
 await go("prep");
 await page.waitForTimeout(500);

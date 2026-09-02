@@ -11,6 +11,7 @@
    dragon taking a legendary action on its OWN turn, which gives it four
    actions instead of one. So that is asserted too. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -44,8 +45,8 @@ await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 const code = await page.locator(".rb-code").innerText();
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector('select[aria-label="Seat"], .join-row');
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 
 await go("prep");
@@ -195,12 +196,12 @@ ok("with the order still below", onTheirs.track < onTheirs.next, true);
    "they cannot see it" is a claim about disclosure rather than about them
    being on another page. */
 const player = await device("player");
-await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "The table", exact: true }).click();
+await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const joinRow = player.locator(".join-row", { hasText: "Kira Vance" });
-if (await joinRow.count()) await joinRow.first().click();
+await player.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player, "Kira Vance");
 await player.waitForTimeout(1500);
 const ptab = player.locator('[data-tab="combat"]');
 if (await ptab.count()) { await ptab.first().click(); await player.waitForTimeout(700); }

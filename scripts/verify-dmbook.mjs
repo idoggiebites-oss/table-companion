@@ -5,6 +5,7 @@
    DM to look up a spell — a player casts Hold Person, the table looks at the
    DM, and the DM had the whole bestiary and not one spell. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -30,8 +31,8 @@ await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector('select[aria-label="Seat"], .join-row');
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 await go(page, "book");
 

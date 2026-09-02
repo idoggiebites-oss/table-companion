@@ -6,6 +6,7 @@
    whether you can read what one does BEFORE taking it, and whether the app
    says anything useful about the five hundred that have a prerequisite. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -199,7 +200,7 @@ await page.getByRole("button", { name: "Create character" }).click();
 await page.waitForSelector(".tabs", { timeout: 20000 });
 
 // --- and the same picker at the table, levelling into an ASI --------------
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(500);
 await go(page, "party");
 await page.getByRole("button", { name: "Milestone" }).click();
@@ -215,7 +216,7 @@ await page.getByRole("button", { name: "Level the party" }).click();
 await page.waitForTimeout(900);
 ok("and two is two — they stack",
   (await page.locator(".owe").first().innerText()).toLowerCase(), "2 levels owed");
-await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitIn(page, "Bel Ashcroft");
 await page.waitForTimeout(600);
 await go(page, "sheet");
 await page.getByRole("button", { name: "Resolve it" }).first().click();

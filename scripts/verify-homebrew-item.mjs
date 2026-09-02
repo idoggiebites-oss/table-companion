@@ -9,6 +9,9 @@
    sheet, brings both grips because it is versatile, and displaces a shield
    when it needs the hand. None of those code paths were told about homebrew. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
+
+
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -34,7 +37,7 @@ await page.getByRole("button", { name: "The table", exact: true }).click();
 await page.getByRole("button", { name: "Start a room" }).click();
 await page.waitForSelector(".rb-code");
 await page.getByRole("button", { name: "Load sample" }).click();
-await page.waitForSelector('select[aria-label="Seat"], .join-row');
+await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
 await page.waitForTimeout(600);
 
 // --- write up a versatile sword ------------------------------------------
@@ -68,7 +71,7 @@ await page.waitForTimeout(600);
 ok("and it is written up", await page.locator(".sv-row", { hasText: "Ashbrand" }).count(), 1);
 
 // --- now: does anything downstream know it is homebrew? ------------------
-await page.selectOption('select[aria-label="Seat"]', { label: "Kira Vance" });
+await sitIn(page, "Kira Vance");
 await page.waitForTimeout(800);
 await go("gear");
 await page.locator(".card", { hasText: "Carrying" }).first()
@@ -110,7 +113,7 @@ ok("which rolls the bigger die",
    The claim is not "it saved". It is that armourClass() reads it — including
    the dexterity cap, which is the most common place hand arithmetic
    disagrees with a sheet. */
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(700);
 await go("prep");
 await page.locator(".card", { hasText: "Homebrew" }).first()
@@ -129,11 +132,14 @@ ok("medium armour says it caps dexterity",
 await page.getByRole("button", { name: "Save the item" }).click();
 await page.waitForTimeout(600);
 
-await page.selectOption('select[aria-label="Seat"]', { label: "Kira Vance" });
+await sitIn(page, "Kira Vance");
 await page.waitForTimeout(800);
 await go("gear");
 const acNow = async () =>
-  Number(await page.locator(".gear-sum b, .strip b").first().innerText());
+  /* The armour class, by name. It was the first `b` in the gear summary or
+     the strip; the summary is V2's carry band now, where the number sits in
+     its own crest, and hit points lead the strip. */
+  Number(await page.locator(".carry-ac").innerText());
 const acBefore = await acNow();
 await page.locator(".card", { hasText: "Carrying" }).first()
   .getByRole("button", { name: "Add" }).click();
@@ -156,7 +162,7 @@ ok("saying so on the sheet",
 
    A shopkeeper who cannot stock the sword the DM invented last week is a
    shopkeeper with the wrong stock. It is already an item everywhere else. */
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(700);
 await go("prep");
 await page.locator(".card", { hasText: "People" }).first()
@@ -180,7 +186,7 @@ ok("with a count, because there is only one of it",
    A creature has hit dice and a challenge rating; a sword has damage and a
    price. They share the word "homebrew" and nothing else, and mixing them
    into one form is how a DM ends up giving a sword a walking speed. */
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(700);
 await go("prep");
 const hb = page.locator(".card", { hasText: "Homebrew" }).first();

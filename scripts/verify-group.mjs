@@ -10,6 +10,7 @@
    - Undo is complete and correct and lives in the Log tab, which is not
      where a DM is when they tap Next by mistake. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -32,8 +33,8 @@ await dm.getByRole("button", { name: "The table", exact: true }).click();
 await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.selectOption('select[aria-label="Seat"]', "dm");
+await dm.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm, "dm");
 await dm.waitForTimeout(700);
 const go = async (tab) => {
   const t = dm.locator(`[data-tab="${tab}"]`);

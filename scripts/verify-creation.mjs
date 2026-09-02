@@ -1,6 +1,21 @@
 /* Session zero: build a character in the app, and watch the consequences of
    each choice as it is made. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
+
+/*
+ * A cell of the sheet's stat strip, BY NAME.
+ *
+ * Hit points joined the strip as its first cell — they were a card of their
+ * own below it — so every index shifted by one and `nth(3)` started returning
+ * Speed. That is a number, so it was reported as a wrong proficiency rather
+ * than as a broken read. Four separate suites did this; none of them should
+ * again.
+ */
+const stripCell = (p, label) =>
+  p.locator(".strip > div").filter({ has: p.getByText(label, { exact: true }) })
+    .locator("b").innerText();
+
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -50,7 +65,7 @@ const sitAs = async (page, name) => {
   // one it is, once; after that it is an ordinary seat change.
   const join = page.locator(".join-row", { hasText: name });
   if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  else await sitIn(page, name);
   await page.waitForTimeout(500);
 };
 // The builder asks two kinds of question before it will finish: which martial
@@ -117,8 +132,8 @@ await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 
 const player = await device("player");
-await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "The table", exact: true }).click();
+await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForTimeout(1200);
 
@@ -274,7 +289,7 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 // a ranger: dex 15+2, wis 14, con 13, str 12, int 10+1, cha 8.
 ok("hit points are the full die plus constitution",
   (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "11 / 11");
-ok("proficiency at level 1", await player.page.locator(".strip div").nth(3).locator("b").innerText(), "+2");
+ok("proficiency at level 1", await stripCell(player.page, "Prof bonus"), "+2");
 ok("a class skill carries proficiency",
   await (await openDrawer(player.page, "Skills"),
     player.page.getByRole("button", { name: /^stealth/ }).locator(".v").innerText()), "+5");
@@ -284,7 +299,8 @@ ok("and an unproficient skill does not",
   await player.page.getByRole("button", { name: /^arcana/ }).locator(".v").innerText(), "+0");
 
 // and it reached the table
-await dm.page.selectOption('select[aria-label="Seat"]', "dm").catch(() => {});
+/* Best-effort: a device that cannot be the DM has no such seat to take. */
+await sitIn(dm.page, "dm").catch(() => {});
 await dm.page.waitForTimeout(1200);
 ok("the DM sees the new character", (await dm.page.locator(".pm-name").innerText()), "Kira Vance");
 
@@ -410,8 +426,8 @@ await noSourceOnScreen(player.page, "the builder");
    with no spells at all, because the Spells tab has to explain where they
    come from, and taking any here would remove the thing that suite measures. */
 const caster = await device("caster");
-await caster.page.locator('input[aria-label="Room code"]').fill(code);
 await caster.page.getByRole("button", { name: "The table", exact: true }).click();
+await caster.page.locator('input[aria-label="Room code"]').fill(code);
 await caster.page.getByRole("button", { name: "Join", exact: true }).click();
 await caster.page.waitForTimeout(1200);
 await caster.page.getByRole("button", { name: "Build a character" }).click();
@@ -430,7 +446,10 @@ await caster.page.waitForTimeout(800);
 const spellDot = async () => {
   await atStep(caster.page, "Story");
   await caster.page.waitForTimeout(300);
-  return caster.page.locator(".cr-rail button", { hasText: /SPELLS/i }).innerText();
+  /* The rail is a run of dots — the step's NAME is its accessible name
+     ("Step 6, Spells"), not visible text, because the header says which
+     step you are on. Found by role, which is what a name is for. */
+  return caster.page.getByRole("button", { name: /^Step \d+, Spells$/ }).innerText();
 };
 ok("a fresh warlock is not finished with Spells either",
   /\u2713/.test(await spellDot()), false);

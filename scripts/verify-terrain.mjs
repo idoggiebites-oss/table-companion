@@ -4,6 +4,7 @@
    thing it cannot see and will not guess: where the fight is happening. The DM
    says it once, and every turn afterwards carries it. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -36,16 +37,16 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.selectOption('select[aria-label="Seat"]', "dm");
+await dm.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm, "dm");
 await dm.waitForSelector(".pm-name");
 
-await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "The table", exact: true }).click();
+await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const join = player.locator(".join-row", { hasText: "Kira Vance" });
-if (await join.count()) await join.first().click();
+await player.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player, "Kira Vance");
 await player.waitForSelector(".hp-big", { timeout: 20000 });
 
 await go(dm, "combat");

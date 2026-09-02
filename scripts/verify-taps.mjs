@@ -16,6 +16,7 @@
    nothing about how any of them is styled. It measures what a thumb has to
    hit, at 390px, which is the narrowest phone the app claims to support. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const TAP = 44;
@@ -72,9 +73,9 @@ await app.waitForSelector(".rb-code");
 await measure(app, "the room, before anything");
 
 await app.getByRole("button", { name: "Load sample" }).click();
-await app.waitForSelector('select[aria-label="Seat"], .join-row');
+await app.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
 await app.waitForTimeout(600);
-await app.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(app, "dm");
 await app.waitForTimeout(500);
 for (const tab of ["party", "prep", "book", "log", "combat"]) {
   await go(app, tab);
@@ -92,7 +93,7 @@ for (const which of ["The table", "This device"]) {
 }
 
 const seats = await app.locator('select[aria-label="Seat"] option').allInnerTexts();
-await app.selectOption('select[aria-label="Seat"]', { label: seats.find((o) => !/dm/i.test(o)) });
+await sitIn(app, seats.find((o) => !/dm/i.test(o)));
 await app.waitForTimeout(700);
 for (const tab of ["sheet", "spells", "gear", "notes", "log", "combat"]) {
   if (!(await app.locator(`[data-tab="${tab}"]`).count())) continue;

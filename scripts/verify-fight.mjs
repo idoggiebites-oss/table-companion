@@ -5,6 +5,9 @@
    target, and the reaction that has been sitting on the waiting screen since
    phase two waiting for something to spend it on. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
+
+
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -41,10 +44,7 @@ const atStep = async (page, label) => {
 const sitAs = async (page, name) => {
   // A device joining a campaign that already has characters is asked which
   // one it is, once; after that it is an ordinary seat change.
-  const join = page.locator(".join-row", { hasText: name });
-  if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
-  await page.waitForTimeout(500);
+  await sitIn(page, name);
 };
 // The builder asks two kinds of question before it will finish: which martial
 // weapon the kit means, and what the class asks about itself — a domain, a
@@ -141,17 +141,17 @@ await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 
 const p1 = await device("kira");
-await p1.page.locator('input[aria-label="Room code"]').fill(code);
 await p1.page.getByRole("button", { name: "The table", exact: true }).click();
+await p1.page.locator('input[aria-label="Room code"]').fill(code);
 await p1.page.getByRole("button", { name: "Join", exact: true }).click();
 await p1.page.waitForSelector('button:has-text("Build a character")', { timeout: 20000 });
 await build(p1.page, "Kira Vance", "fighter", ["Athletics", "Perception"]);
 
 const p2 = await device("bel");
-await p2.page.locator('input[aria-label="Room code"]').fill(code);
 await p2.page.getByRole("button", { name: "The table", exact: true }).click();
+await p2.page.locator('input[aria-label="Room code"]').fill(code);
 await p2.page.getByRole("button", { name: "Join", exact: true }).click();
-await p2.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await p2.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await p2.page.getByRole("button", { name: "This device" }).click();
 await p2.page.getByRole("button", { name: "Add character" }).click();
 await build(p2.page, "Bel Ashcroft", "rogue", ["Acrobatics", "Deception", "Investigation", "Stealth"]);

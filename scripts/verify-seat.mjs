@@ -4,6 +4,9 @@
    take" is not the device's business to decide. The room knows who started it,
    so the room answers. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
+
+
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -40,10 +43,7 @@ const atStep = async (page, label) => {
 const sitAs = async (page, name) => {
   // A device joining a campaign that already has characters is asked which
   // one it is, once; after that it is an ordinary seat change.
-  const join = page.locator(".join-row", { hasText: name });
-  if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
-  await page.waitForTimeout(500);
+  await sitIn(page, name);
 };
 // The builder asks two kinds of question before it will finish: which martial
 // weapon the kit means, and what the class asks about itself — a domain, a
@@ -108,7 +108,21 @@ async function device(name) {
   await page.goto(URL, { waitUntil: "networkidle" });
   return { ctx, page, name };
 }
-const seats = (p) => p.locator('select[aria-label="Seat"] option').allInnerTexts();
+/*
+ * What the seat control OFFERS, whichever shape it is in.
+ *
+ * It is a select while there is something to choose between and a pill when
+ * there is not — one option is not a dropdown. Both assertions below hold
+ * either way and are in fact stronger against the pill: a player who cannot
+ * reach the DM seat has no dropdown at all rather than a dropdown missing an
+ * entry.
+ */
+const seats = async (p) => {
+  const pick = p.locator('select[aria-label="Seat"]');
+  if (await pick.count()) return pick.locator("option").allInnerTexts();
+  const one = p.locator('[data-testid="seat"]');
+  return (await one.count()) ? [(await one.innerText()).trim()] : [];
+};
 
 const dm = await device("dm");
 await dm.page.getByRole("button", { name: "The table", exact: true }).click();
@@ -146,21 +160,21 @@ await dm.page.locator('input[aria-label="Character name"]').fill("Kira Vance");
 await answerGear(dm.page);
 await atStep(dm.page, "Review");
 await dm.page.getByRole("button", { name: "Create character" }).click();
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 
 ok("the DM may sit anywhere — including in a character",
   await seats(dm.page), ["the DM", "Kira Vance"]);
-await dm.page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(dm.page, "dm");
 await dm.page.waitForTimeout(400);
 await go(dm.page, "book");
 ok("and the DM's own tools are there", await dm.page.getByRole("button", { name: "Monsters" }).count(), 1);
 await go(dm.page, "party");
 
 const player = await device("player");
-await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "The table", exact: true }).click();
+await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
-await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await player.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await player.page.waitForTimeout(1200);
 
 // A joining device holds no character, so it is asked which one it is rather
@@ -184,14 +198,14 @@ ok("so the monster reference is not theirs to open",
 // Reload: the answer has to survive, on both sides, or a DM refreshing the
 // page loses their own campaign.
 await dm.page.reload({ waitUntil: "networkidle" });
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await dm.page.waitForTimeout(1500);
 ok("the DM is still the DM after a reload", await seats(dm.page), ["the DM", "Kira Vance"]);
 ok("and still in the DM's seat",
   await dm.page.locator('select[aria-label="Seat"]').inputValue(), "dm");
 
 await player.page.reload({ waitUntil: "networkidle" });
-await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await player.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await player.page.waitForTimeout(1500);
 ok("the player is still not, after a reload", await seats(player.page), ["Kira Vance"]);
 
@@ -217,10 +231,10 @@ await dm.page.getByRole("button", { name: "Close The table" }).click();
 
 // The tablet: the same DM, a second device. It joins like anyone else first.
 const tablet = await device("tablet");
-await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "The table", exact: true }).click();
+await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
-await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await tablet.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1200);
 ok("arrives holding nothing, like anyone else",
   await tablet.page.locator('select[aria-label="Seat"]').count(), 0);
@@ -239,7 +253,7 @@ await tablet.page.getByRole("button", { name: "Claim DM" }).click();
 await tablet.page.waitForTimeout(1200);
 await tablet.page.getByRole("button", { name: "Close The table" }).click();
 ok("the right key seats the tablet as a DM too", await seats(tablet.page), ["the DM", "Kira Vance"]);
-await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(tablet.page, "dm");
 await tablet.page.waitForTimeout(400);
 await go(tablet.page, "book");
 ok("with the DM's tools", await tablet.page.getByRole("button", { name: "Monsters" }).count(), 1);
@@ -247,7 +261,7 @@ ok("with the DM's tools", await tablet.page.getByRole("button", { name: "Monster
 // Additive, not a transfer: the laptop is still the DM. A DM with two devices
 // is one person, not a handover.
 await dm.page.reload({ waitUntil: "networkidle" });
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await dm.page.waitForTimeout(1500);
 ok("and the first device did not lose the seat", await seats(dm.page), ["the DM", "Kira Vance"]);
 

@@ -130,8 +130,8 @@ await dm.page.waitForTimeout(400);
 await dm.page.screenshot({ path: `${OUT}/51-dm-tabs.png`, fullPage: true });
 
 const p1 = await device("kira");
-await p1.page.locator('input[aria-label="Room code"]').fill(code);
 await p1.page.getByRole("button", { name: "The table", exact: true }).click();
+await p1.page.locator('input[aria-label="Room code"]').fill(code);
 await p1.page.getByRole("button", { name: "Join", exact: true }).click();
 await p1.page.waitForSelector('button:has-text("Build a character")', { timeout: 20000 });
 await p1.page.getByRole("button", { name: "Build a character" }).click();

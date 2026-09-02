@@ -1,6 +1,7 @@
 /* Homebrew: the escape hatch for everything the SRD cannot carry. It has to
    behave like any other creature, everywhere. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -20,7 +21,7 @@ const sitAs = async (page, name) => {
   // one it is, once; after that it is an ordinary seat change.
   const join = page.locator(".join-row", { hasText: name });
   if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  else await sitIn(page, name);
   await page.waitForTimeout(500);
 };
 
@@ -44,8 +45,8 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.page.selectOption('select[aria-label="Seat"]', "dm");
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm.page, "dm");
 await dm.page.waitForSelector(".pm-name");
 
 await go(dm.page, "prep");
@@ -122,10 +123,10 @@ await dm.page.screenshot({ path: `${OUT}/31-homebrew-fight.png` });
 
 // and it syncs, because prep on a laptop is used on a tablet
 const tablet = await device("tablet");
-await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "The table", exact: true }).click();
+await tablet.page.locator('input[aria-label="Room code"]').fill(code);
 await tablet.page.getByRole("button", { name: "Join", exact: true }).click();
-await tablet.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await tablet.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 await tablet.page.waitForTimeout(1000);
 // The DM's second device is still the DM, but it has to prove it — joining
 // with the room code makes you a player, whoever you are.
@@ -142,7 +143,7 @@ await tablet.page.locator('input[aria-label="DM key"]').fill(dmKey);
 await tablet.page.getByRole("button", { name: "Claim DM" }).click();
 await tablet.page.getByRole("button", { name: "Close The table" }).click();
 await tablet.page.waitForTimeout(1200);
-await tablet.page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(tablet.page, "dm");
 await go(tablet.page, "prep");
 await tablet.page.waitForSelector(".sv-row", { timeout: 20000 });
 ok("the creature reached the other device",

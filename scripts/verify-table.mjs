@@ -173,8 +173,8 @@ await dm.page.waitForTimeout(600);
 
 // --- a player arrives -----------------------------------------------------
 const player = await device("player");
-await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "The table", exact: true }).click();
+await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForSelector('button:has-text("Build a character")', { timeout: 20000 });
 await player.page.getByRole("button", { name: "Build a character" }).click();

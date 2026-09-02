@@ -490,7 +490,16 @@ export function App() {
           * with a single entry, which is a picture of a choice. V2's rule: it
           * becomes a pill that says who you are.
           */
-        <span className="sb-only" data-testid="seat">
+        <span
+          className="sb-only"
+          data-testid="seat"
+          /* Who this device is, as an id, on whichever shape the control
+             takes. It was read off the select's `value` — which does not
+             exist when there is nothing to choose and the control is a pill,
+             so a nudge was addressed to "". The seat is the fact; the control
+             is how it is changed. */
+          data-seat={seat.kind === "dm" ? "dm" : seat.characterId}
+        >
           {seat.kind === "dm" ? "The DM" : (seatable[0]?.name ?? "The DM")}
         </span>
       ) : (
@@ -500,6 +509,8 @@ export function App() {
             <label className="label" htmlFor="seat-pick">I am</label>
             <select
               id="seat-pick"
+              data-testid="seat"
+              data-seat={seat.kind === "dm" ? "dm" : seat.characterId}
               aria-label="Seat"
               value={seat.kind === "dm" ? "dm" : `pc:${seat.characterId}`}
               onChange={(e) => {
@@ -597,7 +608,20 @@ export function App() {
           /* Getting IN is the whole screen for forty seconds and then never
              again, which is exactly what a sheet is for — and it means a solo
              device spends no pixels at all on a room it does not have. */
-          <RoomBar room={room} onJoin={joinRoom} />
+          <RoomBar
+            room={room}
+            /*
+              * Close the sheet on the way in.
+              *
+              * Getting into a room moved behind this button, and the sheet
+              * then sat over the app after the room existed — with its own
+              * Done button on top of whatever the table wanted to do next.
+              * A sheet whose whole purpose is answered should not need
+              * dismissing; forty seconds of joining is over the moment it
+              * works.
+              */
+            onJoin={async (c) => { await joinRoom(c); setRoomOpen(false); }}
+          />
         ) : (
           <RoomMenu
             room={room}

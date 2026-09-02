@@ -11,6 +11,7 @@
    closes behind them, and that the rebuild keeps everything which is not the
    build — hit points, what they are carrying, their notes. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -45,17 +46,17 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.page.selectOption('select[aria-label="Seat"]', "dm");
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm.page, "dm");
 await dm.page.waitForTimeout(600);
 
 const player = await device("player");
-await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "The table", exact: true }).click();
+await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
-await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const join = player.page.locator(".join-row", { hasText: "Kira Vance" });
-if (await join.count()) await join.first().click();
+await player.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player.page, "Kira Vance");
 await player.page.waitForSelector(".hp-big", { timeout: 20000 });
 
 /* Something has happened to this character, so the rebuild has something to

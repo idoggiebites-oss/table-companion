@@ -4,6 +4,7 @@
    effective caster level read off the full-caster table, hit dice as a pool
    rather than a die, and a prerequisite that cuts both ways. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -125,7 +126,7 @@ const before = await page.locator(".slot .num").allInnerTexts();
 ok("a cleric at 3 has a cleric's slots", before, ["4", "2"]);
 
 // The DM grants a level; the player takes it somewhere new.
-await page.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(page, "dm");
 await page.waitForTimeout(600);
 await go(page, "party");
 await page.getByRole("button", { name: "Milestone" }).click();
@@ -134,7 +135,7 @@ for (let i = 0; i < 3; i++) {
   await page.getByRole("button", { name: "Level the party" }).click();
   await page.waitForTimeout(800);
 }
-await page.selectOption('select[aria-label="Seat"]', { label: "Bel Ashcroft" });
+await sitIn(page, "Bel Ashcroft");
 await page.waitForTimeout(700);
 await go(page, "sheet");
 await page.getByRole("button", { name: "Resolve it" }).first().click();
@@ -367,7 +368,7 @@ await atStep(p3, "Class");
 await p3.locator('input[aria-label="Starting level"]').fill("3");
 await p3.waitForTimeout(300);
 ok("a fighter alone is offered no spells",
-  await p3.locator('[data-step="spells"], .cr-node').filter({ hasText: /spells/i }).count(),
+  await p3.getByRole("button", { name: /^Step \d+, Spells$/ }).count(),
   0);
 
 await p3.selectOption('select[aria-label="Add a class"]', { label: "Wizard" });

@@ -1,6 +1,7 @@
 /* Damage crossing sides: the DM edits a player's sheet from the party view,
    the player sees it, and the feed says who did it. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -20,7 +21,7 @@ const sitAs = async (page, name) => {
   // one it is, once; after that it is an ordinary seat change.
   const join = page.locator(".join-row", { hasText: name });
   if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  else await sitIn(page, name);
   await page.waitForTimeout(500);
 };
 
@@ -46,14 +47,14 @@ await dm.page.getByRole("button", { name: "Start a room" }).click();
 await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.getByRole("button", { name: "Load sample" }).click();
-await dm.page.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.page.selectOption('select[aria-label="Seat"]', "dm");
+await dm.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm.page, "dm");
 await dm.page.waitForSelector(".pm-name");
 
-await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "The table", exact: true }).click();
+await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
-await player.page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 15000 });
+await player.page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 15000 });
 await sitAs(player.page, "Kira Vance");
 await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 

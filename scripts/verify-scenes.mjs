@@ -6,6 +6,7 @@
    at once, because the failure it exists to prevent is a fight that starts in
    daylight it was supposed to start in the dark. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -37,8 +38,8 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.selectOption('select[aria-label="Seat"]', "dm");
+await dm.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm, "dm");
 await dm.waitForSelector(".pm-name");
 
 // --- the night before: something to put in the place ---------------------
@@ -78,12 +79,12 @@ ok("without spilling the note itself", row.includes("stair gives"), false);
 
 // --- a player arrives, knowing none of it --------------------------------
 const player = await device("player");
-await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "The table", exact: true }).click();
+await player.locator('input[aria-label="Room code"]').fill(code);
 await player.getByRole("button", { name: "Join", exact: true }).click();
-await player.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const join = player.locator(".join-row", { hasText: "Kira Vance" });
-if (await join.count()) await join.first().click();
+await player.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* Waits for the seat rather than for a row that may not have synced yet. */
+await sitIn(player, "Kira Vance");
 await player.waitForSelector(".hp-big", { timeout: 20000 });
 await player.waitForTimeout(1200);
 
@@ -163,10 +164,10 @@ ok("the player's log says the room changed", /dark/i.test(after), true);
 
 // --- and it is still there tomorrow --------------------------------------
 const second = await device("second");
-await second.locator('input[aria-label="Room code"]').fill(code);
 await second.getByRole("button", { name: "The table", exact: true }).click();
+await second.locator('input[aria-label="Room code"]').fill(code);
 await second.getByRole("button", { name: "Join", exact: true }).click();
-await second.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
+await second.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
 /* The table's own controls live in a sheet now — the header keeps the code
    and a dot, and everything pressed is behind the gear. "The room" is a
    different thing on this screen: the place the fight is in. */
@@ -180,7 +181,7 @@ await second.locator('input[aria-label="DM key"]').fill(dmKey);
 await second.getByRole("button", { name: "Claim DM" }).click();
 await second.getByRole("button", { name: "Close The table" }).click();
 await second.waitForTimeout(1200);
-await second.selectOption('select[aria-label="Seat"]', "dm");
+await sitIn(second, "dm");
 await second.waitForTimeout(600);
 await go(second, "prep");
 await second.waitForSelector(".sc-row", { timeout: 20000 });

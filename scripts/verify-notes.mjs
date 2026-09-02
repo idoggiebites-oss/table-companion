@@ -7,6 +7,7 @@
    promise the app prints is the promise it keeps: the other player's screen
    never shows it. */
 import { chromium } from "playwright-core";
+import { claimAny, claimNth, sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -38,8 +39,8 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector('select[aria-label="Seat"], .join-row');
-await dm.selectOption('select[aria-label="Seat"]', "dm");
+await dm.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
+await sitIn(dm, "dm");
 await dm.waitForSelector(".pm-name");
 
 // A second character, so there is somebody to be kept out.
@@ -50,12 +51,11 @@ await dm.getByRole("button", { name: "Load sample" }).click();
 await dm.waitForTimeout(900);
 
 const kira = await device("kira");
-await kira.locator('input[aria-label="Room code"]').fill(code);
 await kira.getByRole("button", { name: "The table", exact: true }).click();
+await kira.locator('input[aria-label="Room code"]').fill(code);
 await kira.getByRole("button", { name: "Join", exact: true }).click();
-await kira.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const pick = kira.locator(".join-row").first();
-if (await pick.count()) await pick.click();
+await kira.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+await claimNth(kira, 0);
 await kira.waitForSelector(".hp-big", { timeout: 20000 });
 
 // --- writing ---------------------------------------------------------------
@@ -80,12 +80,13 @@ await kira.screenshot({ path: `${OUT}/42-notes.png`, fullPage: true });
 /* The whole reason it is in the log rather than on the phone: another device,
    same character, same notes. */
 const second = await device("second");
-await second.locator('input[aria-label="Room code"]').fill(code);
 await second.getByRole("button", { name: "The table", exact: true }).click();
+await second.locator('input[aria-label="Room code"]').fill(code);
 await second.getByRole("button", { name: "Join", exact: true }).click();
-await second.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const same = second.locator(".join-row").first();
-if (await same.count()) await same.click();
+await second.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* The same character, deliberately: another device, same person, same
+   notes is the whole reason they are in the log. */
+await claimNth(second, 0);
 await second.waitForSelector(".hp-big", { timeout: 20000 });
 await go(second, "notes");
 await second.waitForSelector(".nt", { timeout: 20000 });
@@ -102,13 +103,17 @@ ok("the DM's log records that something was written",
 ok("without printing it", /innkeeper/i.test(dmLog), false);
 
 const bel = await device("bel");
-await bel.locator('input[aria-label="Room code"]').fill(code);
 await bel.getByRole("button", { name: "The table", exact: true }).click();
+await bel.locator('input[aria-label="Room code"]').fill(code);
 await bel.getByRole("button", { name: "Join", exact: true }).click();
-await bel.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-const rows = bel.locator(".join-row");
-if ((await rows.count()) > 1) await rows.nth(1).click();
-else await rows.first().click();
+await bel.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+/* The OTHER character, and it waits for the second offer to arrive. Asking
+   `rows.count()` before the log replayed answered 1, so bel took the same
+   character the second device had — and then "the other player is not told"
+   and "their own page is their own" were being asked of a device sitting in
+   the very character that wrote the note. Both passed. Neither meant
+   anything. */
+await claimNth(bel, 1);
 await bel.waitForSelector(".hp-big", { timeout: 20000 });
 await go(bel, "log");
 await bel.waitForTimeout(800);

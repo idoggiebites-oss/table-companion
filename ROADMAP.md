@@ -112,6 +112,66 @@ spread across the other modules, and MODULES.md's table is the whole of it.
 
 ## Done since this list was written
 
+**The 37 room suites, run at last — and eleven things were wrong.** They had
+never been run against the port, on the belief that `wrangler dev` would not
+boot from a tool shell. It boots in twenty seconds. That belief came from V2
+on a different port and was never retested, and it is the whole reason a port
+shipped unverified.
+
+TWO were bugs in the app. **The room sheet did not close** once you were in a
+room, so its Done button sat over whatever the table wanted to press next —
+getting in moved behind that button, and nothing dismissed it when the forty
+seconds were over. And **the two-column sheet drew every card full width on a
+laptop**: `column-count` computed as `2` and did nothing, because the shell's
+scroller is a flex column and multi-column does not lay out flex children. One
+assertion caught it while its neighbour — "columnCount is 2" — passed happily,
+which is the difference between a property being set and a layout happening.
+
+THE REST were the port's stale hooks, and two were self-inflicted while fixing:
+
+- `.pane-main` in eight places, for a `<main>` the shell replaced.
+- **Four more positional `.strip` reads.** `nth(3)` was proficiency; hit points
+  lead the strip now, so it returns Speed — a number, reported as a wrong
+  proficiency rather than as a broken read. Six times in this port.
+- Two more rail lookups by visible text, which dots do not have.
+- `verify-combat` asserted 84px of hand-reserved padding under the turn bar.
+  The shell replaced that with a grid row, so the number is gone and the CLAIM
+  is not: it measures overlap now, which is the better assertion and would
+  have caught the original bug too.
+- **I weakened 59 waits.** Adding the seat pill to
+  `waitForSelector('select | seat | join-row')` made them resolve on the first
+  paint, so suites carried on BEFORE the log had replayed and claimed
+  characters that did not exist yet. The fix is not a better selector: `sitIn`
+  waits for the SEAT — a join row offering it, a select holding it, or a pill
+  already saying it.
+- **I broke a file with a regex.** The join-row rewrite ate an `if (…)` and
+  left its `else`, so `verify-stance` was a SyntaxError reporting as an error
+  with zero assertions. `node --check` over all 76 suite files is a two-second
+  sweep and belongs immediately after any bulk edit, not three steps later.
+
+And one that had been green while testing nothing. **`verify-notes` asserted
+privacy between a device and itself.** A third device was meant to claim the
+OTHER character and then not see the first player's notes — but `rows.count()`
+was asked before the log replayed, answered 1, and it claimed the character
+that wrote the note. Both privacy assertions passed, of a device reading its
+own page. It waits for the second offer now.
+
+Sixty-five direct seat calls across thirty-five files are one shared
+`scripts/lib/seat.mjs` (`sitIn`, `seatsOffered`, `claimAny`, `claimNth`).
+They were copy-pasted per suite, so the next change of shape would have meant
+finding all sixty-five again.
+
+**A suite that reports nothing is not a suite that passed.** Ten suites came
+back with zero assertions because the worker had died mid-run — the failure
+this file already documents — and the first runner recorded them as results.
+That is exactly the hole `sweep.sh` exists to close. It checks the server
+before each suite and after any run that asserted nothing, and refuses to
+record either way.
+
+Proof, finally complete: lint, typecheck, 903 unit tests, **537 browser
+assertions** across the 26 suites needing no worker and **740** across the 37
+that do.
+
 **The crest row's controls, and V2's equipment.** The seat is a PILL now, and
 when there is nothing to choose between it is a pill that says who you are
 rather than a dropdown with one entry in it — V2's rule. The table and this
@@ -1042,6 +1102,12 @@ switch, the monster piles, and the DM's spell lookup.
   now names all three before it starts. The same lesson as the empty-suite
   rule, one layer up: state the precondition where the message can still name
   the cause.
+
+- **`wrangler dev` boots fine from a tool shell, and the note saying it did
+  not was wrong.** It was carried over from V2 on port 8791 without retesting,
+  and it is the assumption that let a whole interface port ship with 37 suites
+  unverified. `npx wrangler dev --port 8787 --local` answers in about twenty
+  seconds. Try it before concluding anything.
 
 - **The dev server dies under repeated full-suite runs.** Removed from this
   list once on the evidence of a clean 55-suite run; that was wrong. It dies

@@ -5,6 +5,21 @@
    level 1 carrying seven deltas. Everything derived has to follow from that on
    its own. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
+
+/*
+ * A cell of the sheet's stat strip, BY NAME.
+ *
+ * Hit points joined the strip as its first cell — they were a card of their
+ * own below it — so every index shifted by one and `nth(3)` started returning
+ * Speed. That is a number, so it was reported as a wrong proficiency rather
+ * than as a broken read. Four separate suites did this; none of them should
+ * again.
+ */
+const stripCell = (p, label) =>
+  p.locator(".strip > div").filter({ has: p.getByText(label, { exact: true }) })
+    .locator("b").innerText();
+
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -73,7 +88,7 @@ const sitAs = async (page, name) => {
   // one it is, once; after that it is an ordinary seat change.
   const join = page.locator(".join-row", { hasText: name });
   if (await join.count()) await join.first().click();
-  else await page.selectOption('select[aria-label="Seat"]', { label: name });
+  else await sitIn(page, name);
   await page.waitForTimeout(500);
 };
 // The builder asks two kinds of question before it will finish: which martial
@@ -140,8 +155,8 @@ await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 
 const player = await device("player");
-await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "The table", exact: true }).click();
+await player.page.locator('input[aria-label="Room code"]').fill(code);
 await player.page.getByRole("button", { name: "Join", exact: true }).click();
 await player.page.waitForTimeout(1200);
 await player.page.getByRole("button", { name: "Build a character" }).click();
@@ -268,7 +283,7 @@ await player.page.waitForSelector(".hp-big", { timeout: 15000 });
 ok("arrives at the table with the right hit points",
   (await player.page.locator(".hp-big").innerText()).replace(/\s+/g, " "), "60 / 60");
 ok("proficiency is a level-8 bonus, not a level-1 one",
-  await player.page.locator(".strip div").nth(3).locator("b").innerText(), "+3");
+  await stripCell(player.page, "Prof bonus"), "+3");
 await atStep(player.page, "Scores");
 ok("the improvement reached the sheet",
   Number((await player.page.locator(".cr-ab, .strip div").first().innerText().catch(() => "0"))
@@ -290,7 +305,8 @@ await player.page.screenshot({ path: `${OUT}/41-level-8-sheet.png`, fullPage: tr
 
 // The DM's view is where the structural claim shows: one class entry at level
 // 8, and nothing owed — a mid-campaign joiner is not behind on levelling.
-await dm.page.selectOption('select[aria-label="Seat"]', "dm").catch(() => {});
+/* Best-effort: a device that cannot be the DM has no such seat to take. */
+await sitIn(dm.page, "dm").catch(() => {});
 await dm.page.waitForTimeout(1500);
 const prow = dm.page.locator(".prow").filter({ hasText: "Bel Ashcroft" });
 ok("the DM sees one class at level 8", (await prow.locator(".cls").innerText()).trim().toLowerCase(), "ranger 8");

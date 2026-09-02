@@ -9,6 +9,7 @@
    Apple withholds deleted before any of the app's code runs. That is what
    iOS Safari actually presents. */
 import { chromium } from "playwright-core";
+import { sitIn } from "./lib/seat.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const browser = await chromium.launch({
@@ -55,15 +56,15 @@ await dm.getByRole("button", { name: "Start a room" }).click();
 await dm.waitForSelector(".rb-code");
 const code = await dm.locator(".rb-code").innerText();
 await dm.getByRole("button", { name: "Load sample" }).click();
-await dm.waitForSelector('select[aria-label="Seat"], .join-row');
+await dm.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row');
 
 const join = async (page) => {
-  await page.locator('input[aria-label="Room code"]').fill(code);
   await page.getByRole("button", { name: "The table", exact: true }).click();
+  await page.locator('input[aria-label="Room code"]').fill(code);
   await page.getByRole("button", { name: "Join", exact: true }).click();
-  await page.waitForSelector('select[aria-label="Seat"], .join-row', { timeout: 20000 });
-  const row = page.locator(".join-row", { hasText: "Kira Vance" });
-  if (await row.count()) await row.first().click();
+  await page.waitForSelector('select[aria-label="Seat"], [data-testid="seat"], .join-row', { timeout: 20000 });
+  /* Waits for the seat rather than for a row that may not have synced yet. */
+  await sitIn(page, "Kira Vance");
   await page.waitForSelector(".hp-big", { timeout: 20000 });
   await go(page, "combat");
 };
