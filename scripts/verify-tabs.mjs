@@ -98,9 +98,12 @@ await dm.page.waitForSelector(".rb-code");
 const code = await dm.page.locator(".rb-code").innerText();
 await dm.page.waitForTimeout(800);
 
+/* Each bar leads with the seat's HOME — a DM's is the party they are looking
+   after, which is where this app already lands them. Both bars used to lead
+   with Combat, so the first tab was never the one you were standing on. */
 ok("the DM's sections are their responsibilities",
   (await tabsOf(dm.page)).map((t) => t.toLowerCase()),
-  ["combat", "party", "prep", "book", "log"]);
+  ["party", "combat", "prep", "book", "log"]);
 // Never "Fight" when there is no fight — that is a dead screen with
 // "No fight yet" on it.
 ok("and an empty table opens on the party, not on a fight that is not happening",
@@ -170,7 +173,7 @@ await p1.page.waitForTimeout(600);
    turn, which is why it is a tab rather than a corner of the log. */
 ok("a player gets different sections",
   (await tabsOf(p1.page)).map((t) => t.toLowerCase()),
-  ["combat", "sheet", "gear", "notes", "log"]);
+  ["sheet", "combat", "gear", "notes", "log"]);
 ok("and lands on their own sheet", await activeTab(p1.page), "sheet");
 ok("there is no prep or reference for them",
   await p1.page.locator('[data-tab="prep"], [data-tab="book"]').count(), 0);

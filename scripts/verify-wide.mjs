@@ -58,7 +58,9 @@ await player.page.waitForSelector(".hp-big", { timeout: 20000 });
 ok("no fight, nothing pinned", await dm.page.locator(".pane-pin").count(), 0);
 ok("and the Fight tab is still offered",
   (await dm.page.locator(".tab").allInnerTexts()).map((t) => t.toLowerCase()),
-  ["combat", "party", "prep", "book", "log"]);
+  /* Each bar leads with the seat's home, so a DM's begins at Party. What this
+     is about is that Combat is still THERE when no fight is pinned. */
+  ["party", "combat", "prep", "book", "log"]);
 
 await go(dm.page, "combat");
 await dm.page.getByRole("button", { name: "Add creature" }).click();

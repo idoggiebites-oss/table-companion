@@ -278,6 +278,31 @@ The header is also the one place on every screen reserved for saying *where
 you are*, which is what let the creation rail stop being fourteen labelled
 pills that had to be swiped and become a run of dots on one rule.
 
+**One navigation, and it is the bottom bar.** Decided 2 Sep 2026, against the
+concept, deliberately.
+
+The concept's sheet carries a segmented row — Overview, Combat, Inventory,
+Notes — under a bottom bar of Sheet, Characters and Log. That is the same
+split this app already makes, expressed one level lower: our bar IS
+Combat / Sheet / Spells / Gear / Notes / Log for a player and
+Combat / Party / Prep / Book / Log for a DM. Adding the segments on top would
+put two navigations on one screen, which is the thing the concept itself
+deleted from its own hub.
+
+Its three-tab bar works because it has no DM. Party, Prep and Book have
+nowhere to go in a bar of three, and the concept has no answer for them
+because it has never had to.
+
+Nor can the two seats share one bar: the union is nine entries, which measures
+**43px each on a 390px phone** — under the floor, on the rule this app has
+broken four times already.
+
+So: one bar, contents by seat, no segments. What DID change is the order —
+**each bar leads with that seat's home**. This app already decides where you
+land ("a player's home is their sheet; a DM's is the party they are looking
+after") and both bars led with Combat anyway, so the first tab was never the
+one you were standing on. The eye starts at the left of a bar.
+
 The **tab bar is a band at the foot**, with an icon and a word on each entry.
 It was six words across the top under three other bars, and at six entries it
 overflowed a 390px phone and scrolled sideways — a tab you have to swipe to is

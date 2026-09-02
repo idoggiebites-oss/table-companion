@@ -112,6 +112,22 @@ spread across the other modules, and MODULES.md's table is the whole of it.
 
 ## Done since this list was written
 
+**One navigation, and it is the bottom bar** (2 Sep 2026). The last gap to
+the concept was its segmented Overview / Combat / Inventory / Notes row. It is
+not being closed, and that is a decision rather than an omission — DESIGN.md
+carries the reasoning.
+
+The short of it: the concept's three-tab bar works because it has no DM, and
+its segments are the same split this app already makes one level lower. Two
+navigations on one screen is the thing the concept deleted from its own hub.
+And the two seats cannot share one bar — the union is nine entries at **43px
+on a 390px phone**, under the floor this app has broken four times.
+
+What did change is the ORDER: each bar now leads with that seat's home. The
+rule was already written down — "a player's home is their sheet; a DM's is the
+party they are looking after" — and both bars led with Combat anyway, so the
+first tab was never the one you were standing on.
+
 **The equipment screen, 1:1 with the concept.** Three divergences, and the
 first was visible on the live site.
 

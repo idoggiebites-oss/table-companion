@@ -208,9 +208,20 @@ export function App() {
   const askingReaction =
     offeredToMe !== null && reactionSpare && answeredOffer !== offerKey;
 
+  /*
+   * Each bar LEADS WITH THE SEAT'S HOME.
+   *
+   * This app already decides where you land — "a player's home is their
+   * sheet; a DM's is the party they are looking after" — and both bars led
+   * with Combat anyway, so the first tab was never the one you were standing
+   * on. The eye starts at the left of a bar; that should be where you are.
+   *
+   * It is also the concept's order: its sheet segments run Overview, Combat,
+   * Inventory, Notes. The rest of each bar keeps the order it had.
+   */
   const dmTabs: TabDef<TabId>[] = [
-    { id: "combat", label: "Combat", icon: "sword", dot: state.combat?.phase === "rolling" },
     { id: "party", label: "Party", icon: "person" },
+    { id: "combat", label: "Combat", icon: "sword", dot: state.combat?.phase === "rolling" },
     { id: "prep", label: "Prep", icon: "map" },
     { id: "book", label: "Book", icon: "book" },
     { id: "log", label: "Log", icon: "list" },
@@ -220,8 +231,8 @@ export function App() {
     mine !== undefined &&
     (mine.spellSlots.some((n) => n > 0) || (mineState?.spells.length ?? 0) > 0);
   const playerTabs: TabDef<TabId>[] = [
-    { id: "combat", label: "Combat", icon: "sword", dot: myTurn || askingReaction },
     { id: "sheet", label: "Sheet", icon: "person", dot: owed > 0 || saveOwed },
+    { id: "combat", label: "Combat", icon: "sword", dot: myTurn || askingReaction },
     ...(casts ? [{ id: "spells" as const, label: "Spells", icon: "spark" as const }] : []),
     { id: "gear", label: "Gear", icon: "pack", dot: shopOpen },
     { id: "notes", label: "Notes", icon: "page" },
