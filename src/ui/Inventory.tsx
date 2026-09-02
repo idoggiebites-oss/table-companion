@@ -23,6 +23,7 @@ import {
 } from "../domain/items.js";
 import { formatCoins, formatPrice, parseCoins } from "../domain/money.js";
 import { displacedBy } from "../domain/equipment.js";
+import { Icon, type IconName } from "./Icon.js";
 
 const CATEGORIES = [
   { id: "", label: "All" },
@@ -108,18 +109,34 @@ export function Inventory({
     const isOn = equipped.includes(s.itemId);
     return (
       <div className="inv-row" key={`${s.itemId}:${s.note ?? ""}`}>
-        {/* Hold the name to find out what it is. There is no prose to show —
-            not one of the 10,760 items carries a description — so it is the
-            fields, and the panel says so rather than looking empty. */}
-        <ItemName
-          label={s.name}
-          note={s.note}
-          count={s.qty}
-          {...(item ? { onRead: () => setReading(item) } : {})}
-        />
+        {/*
+          * A thumb for the kind of thing it is. The app ships no item art, so
+          * this is the same drawn set the slots use — and it is what turns a
+          * list of forty names into a list you can skim.
+          */}
+        <span className="inv-th" aria-hidden="true"><Icon name={iconForItem(item)} /></span>
+        <span className="inv-t">
+          {/* Hold the name to find out what it is. There is no prose to show —
+              not one of the 10,760 items carries a description — so it is the
+              fields, and the panel says so rather than looking empty. */}
+          <ItemName
+            label={s.name}
+            note={s.note}
+            count={s.qty}
+            {...(item ? { onRead: () => setReading(item) } : {})}
+          />
+          {item && <span className="inv-d">{describeItem(item)}</span>}
+        </span>
+        {/* The damage, in its own column, because that is the number the eye
+            is looking for when it scans a weapon list. */}
+        {item?.damage
+          ? <span className="inv-dmg">
+              <b className="num">{item.damage}</b><span className="label">dmg</span>
+            </span>
+          : <span className="inv-dmg" />}
         {editable && equippable(item) && (
           <button
-            className={isOn ? "on" : ""}
+            className={`inv-eq${isOn ? " on" : ""}`}
             aria-label={`${isOn ? "Put away" : "Equip"} ${s.name}`}
             onClick={() => {
               /* Both hands means both hands. Whatever was in the other one
@@ -137,7 +154,7 @@ export function Inventory({
               });
             }}
           >
-            {isOn ? "Worn" : "Equip"}
+            {isOn ? "Equipped" : "Equip"}
           </button>
         )}
         {editable && (
@@ -153,10 +170,14 @@ export function Inventory({
             ✕
           </button>
         )}
-        {item && <span className="inv-desc faint">{describeItem(item)}</span>}
+        {/* Said once, in `.inv-d` above. It used to be a line of its own
+            under the row because the row wrapped; the row has declared
+            columns now, so the description sits where it belongs. */}
       </div>
     );
   };
+
+  const [bucket, setBucket] = useState<Bucket>("weapons");
 
   return (
     <section className="card">
@@ -175,12 +196,12 @@ export function Inventory({
         * and the wrong one for a bag, where everything else is one list with a
         * rope, a rapier and a potion in whatever order they were picked up.
         *
-        * HEADINGS, not tabs. V2 can afford four tabs because its inventory IS
-        * the screen; here it is one card among three on the Gear tab, and a
-        * pack is usually under a dozen things. Tabs hid three quarters of it
-        * — including whatever you had just added, which is the one thing you
-        * were looking at the list to see. Two suites caught it immediately and
-        * they were right to: "what am I carrying" became four questions.
+        * TABS, as V2 draws them. They were headings for one commit, out of a
+        * worry that four tabs hide three quarters of a small pack — and the
+        * nesting is in fact the same depth in both apps: V2 reaches its pack
+        * through a sheet tab, this reaches it through a bottom-bar tab. The
+        * count on each tab is what answers "is there anything under there"
+        * without opening it, which is what the worry was really about.
         *
         * Worn and wielded keeps its own band above these: what is IN HAND is a
         * different question from what is in the bag. `bucketOf` is the rule,
@@ -192,19 +213,37 @@ export function Inventory({
           {worn.map(row)}
         </div>
       )}
-      {packed.length > 0 && BUCKETS.map((b) => {
-        const rows = inBucket(packed, (id) => catalogue[id], b.id);
-        if (rows.length === 0) return null;
-        return (
-          <div className="inv" key={b.id}>
-            <span className="label cr-sub pk-hd">
-              {b.label}
-              <i className="pk-n num">{rows.length}</i>
-            </span>
-            {rows.map(row)}
+      {packed.length > 0 && (
+        <>
+          <div className="pk-tabs" role="tablist" aria-label="Pack">
+            {BUCKETS.map((b) => {
+              const n = inBucket(packed, (id) => catalogue[id], b.id).length;
+              return (
+                <button
+                  key={b.id}
+                  role="tab"
+                  aria-selected={b.id === bucket}
+                  className={`pk-tab${b.id === bucket ? " on" : ""}`}
+                  onClick={() => setBucket(b.id)}
+                >
+                  {b.label}
+                  {n > 0 && <i className="pk-n num">{n}</i>}
+                </button>
+              );
+            })}
           </div>
-        );
-      })}
+          <div className="inv">
+            {(() => {
+              const rows = inBucket(packed, (id) => catalogue[id], bucket);
+              return rows.length === 0
+                ? <p className="faint note pk-none">
+                    Nothing under {BUCKETS.find((b) => b.id === bucket)?.label.toLowerCase()}.
+                  </p>
+                : rows.map(row);
+            })()}
+          </div>
+        </>
+      )}
 
       {inventory.length === 0 && (
         <div className="card-body">
@@ -314,6 +353,22 @@ export function Inventory({
 }
 
 /** The one line that matters about an item, or nothing. */
+/**
+ * A mark for the kind of thing it is. The app ships no item art and never
+ * will — a downloaded picture is a request that can fail in a cellar — so
+ * this is the drawn set the worn slots already use.
+ */
+function iconForItem(i: Item | undefined): IconName {
+  if (i === undefined) return "pack";
+  if (isWeapon(i)) return /\b(bow|sling|crossbow)\b/i.test(i.name) ? "bow" : "sword";
+  if (isShield(i) || isArmour(i)) return "shield";
+  if (/\b(potion|elixir|oil|flask|vial|antitoxin)\b/i.test(i.name)) return "flask";
+  if (/\b(scroll|book|tome|spellbook)\b/i.test(i.name)) return "book";
+  if (/\b(cloak|cape|mantle)\b/i.test(i.name)) return "cloak";
+  if (/\b(boots|shoes|sandals)\b/i.test(i.name)) return "helm";
+  return "pack";
+}
+
 export function describeItem(i: Item): string {
   if (isWeapon(i)) {
     const props = (i.properties ?? []).join(", ");

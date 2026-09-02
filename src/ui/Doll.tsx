@@ -19,7 +19,7 @@ import {
 import { displacedBy, usesBothHands } from "../domain/equipment.js";
 import { Popover } from "./Popover.js";
 import {
-  HELD, rarityOf, rarityStep, slotFor, SLOTS, WORN, worn as fill,
+  rarityOf, rarityStep, slotFor, SLOTS, worn as fill,
   type SlotId,
 } from "../domain/slots.js";
 import { loadEquipment } from "../store/srd.js";
@@ -69,8 +69,24 @@ export function Doll({
       .filter((i) => slotFor(i, taken) === id);
   };
 
+  /*
+   * Six cards in a plain two-column grid, and no drawn figure between them.
+   *
+   * There WAS one — line art of a person, with three slots down each side —
+   * and the reasoning for it still reads well: "what is in my hands" and
+   * "what am I wearing" are questions whose shape is a person. The reasoning
+   * was right and the layout was not. The figure took ninety-two pixels out
+   * of the middle of a 390px phone, which left each slot about a hundred and
+   * thirty: every label on the live screen was clipped — "Dagge…", "Leath
+   * Armo", "a shiel…". A slot that cannot say what is in it has stopped being
+   * an answer to anything.
+   *
+   * V2 keeps the component's NAME and drops the drawing, which is the right
+   * trade: the six places still read as a body — head, body, cloak on one
+   * side, hands and belt on the other — because the ORDER says so.
+   */
   const column = (ids: readonly SlotId[]) => (
-    <div className="dl-col">
+    <>
       {ids.map((id) => {
         const slot = SLOTS.find((s) => s.id === id)!;
         const item = slots[id];
@@ -116,7 +132,7 @@ export function Doll({
           </button>
         );
       })}
-    </div>
+    </>
   );
 
   const slot = open ? SLOTS.find((s) => s.id === open)! : null;
@@ -125,21 +141,17 @@ export function Doll({
 
   return (
     <>
+      {/*
+        * Hands first, then the body, then what hangs off it.
+        *
+        * Two columns fill row by row, so emitting the worn three and then the
+        * held three paired HEAD with BODY and CLOAK with MAIN HAND — a
+        * reading order that crosses the body twice. The concept leads with
+        * what is in your hands, which is also the honest answer to which of
+        * these six a table asks about most.
+        */}
       <div className="dl">
-        {column(WORN)}
-        <div className="dl-fig">
-          {/*
-            * Line art, drawn rather than fetched. The app ships no icon set
-            * and a downloaded one is a request that can fail in a cellar.
-            */}
-          <svg viewBox="0 0 90 210" aria-hidden="true" fill="none" stroke="var(--rule)" strokeWidth="1.4">
-            <circle cx="45" cy="24" r="15" />
-            <path d="M45 39v16M24 60c0-3 9-5 21-5s21 2 21 5l4 46c0 4-4 6-25 6s-25-2-25-6z" />
-            <path d="M24 62 8 104l9 5 12-32M66 62l16 42-9 5-12-32" />
-            <path d="M31 112l-3 62h13l4-40 4 40h13l-3-62" />
-          </svg>
-        </div>
-        {column(HELD)}
+        {column(["main", "off", "body", "cloak", "head", "belt"])}
       </div>
 
       {/*

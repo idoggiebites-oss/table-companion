@@ -5,6 +5,7 @@
    so they have to move the moment something is worn, and move back when it
    comes off. */
 import { chromium } from "playwright-core";
+import { showInPack } from "./lib/pack.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -168,6 +169,9 @@ await page.waitForTimeout(500);
 ok("taking the armour off drops the armour class to unarmoured plus shield",
   Number(await strip().innerText()), 12 + 2);
 
+/* The pack is four tabs; chain mail is under Armour. */
+await showInPack(page, /chain mail/i);
+await showInPack(page, /Chain\ Mail/i);
 await page.getByRole("button", { name: "Equip Chain Mail" }).click();
 await page.waitForTimeout(500);
 ok("heavy armour sets armour class and ignores dexterity",
@@ -178,6 +182,7 @@ ok("heavy armour sets armour class and ignores dexterity",
 await page.getByRole("button", { name: "Put away Chain Mail" }).click();
 await page.waitForTimeout(400);
 await addItem("Half Plate Armor");
+await showInPack(page, /Half\ Plate\ Armor/i);
 await page.getByRole("button", { name: "Equip Half Plate Armor" }).click();
 await page.waitForTimeout(500);
 ok("medium armour caps dexterity at +2", Number(await strip().innerText()), 15 + 2 + 2);
@@ -193,6 +198,7 @@ ok("and says why", (await page.locator(".carry-from").innerText()),
 ok("the kit's weapon is already an attack",
   (await attacks()).length, 1);
 await addItem("Longsword");
+await showInPack(page, /Longsword/i);
 await page.getByRole("button", { name: "Equip Longsword" }).click();
 await page.waitForTimeout(500);
 const list = await attacks();
@@ -217,12 +223,14 @@ const freeHand = await attacks();
 const twoH = freeHand.find((t) => /two-handed/i.test(t)) ?? "";
 ok("a free hand offers the two-handed grip", twoH !== "", true);
 ok("and it rolls the bigger die", /1d10/.test(twoH), true);
+await showInPack(page, /Shield/i);
 await page.getByRole("button", { name: "Equip Shield" }).click();
 await page.waitForTimeout(500);
 
 /* A longbow needs both hands, so putting it up takes down whatever was in
    them — as its own event, so the log says so. */
 await addItem("Longbow");
+await showInPack(page, /Longbow/i);
 await page.getByRole("button", { name: "Equip Longbow" }).click();
 await page.waitForTimeout(600);
 const both = await attacks();
@@ -241,6 +249,7 @@ await page.screenshot({ path: `${OUT}/45-inventory.png`, fullPage: true });
 await page.getByRole("button", { name: "Put away Longbow" }).click();
 await page.waitForTimeout(500);
 ok("sheathing a weapon takes its attack away", (await attacks()).length, 0);
+await showInPack(page, /Longsword/i);
 await page.getByRole("button", { name: "Equip Longsword" }).click();
 await page.waitForTimeout(500);
 

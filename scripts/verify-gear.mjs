@@ -5,6 +5,7 @@
    two martial weapons" — so the real claim under test is that the sentence
    became a choice, and that what was chosen is actually being carried. */
 import { chromium } from "playwright-core";
+import { showInPack, wholePack } from "./lib/pack.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -172,12 +173,19 @@ await create.click();
 await page.waitForSelector(".tabs", { timeout: 20000 });
 await go(page, "gear");
 
-const carried = (await page.locator(".inv-row .nm").allInnerTexts()).map((t) => t.toLowerCase());
+/* Across every bucket: the pack is four tabs, and what creation put in it
+   lands under whichever heading each thing belongs to. */
+const carried = (await wholePack(page)).map((t) => t.toLowerCase());
 ok("the chosen armour is carried, not the other one", carried.some((c) => c.includes("leather armor")), true);
 ok("and the one not chosen is not", carried.some((c) => c.includes("chain mail")), false);
 ok("the rest of that option came with it",
   carried.some((c) => c.includes("longbow")) && carried.some((c) => c.includes("arrow")), true);
-ok("the quantity survived", (await page.locator(".inv-row", { hasText: /arrow/i }).innerText()).includes("20"), true);
+/* Arrows are consumables, so the row is only in the DOM once that tab is
+   showing — the pack is four tabs, as the concept draws it. */
+ok("the quantity survived",
+  (await showInPack(page, /arrow/i))
+    && (await page.locator(".inv-row").filter({ hasText: /arrow/i }).first().innerText()).includes("20"),
+  true);
 ok("the category answer is carried", carried.some((c) => c.includes("greatsword")), true);
 ok("and the fixed half of the choice too", carried.some((c) => c.includes("shield")), true);
 await page.screenshot({ path: `${OUT}/56-carried.png`, fullPage: true });

@@ -1431,17 +1431,31 @@ html, body { overscroll-behavior-y: none; }
 
 /* ---- the pack, under four headings ---- */
 /*
- * HEADINGS, not tabs.
- *
- * The concept draws four tabs, and it can: its inventory is the whole screen.
- * Here this is one card among three on the Gear tab, and a pack is usually
- * under a dozen things — so tabs hid three quarters of it, including whatever
- * had just been added, which is the one thing somebody opens this list to see.
- * "What am I carrying" is one question and it gets one answer.
+ * An underline row, as the concept draws it — not the app's segmented pill,
+ * because these are HEADINGS over a list rather than a choice that changes
+ * what a control does. The gold sits under the word.
  */
-.pk-hd { display: flex; align-items: baseline; gap: var(--s-4); }
-/* How many are under it, so the shape of the pack reads before the rows do. */
-.pk-n { font-style: normal; font-size: var(--t-2); color: var(--ink-faint); }
+.pk-tabs {
+  display: flex; gap: var(--s-2);
+  padding: 0 var(--card-pad);
+  border-bottom: 1px solid var(--hairline);
+  overflow-x: auto; scrollbar-width: none;
+}
+.pk-tabs::-webkit-scrollbar { display: none; }
+.pk-tab {
+  flex: 1 1 auto; min-height: var(--tap); padding: var(--s-5) var(--s-3);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-3);
+  border: 0; border-radius: 0; background: none; box-shadow: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-dim); font-size: var(--t-5); white-space: nowrap;
+}
+.pk-tab.on { color: var(--gold-ink); border-bottom-color: var(--gold-edge); font-weight: 600; }
+.pk-tab:active:not(:disabled) { transform: none; background: var(--surface-2); }
+/* How many are under the heading, so an empty one is visible before it is
+   opened — which is what the worry about hiding the pack was really about. */
+.pk-n { font-size: var(--t-2); color: var(--ink-faint); font-style: normal; }
+.pk-tab.on .pk-n { color: var(--gold-ink); }
+.pk-none { padding: var(--card-pad); }
 
 /* ---- gear ---- */
 .gear-sum { padding: var(--s-6) var(--card-pad) var(--s-7); }
@@ -1531,17 +1545,48 @@ html, body { overscroll-behavior-y: none; }
 /* ---- inventory ---- */
 .inv { padding: 4px 12px 10px; }
 .inv-purse { color: var(--ink); font-size: 0.88rem; letter-spacing: 0.04em; }
+/*
+ * A row, as the concept draws one: a thumb for the kind of thing, the name
+ * over what it is, the damage in its own column, and the one control.
+ *
+ * It was a wrapping flex row where the description dropped onto a line of its
+ * own — "name, two buttons and a description are four columns, and at 430px
+ * the description loses". Declared columns rather than wrapping: the damage
+ * column is the number the eye hunts for down a weapon list, and it cannot
+ * hunt for it if it moves.
+ */
 .inv-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 0; border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  align-items: center; gap: var(--s-4);
+  padding: var(--s-4) 0; border-top: 1px solid var(--hairline);
 }
-.inv-row { flex-wrap: wrap; }
-.inv-row .nm { flex: 1 1 auto; min-width: 0; }
-/* Its own line: name, two buttons and a description are four columns, and at
-   430px the description loses and wraps into unreadable slivers. */
-.inv-desc { flex-basis: 100%; font-size: 0.72rem; }
-.inv-row button { padding: 5px 9px; font-size: 0.6rem; }
-.inv-row button.on { color: var(--ink); border-color: var(--edge); }
+.inv-th {
+  flex: none; width: 38px; height: 38px; display: grid; place-items: center;
+  background: var(--surface-2); border-radius: var(--r-control);
+  color: var(--ink-dim);
+}
+.inv-t { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.inv-t .nm { min-width: 0; }
+.inv-d {
+  font-size: var(--t-2); color: var(--ink-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* The damage, in a fixed column so a list of weapons reads down it. */
+.inv-dmg {
+  min-width: 42px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+}
+.inv-dmg b { font-family: var(--mono); font-size: var(--t-5); font-weight: 400; }
+.inv-dmg .label { font-size: var(--t-micro); }
+/* Equipped is a fact, not an action — green, and the app's healing green is
+   the only green it owns. Equip is the accent, because it is the thing to do. */
+.inv-eq {
+  padding: var(--s-3) var(--s-5); font-size: var(--t-2);
+  border-color: var(--gold-edge); color: var(--gold-ink);
+}
+.inv-eq.on { border-color: var(--heal); color: var(--heal); background: var(--surface-1); }
+.inv-row button { padding: var(--s-3) var(--s-4); font-size: var(--t-2); }
 .inv-find { display: flex; flex-direction: column; margin-top: 10px; }
 .inv-add {
   display: flex; align-items: baseline; gap: 8px; width: 100%;
@@ -2868,13 +2913,20 @@ html, body { overscroll-behavior-y: none; }
  * name widens its column past the card — which is exactly how the mock-up's
  * first render pushed a longbow off the edge of the phone.
  */
+/*
+ * Six cards, two columns, and nothing between them.
+ *
+ * There was a drawn figure in the middle — three slots down each side of it —
+ * and it took 92px out of a 390px phone. That left each slot about 130, and
+ * every label on the live screen was clipped: "Dagge…", "Leath Armo",
+ * "a shiel…". A slot that cannot say what is in it has stopped answering the
+ * question it exists for. The six places still read as a body because the
+ * ORDER says so — head, body, cloak, then the hands and the belt.
+ */
 .dl {
-  display: grid; grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr);
-  gap: 8px; align-items: center;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4); align-items: start;
 }
-.dl-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.dl-fig { display: grid; place-items: center; }
-.dl-fig svg { width: 100%; height: auto; opacity: 0.85; }
 
 /*
  * A worn slot, as the mockup draws one: the slot's NAME in tracked caps above

@@ -112,6 +112,50 @@ spread across the other modules, and MODULES.md's table is the whole of it.
 
 ## Done since this list was written
 
+**The equipment screen, 1:1 with the concept.** Three divergences, and the
+first was visible on the live site.
+
+**The drawn figure is gone.** Six slots sat three down each side of a line-art
+person, and the person took 92px out of the middle of a 390px phone — leaving
+each slot about 130. Every label was clipped: "Dagge…", "Leath Armo",
+"a shiel…". A slot that cannot say what is in it has stopped answering the
+question it exists for. V2 keeps the component's NAME and draws no figure,
+which is the right trade: the six places still read as a body because the
+ORDER says so. Now measured at zero clipped labels.
+
+Hands first, too. Two columns fill row by row, so emitting the worn three and
+then the held three paired HEAD with BODY and CLOAK with MAIN HAND — a
+reading order that crosses the body twice.
+
+**The pack is four tabs again**, and this reverses a call made two commits
+ago. The worry was that tabs hide three quarters of a small pack; the answer
+is that the nesting is the same depth in both apps — V2 reaches its pack
+through a sheet tab, this reaches it through a bottom-bar tab — and the count
+on each tab says whether anything is under it without opening it, which is
+what the worry was actually about.
+
+**The rows are the concept's rows:** a thumb for the kind of thing, the name
+over what it is, the damage in its own column, and Equipped in green against
+Equip in gold. They were a wrapping flex row whose description dropped onto a
+line of its own; the columns are declared now, because the damage column is
+what the eye runs down a weapon list and it cannot do that if it moves.
+
+Ten suite call sites went through `scripts/lib/pack.mjs` (`showInPack`,
+`wholePack`), which opens the tab a thing is under before pressing its button.
+It does not assert the thing is there — the caller's own assertion still has
+to, and a helper that quietly passed when nothing matched would be worse than
+the problem it solves.
+
+STILL NOT 1:1, and both need a decision rather than a stylesheet: the sheet
+has no Overview / Combat / Inventory / Notes segmented row, because V2's
+bottom bar is Sheet/Characters/Log and this one already IS
+Combat/Sheet/Spells/Gear/Notes — adding segments puts two navigations on one
+screen. And the slot SETS genuinely differ: head/body/cloak/main/off/belt here
+against main/off/armor/cloak/boots/trinket there.
+
+Proof: lint, typecheck, 903 unit tests, 545 browser assertions across the 26
+suites needing no worker and 731 across the 37 that do.
+
 **The 37 room suites, run at last — and eleven things were wrong.** They had
 never been run against the port, on the belief that `wrangler dev` would not
 boot from a tool shell. It boots in twenty seconds. That belief came from V2

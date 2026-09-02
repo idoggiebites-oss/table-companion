@@ -9,6 +9,7 @@
    Measured, not eyeballed: the height of the screen and the count of what is
    on it are the whole claim. */
 import { chromium } from "playwright-core";
+import { showInPack, wholePack } from "./lib/pack.mjs";
 
 const URL = process.env.URL ?? "http://127.0.0.1:8787/";
 const OUT = "/tmp/tc-shots";
@@ -205,6 +206,7 @@ const acNow = async () =>
 const before = await acNow();
 await page.getByRole("button", { name: "Body, empty" }).click();
 await page.waitForTimeout(300);
+await showInPack(page, /Studded\ Leather/i);
 await page.getByRole("button", { name: /^Wear Studded Leather/i }).click();
 await page.waitForTimeout(600);
 ok("wearing the armour fills the body slot",
@@ -219,6 +221,7 @@ await page.waitForTimeout(300);
 const offered = await page.locator(".dl-row .n").allInnerTexts();
 ok("the hand offers only what a hand takes",
   offered.some((t) => /longbow/i.test(t)) && !offered.some((t) => /studded/i.test(t)), true);
+await showInPack(page, /Longbow/i);
 await page.getByRole("button", { name: /^Wear Longbow/i }).click();
 await page.waitForTimeout(600);
 
@@ -241,6 +244,7 @@ await page.waitForTimeout(500);
    which is what slotFor means by "taken". */
 await page.getByRole("button", { name: "Main hand, empty" }).click();
 await page.waitForTimeout(300);
+await showInPack(page, /Shortsword/i);
 await page.getByRole("button", { name: /^Wear Shortsword/i }).click();
 await page.waitForTimeout(600);
 ok("a one-handed weapon goes up, and the other hand is free again",
@@ -253,6 +257,7 @@ ok("with a real empty off hand this time",
    the free one, beside the sword. */
 await page.getByRole("button", { name: "Off hand, empty" }).click();
 await page.waitForTimeout(300);
+await showInPack(page, /Shield/i);
 await page.getByRole("button", { name: /^Wear Shield/i }).click();
 await page.waitForTimeout(600);
 ok("a shield goes in the hand, not on the body",
@@ -268,8 +273,10 @@ await page.waitForTimeout(600);
 ok("taking it off empties the slot again", await page.locator(".dl-slot.empty").count(), 4);
 ok("and the armour class falls with it", await acNow(), before);
 await go(page, "gear");
+/* Across every bucket: taking a shield off puts it back in the pack, and
+   which of the four headings it lands under is not what this is about. */
 ok("without dropping it",
-  (await page.locator(".inv .nm").allInnerTexts()).some((t) => /shield/i.test(t)), true);
+  (await wholePack(page)).some((t) => /shield/i.test(t)), true);
 
 console.log(errors.length ? `\nERRORS:\n${errors.join("\n")}` : "\nno console errors");
 if (errors.length) process.exitCode = 1;

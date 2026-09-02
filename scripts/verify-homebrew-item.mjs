@@ -10,6 +10,7 @@
    when it needs the hand. None of those code paths were told about homebrew. */
 import { chromium } from "playwright-core";
 import { sitIn } from "./lib/seat.mjs";
+import { showInPack } from "./lib/pack.mjs";
 
 
 
@@ -148,6 +149,9 @@ await page.locator('input[aria-label="Search items"]').fill("Cinder Mail");
 await page.waitForTimeout(700);
 await page.locator(".inv-add", { hasText: /Cinder Mail/ }).first().click();
 await page.waitForTimeout(400);
+/* A homebrew suit of armour lands under the Armour heading, and the pack is
+   four tabs — so the row is only in the DOM once that tab is showing. */
+await showInPack(page, /Cinder Mail/i);
 await page.getByRole("button", { name: /^Equip Cinder Mail/ }).click();
 await page.waitForTimeout(700);
 const acAfter = await acNow();
