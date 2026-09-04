@@ -12,3 +12,6 @@ worker-configuration.d.ts
 # Built from a compendium by scripts/build-compendium.mjs. These are the
 # published books: they belong on the machine doing the deploying, not here.
 public/content/
+
+# graphify knowledge graph outputs
+graphify-out/
